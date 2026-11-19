@@ -31,6 +31,7 @@
 #include "vmgahp_error_codes.h"
 #include "condor_vm_universe_types.h"
 #include "my_popen.h"
+#include "which.h"
 #include <string>
 #include <libvirt/libvirt.h>
 #include <libvirt/virterror.h>
@@ -73,28 +74,69 @@ VirshType::~VirshType()
 void
 VirshType::Config()
 {
-	char *config_value = NULL;
+	// Resolve networking capabilities and default network type
+	if (vmgahp->m_gahp_config->m_vm_networking) {
+		std::vector<std::string>& networking_types = vmgahp->m_gahp_config->m_vm_networking_types;
 
-	config_value = param("VM_NETWORKING_BRIDGE_INTERFACE");
-	if( config_value ) {
-		m_vm_bridge_interface = delete_quotation_marks(config_value);
-		free(config_value);
-	} else if(contains(vmgahp->m_gahp_config->m_vm_networking_types, "bridge") == true) {
-		vmprintf( D_ALWAYS, "ERROR: 'VM_NETWORKING_TYPE' contains "
-				"'bridge' but VM_NETWORKING_BRIDGE_INTERFACE "
-				"isn't defined, so 'bridge' "
-				"networking is disabled\n");
-		std::erase(vmgahp->m_gahp_config->m_vm_networking_types, "bridge");
-		if( vmgahp->m_gahp_config->m_vm_networking_types.empty() ) {
-			vmprintf( D_ALWAYS, "ERROR: 'VM_NETWORKING' is true "
-					"but 'VM_NETWORKING_TYPE' contains "
-					"no valid entries, so 'VM_NETWORKING' "
-					"is disabled\n");
+		// Verify bridge networking availability
+		std::string bridge_interface;
+		param(bridge_interface, "VM_NETWORKING_BRIDGE_INTERFACE");
+		if ( ! bridge_interface.empty()) {
+			m_vm_bridge_interface = delete_quotation_marks(bridge_interface.c_str());
+		} else if (contains(networking_types, "bridge")) {
+			vmprintf(D_ALWAYS,
+			    "ERROR: 'VM_NETWORKING_TYPE' contains 'bridge' but "
+			    "VM_NETWORKING_BRIDGE_INTERFACE isn't defined, so 'bridge' "
+			    "networking is disabled\n"
+			);
+			std::erase(networking_types, "bridge");
+		}
+
+		// Verify user networking availability
+		bool has_user_net = false;
+		bool user_net_configed = contains(networking_types, "user");
+		if (user_net_configed && m_vmtype == CONDOR_VM_UNIVERSE_KVM) {
+			unsigned long libvirt_version = 0;
+			bool libvirt_supported = (virGetVersion(&libvirt_version, nullptr, nullptr) == 0 && libvirt_version >= 9000000);
+			if ( ! libvirt_supported) {
+				if (libvirt_version) {
+					vmprintf(D_ALWAYS, "ERROR: libvirt version (%lu) does not support 'user' network type\n",
+					         libvirt_version);
+				} else {
+					vmprintf(D_ALWAYS, "ERROR: Failed to get libvirt version\n");
+				}
+			}
+
+			std::string passt = which("passt");
+			if (passt.empty()) {
+				vmprintf(D_ALWAYS, "ERROR: Failed to locate 'passt' backend for 'user' network type\n");
+			}
+
+			has_user_net = (libvirt_supported && ! passt.empty());
+		}
+
+		if ( ! has_user_net && user_net_configed) {
+			vmprintf(D_ALWAYS, "ERROR: Disabling 'user' VM network type\n");
+			std::erase(networking_types, "user");
+			user_net_configed = false;
+		}
+
+		// Check if we still have networking types
+		if (networking_types.empty()) {
+			vmprintf(D_ALWAYS,
+			    "ERROR: 'VM_NETWORKING' is true but 'VM_NETWORKING_TYPE' contains "
+			    "no valid entries, so 'VM_NETWORKING' is disabled\n"
+			);
 			vmgahp->m_gahp_config->m_vm_networking = false;
 		} else {
-			vmprintf( D_ALWAYS,
-					"Setting default networking type to 'nat'\n");
-			vmgahp->m_gahp_config->m_vm_default_networking_type = "nat";
+			// Resolve default VM network type
+			std::string& default_network = vmgahp->m_gahp_config->m_vm_default_networking_type;
+			// No default network type configured or it was removed from available types above
+			if (default_network.empty() || ! contains(networking_types, default_network)) {
+				default_network = (has_user_net && user_net_configed) ? "user" : "nat";
+				vmprintf(D_ALWAYS, "Setting default networking type to '%s'\n",
+				         default_network.c_str());
+			}
 		}
 	}
 }
@@ -835,6 +877,19 @@ bool KVMType::CreateVirshConfigFile(const char * filename)
 				m_xml += "'/>";
 				}
 			m_xml += "</interface>";
+			} else if (m_vm_networking_type.find("user") != std::string::npos) {
+				// virtio required: e1000 + QEMU stream backend (passt) causes ~60s
+				// carrier detection delay before DHCP fires. No <alias>: libvirt
+				// output-only element; breaks connectivity if present in input XML.
+				m_xml += "<interface type='user'>";
+				m_xml += "<model type='virtio'/>";
+				if ( ! m_vm_job_mac.empty()) {
+					m_xml += "<mac address='";
+					m_xml += m_vm_job_mac;
+					m_xml += "'/>";
+				}
+				m_xml += "<backend type='passt'/>";
+				m_xml += "</interface>";
 			}
 			}
 		disk_string = makeVirshDiskString();

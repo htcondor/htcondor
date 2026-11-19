@@ -3,6 +3,7 @@ from htc_helpers import *
 
 # Global table of documented ClassAd attributes (:classad-attribute-def:)
 ATTRIBUTE_FILES = {}
+ATTRIBUTE_FILES_CI = {}
 # Table of Specified ClassAd attr type to file
 AD_TYPE_FILES = {
     "ACCOUNTING" : "accounting-classad-attributes.html",
@@ -54,26 +55,32 @@ def classad_attr_role(name, rawtext, text, lineno, inliner, options={}, content=
     details = extra_info_parser(attr_info) if attr_info != "" else None
 
     attr_name = descope_classad(full_name)
+    # Case-insensitive lookup: exact match first, then fall back to the
+    # canonical (as-defined) case so the anchor we link to actually exists.
+    canonical = attr_name if attr_name in ATTRIBUTE_FILES else ATTRIBUTE_FILES_CI.get(attr_name.lower())
     ad_type = details.get("TYPE", "").upper() if details is not None else None
     attr_index = details.get("INDEX", "") if details is not None else ""
     filename = AD_TYPE_FILES.get(ad_type) if ad_type in AD_TYPE_FILES else None
 
-    if attr_name not in ATTRIBUTE_FILES:
+    if canonical is None:
         warn(f"{docname}:{lineno} | ClassAd Attribute '{attr_name}' not defined in any ClassAd Documentation files")
         filename = "classad-types.html"
+        canonical = attr_name
     elif filename is None:
-        filename = ATTRIBUTE_FILES[attr_name][0]
-        if len(ATTRIBUTE_FILES[attr_name]) > 1:
-            warn(f"{docname}:{lineno} | ClassAd Attribute '{attr_name}' is defined in multiple files. Defaulting to {filename}")
+        filename = ATTRIBUTE_FILES[canonical][0]
+        if len(ATTRIBUTE_FILES[canonical]) > 1:
+            warn(f"{docname}:{lineno} | ClassAd Attribute '{canonical}' is defined in multiple files. Defaulting to {filename}")
 
-    ref_link = f"href=\"{root_dir}/classad-attributes/{filename}#{attr_name}\""
+    ref_link = f"href=\"{root_dir}/classad-attributes/{filename}#{canonical}\""
     return make_ref_and_index_nodes(name, full_name, attr_index, ref_link,
                                     rawtext, inliner, lineno, options, attr_name)
 
 def setup(app):
     """Setup ad-attr role"""
     global ATTRIBUTE_FILES
+    global ATTRIBUTE_FILES_CI
     # Create mapping of ClassAd attribute to source file
     ATTRIBUTE_FILES = map_attrs(app.srcdir)
+    ATTRIBUTE_FILES_CI = build_ci_index(ATTRIBUTE_FILES.keys(), "ClassAd attribute")
     app.add_role("ad-attr", classad_attr_role)
 

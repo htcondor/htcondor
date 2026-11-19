@@ -92,12 +92,17 @@ def sum_check_correct_uptimes(condor, handle, resource, resources):
             increments[assigned_resources] = the_sum
     logger.info(f"Allowed increments are {increments} (may be out of order)")
 
-    # the uptimes are increasing over time, so we
-    # assert that we have some reasonable multiple of the increments being
-    # emitted by the monitor script
+    # The uptimes increase by the increment every monitor period, so the
+    # measured uptimes should be exactly (number-of-monitor-firings) * increment.
+    # The multiplier is therefore elapsed_time / monitor_period and grows without
+    # bound as the test runs; the lower bound of 2 just confirms the monitor fired
+    # more than once.  The upper bound is only a search limit, so keep it large
+    # enough that a very slow machine (where the multiplier can get big before this
+    # check runs) doesn't spuriously fail -- widening it never makes a broken
+    # monitor pass, since a non-multiple of the increment matches no multiplier.
     assert any(
         {multiplier * u for u in increments.values()} == measured_uptimes
-        for multiplier in range(2, 100)
+        for multiplier in range(2, 100000)
     )
 
 
@@ -147,7 +152,7 @@ def peak_job_script(resource):
 
         elapsed = 0;
         while elapsed < int(sys.argv[1]):
-            os.system('condor_status -ads ${{_CONDOR_SCRATCH_DIR}}/.update.ad -af Assigned{resource}s {resource}sMemoryUsage')
+            os.system('condor_status -ads ${{_CONDOR_SCRATCH_DIR}}/../htcondor/.update.ad -af Assigned{resource}s {resource}sMemoryUsage')
             time.sleep(1)
             elapsed += 1
         """)

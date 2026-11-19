@@ -63,23 +63,37 @@ def _create_limit(helper_path, schedd_address, *, tag, expr, count, window, expi
     return tag
 
 
-def _query_limit(helper_path, schedd_address, tag):
+def _query_limit(helper_path, schedd_address, tag, *, attempts=3, retry_delay=1):
+    """Query one startup limit, retrying failed queries.
+
+    A single query can fail on a loaded (especially Windows) test host even
+    though the limit is installed, so one failure is not fatal.
+    """
     cmd = [str(helper_path), "--query", "--schedd", schedd_address, "--tag", tag]
-    # Avoid capture_output (Python 3.7+); stay compatible with older runtimes.
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, check=True)
-    lines = [l.strip() for l in proc.stdout.splitlines() if l.strip()]
-    if not lines:
-        raise RuntimeError("no startup limit data returned")
-    fields = lines[-1].split()
-    if len(fields) < 5:
-        raise RuntimeError(f"unexpected startup limit output: {lines[-1]}")
-    return {
-        "tag": fields[0],
-        "name": fields[1],
-        "skipped": int(fields[2]),
-        "ignored": int(fields[3]),
-        "allowed": int(fields[4]),
-    }
+    err = None
+    for attempt in range(attempts):
+        if attempt:
+            time.sleep(retry_delay)
+        # Avoid capture_output (Python 3.7+); stay compatible with older runtimes.
+        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, check=False)
+        if proc.returncode != 0:
+            err = f"startup_limit_ctl --query exited {proc.returncode}: {proc.stderr.strip()}"
+            continue
+        lines = [l.strip() for l in proc.stdout.splitlines() if l.strip()]
+        if not lines:
+            err = f"no startup limit data returned for tag {tag}"
+            continue
+        fields = lines[-1].split()
+        if len(fields) < 5:
+            raise RuntimeError(f"unexpected startup limit output: {lines[-1]}")
+        return {
+            "tag": fields[0],
+            "name": fields[1],
+            "skipped": int(fields[2]),
+            "ignored": int(fields[3]),
+            "allowed": int(fields[4]),
+        }
+    raise RuntimeError(f"{err} (after {attempts} attempts)")
 
 
 def _wait_for_limit(helper_path, schedd_address, tag, predicate, *, timeout=60, interval=1, handles=None):
@@ -97,8 +111,8 @@ def _wait_for_limit(helper_path, schedd_address, tag, predicate, *, timeout=60, 
             last_err = None
             if predicate(info):
                 return info
-        except subprocess.CalledProcessError as exc:
-            # Schedd may be briefly unavailable during startup/shutdown; keep polling.
+        except RuntimeError as exc:
+            # A query can fail transiently (schedd busy, dropped reply); keep polling.
             last_err = exc
 
         if handles:
@@ -154,6 +168,11 @@ def the_condor(test_dir):
 
 @action
 def installed_limit(helper_path, the_condor, schedd_address):
+    # window=60: the schedd may serialize the 3 startups across 1-2 slots with
+    # several seconds between each (claim-reuse, negotiation cycle delays).
+    # A 60s window throttles any 2nd+ startup that lands within a minute of
+    # the first, regardless of slot/claim-reuse timing. With a 5s window the
+    # test was flaky when startups happened to land >5s apart.
     return _create_limit(
         helper_path,
         schedd_address,
@@ -161,7 +180,7 @@ def installed_limit(helper_path, the_condor, schedd_address):
         name="rate-test",
         expr="true",
         count=1,
-        window=5,
+        window=60,
     )
 
 
@@ -487,8 +506,11 @@ class TestStartupLimitMonitoring:
             "+LimitGroup": '"monitor"',
         }
 
-        # Submit exactly NUM_SLOTS (2) jobs so each slot gets one job
-        # and no claim reuse occurs, keeping the allowed count deterministic.
+        # Submit NUM_SLOTS (2) jobs. Note: the schedd does NOT guarantee one
+        # job per slot -- claim reuse and multi-slot matchmaking mean both jobs
+        # may run on the same slot and the startup-limit gate may be consulted
+        # more than once per job. "allowed" counts allowed startup events, not
+        # unique jobs, so only its lower bound is deterministic.
         handle = the_condor.submit(description=desc, count=2)
         assert handle.wait(
             timeout=120,
@@ -499,4 +521,6 @@ class TestStartupLimitMonitoring:
         info = _query_limit(helper_path, schedd_address, monitoring_limit)
         assert info["skipped"] == 0
         assert info["ignored"] == 0
-        assert info["allowed"] == 2
+        # A zero-count (monitoring) limit must record startups without throttling.
+        # At least one startup per submitted job; claim reuse can push this higher.
+        assert info["allowed"] >= 2

@@ -29,7 +29,7 @@ install(FILES		master_shutdown_script.sh
 		DESTINATION	"${C_CONFIGD}/.."
 		PERMISSIONS	${CONDOR_SCRIPT_PERMS}
 )
-endif (RPM_SYSTEM_NAME)
+endif()
 
 # Only install the small shadow configuration on RHEL
 if (RPM_SYSTEM_NAME AND (${BIT_MODE} MATCHES "32"))
@@ -105,7 +105,8 @@ if ( RPM_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 					DEPENDS condor_config.patched)
 	install(FILES		${CMAKE_CURRENT_BINARY_DIR}/condor_config.patched
 			DESTINATION	"${C_ETC}"
-			RENAME	condor_config)
+			RENAME	condor_config
+			PERMISSIONS ${CONDOR_FILE_PERMS})
 
 elseif ( DEB_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 
@@ -122,7 +123,8 @@ elseif ( DEB_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 
 	install(FILES		${CMAKE_CURRENT_BINARY_DIR}/condor_config.patched
 						DESTINATION	"${C_ETC}"
-						RENAME	condor_config)
+						RENAME	condor_config
+						PERMISSIONS ${CONDOR_FILE_PERMS})
 
 elseif( APPLE )
 
@@ -158,4 +160,4 @@ else()
 			DESTINATION	"${C_ETC}")
 
 
-endif(NOT WINDOWS)
+endif()

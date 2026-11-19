@@ -58,7 +58,13 @@ bool IOProxyHandler::init( Stream *s, const char *c )
 	cookie = strdup(c);
 	if(!cookie) return false;
 
-	daemonCore->Register_Socket( s, "IOProxy client", (SocketHandlercpp) &IOProxyHandler::handle_request, "IOProxyHandler::handle_request", this );
+	int rc = daemonCore->Register_Socket( s, "IOProxy client", (SocketHandlercpp) &IOProxyHandler::handle_request, "IOProxyHandler::handle_request", this );
+	if (rc < 0) {
+		dprintf(D_ALWAYS, "IOProxyHandler::init: Register_Socket failed (rc=%d), cannot service IOProxy client\n", rc);
+		free(cookie);
+		cookie = nullptr;
+		return false;
+	}
 
 	return true;
 }
@@ -109,6 +115,7 @@ void IOProxyHandler::handle_cookie_request( ReliSock *r, char *line )
 	char check_cookie[CHIRP_LINE_MAX];
 	check_cookie[0] = 0;
 
+	// line won't be longer than CHIRP_LINE_MAX
 	if(sscanf(line,"cookie %s",check_cookie)==1) {
 		if(!strcmp(check_cookie,cookie)) {
 			dprintf( D_FULLDEBUG, 
@@ -227,43 +234,6 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 	flags_string[0] = 0;
 	if(m_enable_files && sscanf_chirp(line,"open %s %s %d",path,flags_string,&mode)==3) {
-
-		/*
-		Open is a rather special case.
-		First, we attempt to look up the file name and
-		convert it into a physical url.  Then, we make
-		sure that we know how to open the url.
-		Finally, we actually open it.
-		*/
-
-		dprintf(D_SYSCALLS,"Getting mapping for file %s\n",path);
-
-		result = REMOTE_CONDOR_get_file_info_new(path,url);
-		if(result==0) {
-			dprintf(D_SYSCALLS,"Directed to use url %s\n",url);
-			ASSERT( strlen(url) < CHIRP_LINE_MAX );
-			if(!strncmp(url,"remote:",7)) {
-				strncpy(path,url+7,CHIRP_LINE_MAX-1);
-			} else if(!strncmp(url,"buffer:remote:",14)) {
-				strncpy(path,url+14,CHIRP_LINE_MAX-1);
-			} else {
-				// Condor 7.9.6 dropped the remote: and buffer:remote prefix for the vanilla shadow
-				// so it's not longer correct to assert then these prefixes are missing.
-				// TJ: for some reason get_peer_version() is not set here, so I have to assume that the other side
-				// *might* be 7.9.6 and tolerate the missing url prefix.
-				const CondorVersionInfo *vi = r->get_peer_version();
-				dprintf(D_SYSCALLS | D_VERBOSE,"File %s maps to url %s, peer version is %d.%d.%d\n", path, url, 
-					    vi ? vi->getMajorVer() : 0, vi ? vi->getMinorVer() : 0, vi ? vi->getSubMinorVer() : 0);
-				if (vi && ! vi->built_since_version(7,9,6)) {
-					EXCEPT("File %s maps to url %s, which I don't know how to open.",path,url);
-				}
-				strncpy(path,url,CHIRP_LINE_MAX-1);
-			}
-		} else {
-			EXCEPT("Unable to map file %s to a url: %s",path,strerror(errno));
-		}
-
-		dprintf(D_SYSCALLS,"Which simplifies to file %s\n",path);
 
 		flags = 0;
 
@@ -473,7 +443,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		}
 		r->put_line_raw(line);
 		
-	} else if(m_enable_updates && sscanf_chirp(line,"ulog %s", name)==1) {
+	} else if ((m_enable_updates || m_enable_delayed) && sscanf_chirp(line,"ulog %s", name)==1) {
 
 		GenericEvent event;
 		ClassAd *ad;

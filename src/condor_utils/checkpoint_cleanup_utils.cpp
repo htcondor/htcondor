@@ -199,6 +199,11 @@ spawnCheckpointCleanupProcess(
 	}
 #endif /* ! defined(WINDOWS) */
 
+	if (pid == FALSE) {
+		dprintf(D_ERROR, "spawnCheckpointCleanupProcess(): Failed to spawn clean-up process for job %d.%d\n", cluster, proc);
+		return false;
+	}
+
 	dprintf( D_TEST, "spawnCheckpointCleanupProcess(): ... checkpoint clean-up for job %d.%d spawned as pid %d.\n", cluster, proc, pid );
 	return true;
 }
@@ -255,7 +260,10 @@ moveCheckpointsToCleanupDirectory(
 	// The owner-specific directory should have the same ownership
 	// as the spool directory going into it.
 	struct stat statbuf = {};
-	stat(spool.string().c_str(), &statbuf);
+	if( stat(spool.string().c_str(), &statbuf) != 0 ) {
+		dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): failed to stat spool directory '%s' (%d: %s), will not clean up.\n", spool.string().c_str(), errno, strerror(errno) );
+		return false;
+	}
 	auto owner_uid = statbuf.st_uid;
 	auto owner_gid = statbuf.st_gid;
 

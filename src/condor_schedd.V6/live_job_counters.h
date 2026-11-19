@@ -25,19 +25,24 @@
 // by tracking state transitions
 //
 struct LiveJobCounters {
-  int JobsSuspended;
-  int JobsIdle;             // does not count Local or Scheduler universe jobs, or Grid jobs that are externally managed.
-  int JobsRunning;
-  int JobsRemoved;
-  int JobsCompleted;
-  int JobsHeld;
-  int SchedulerJobsIdle;
-  int SchedulerJobsRunning;
-  int SchedulerJobsRemoved;
-  int SchedulerJobsCompleted;
-  int SchedulerJobsHeld;
+  int JobsSuspended{0};
+  int JobsIdle{0};             // does not count Local or Scheduler universe jobs, or Grid jobs that are externally managed.
+  int JobsRunning{0};
+  int JobsRemoved{0};
+  int JobsCompleted{0};
+  int JobsHeld{0};
+  int JobsBlocked{0};
+  int JobsPreparing{0};
+  int SchedulerJobsIdle{0};
+  int SchedulerJobsRunning{0};
+  int SchedulerJobsRemoved{0};
+  int SchedulerJobsCompleted{0};
+  int SchedulerJobsHeld{0};
+  int SchedulerJobsBlocked{0};
+  int SchedulerJobsPreparing{0};
   void clear_counters() { memset(this, 0, sizeof(*this)); }
   void publish(ClassAd & ad, const char * prefix) const;
+/*
   LiveJobCounters()
 	: JobsSuspended(0)
 	, JobsIdle(0)
@@ -51,6 +56,7 @@ struct LiveJobCounters {
 	, SchedulerJobsCompleted(0)
 	, SchedulerJobsHeld(0)
   {}
+*/
 };
 
 void IncrementLiveJobCounter(LiveJobCounters & num, int universe, int status, int increment /*, JobQueueJob * job*/);

@@ -65,6 +65,16 @@ These macros affect the *condor_collector*.
     Network timeout when talking to anyone doing a query. It is defined
     in seconds and defaults to 60.
 
+:macro-def:`HA_COLLECTOR_PROBE_TIMEOUT`
+    Network timeout, in seconds, for the reachability probe used to fail
+    over quickly past an unresponsive collector when :macro:`COLLECTOR_HOST`
+    lists more than one collector. Unlike :macro:`QUERY_TIMEOUT`, it is not
+    scaled by :macro:`TIMEOUT_MULTIPLIER`. Defaults to 10. A value of 0 or
+    less disables the probe entirely, so queries fall back to connecting
+    directly with the full (possibly multiplier-scaled)
+    :macro:`QUERY_TIMEOUT`, exposing callers to the full timeout when a
+    collector is unresponsive.
+
 :macro-def:`COLLECTOR_NAME`
     This macro is used to specify a short description of your pool. It
     should be about 20 characters long. For example, the name of the
@@ -88,7 +98,7 @@ These macros affect the *condor_collector*.
     pool. The larger this value, the less likely the *condor_collector*
     will have stale information about the pool due to dropping update
     packets. If your pool is small or your central manager has very
-    little RAM, considering setting this parameter to a lower value
+    little RAM, consider setting this parameter to a lower value
     (perhaps 256000 or 128000).
 
     .. note::
@@ -112,42 +122,15 @@ These macros affect the *condor_collector*.
     larger this value, the less likely the *condor_collector* will have
     stale information about the pool due to dropping update packets. If
     your pool is small or your central manager has very little RAM,
-    considering setting this parameter to a lower value (perhaps 65536
+    consider setting this parameter to a lower value (perhaps 65536
     or 32768).
 
     .. note::
 
         See the note for :macro:`COLLECTOR_SOCKET_BUFSIZE`.
 
-:macro-def:`KEEP_POOL_HISTORY`
-    This boolean macro is used to decide if the collector will write out
-    statistical information about the pool to history files. The default
-    is ``False``. The location, size, and frequency of history logging
-    is controlled by the other macros.
-
-:macro-def:`POOL_HISTORY_DIR`
-    This macro sets the name of the directory where the history files
-    reside (if history logging is enabled). The default is the :macro:`SPOOL`
-    directory.
-
-:macro-def:`POOL_HISTORY_MAX_STORAGE`
-    This macro sets the maximum combined size of the history files. When
-    the size of the history files is close to this limit, the oldest
-    information will be discarded. Thus, the larger this parameter's
-    value is, the larger the time range for which history will be
-    available. The default value is 10000000 (10 MB).
-
-:macro-def:`POOL_HISTORY_SAMPLING_INTERVAL`
-    This macro sets the interval, in seconds, between samples for
-    history logging purposes. When a sample is taken, the collector goes
-    through the information it holds, and summarizes it. The information
-    is written to the history file once for each 4 samples. The default
-    (and recommended) value is 60 seconds. Setting this macro's value
-    too low will increase the load on the collector, while setting it to
-    high will produce less precise statistical information.
-
 :macro-def:`FLOCK_FROM`
-    The macros contains a comma separate list of schedd names that
+    The macro contains a comma-separated list of schedd names that
     should be allowed to flock to this central manager.  Defaults
     to an empty list.
 
@@ -192,7 +175,7 @@ These macros affect the *condor_collector*.
 
     If the value is a non-zero one, the *condor_collector* will insert
     attribute :ad-attr:`UpdatesHistory` into the ClassAd (similar to
-    ``UpdatesTotal``). AttrUpdatesHistory is a hexadecimal string which
+    ``UpdatesTotal``). UpdatesHistory is a hexadecimal string which
     represents a bitmap of the last :macro:`COLLECTOR_DAEMON_HISTORY_SIZE`
     updates. The most significant bit (MSB) of the bitmap represents
     the most recent update, and the least significant bit (LSB) represents
@@ -341,7 +324,7 @@ These macros affect the *condor_collector*.
     of attributes to forward.  If the string has no attributes, it is ignored. The intended use is to
     restrict the list of attributes forwarded for claimed Machine ads.
     When ``$(NEGOTIATOR_CONSIDER_PREEMPTION)`` is false, the negotiator needs only a few attributes from
-    Machine ads that are in the ``Claimed`` state. A Suggested use might be
+    Machine ads that are in the ``Claimed`` state. A suggested use might be
 
     .. code-block:: condor-config
 

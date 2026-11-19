@@ -587,7 +587,7 @@ JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
 
 	// if we are writing a sandbox starter log, flush and temporarily close it before we make the manifest
 	if (job_ad->Lookup(ATTR_JOB_STARTER_DEBUG)) {
-		dprintf_close_logs_in_directory(starter->GetWorkingDir(false), false);
+		dprintf_close_logs_in_directory(starter->GetWorkingDir(WD::OUTER), false);
 	}
 
 	std::string dummy;
@@ -670,17 +670,27 @@ JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
 		int timeout = param_integer( "STARTER_UPLOAD_TIMEOUT", 200 );
 		filetrans->setClientSocketTimeout(timeout);
 
-		// Warning! On unix, the following file transfer call returns
-		// immediately after creating a child process to perform the transfer.
-		// On windows, the transfer is done in-process and the function
-		// returns only after the transfer is complete.
+		// On unix, the following file transfer call returns immediately
+		// after creating a child process to perform the transfer.
+		// On windows, Create_Thread() runs the transfer in-process, so a
+		// non-blocking transfer would still block, and it would report its
+		// status through a pipe that nothing reads until the transfer
+		// completes. Large sandboxes overflow that pipe and deadlock the
+		// starter, so be explicit about using blocking mode on windows.
+		// Either way, our callback queues allJobsDone() when the transfer
+		// completes, which calls transferOutputFinish().
+#ifdef WIN32
+		const bool block_transfer = true;
+#else
+		const bool block_transfer = false;
+#endif
 		dprintf( D_FULLDEBUG, "Begin transfer of sandbox to shadow.\n");
 		if( job_failed && final_transfer ) {
 			// Only attempt failure file upload if we have failure files
 			if (filetrans->hasFailureFiles()) {
 				sleep(1); // Delay to give time for shadow side to reap previous upload
 				m_output_transfer_active = true;
-				m_ft_rval = filetrans->UploadFailureFiles(false);
+				m_ft_rval = filetrans->UploadFailureFiles(block_transfer);
 				// We would otherwise not send any UnreadyReasons we
 				// may have queued, as they could be skipped in favor of
 				// putting the job on hold for failing to transfer ouput.
@@ -688,11 +698,13 @@ JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
 			}
 		} else {
 			m_output_transfer_active = true;
-			m_ft_rval = filetrans->UploadFiles(false, final_transfer);
+			m_ft_rval = filetrans->UploadFiles(block_transfer, final_transfer);
 		}
 
 		if (m_output_transfer_active) {
-			if (m_ft_rval) {
+			// A blocking transfer that launched but failed has already
+			// called our callback, so let transferOutputFinish() handle it.
+			if (m_ft_rval || (block_transfer && filetrans->GetInfo().xfer_status == XFER_STATUS_DONE)) {
 				in_progress = true;
 			} else {
 				m_output_transfer_active = false;
@@ -1219,7 +1231,7 @@ JICShadow::updateStartd( ClassAd *ad, bool final_update )
 		// Send the effect scratch dir path to starter, we already sent it to the shadow in the starter ad
 		// and we *don't* want to send it to the shadow to be incorporated into the job ad.
 		// TODO figure out a way to only send this once? maybe we should have an initial_update as well as a final update?
-		const char * sandbox_dir = starter->GetWorkingDir(false);
+		const char * sandbox_dir = starter->GetWorkingDir(WD::OUTER);
 		if (sandbox_dir && sandbox_dir[0]) {
 			ad->Assign(ATTR_CONDOR_SCRATCH_DIR, sandbox_dir);
 		}
@@ -1263,7 +1275,7 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 	// else to go if this is a recurring problem.
 	if( starter->WorkingDirExists() && job_universe != CONDOR_UNIVERSE_LOCAL ) {
 		struct stat si = {};
-		if (stat(starter->GetWorkingDir(false), &si) != 0 && errno == ENOENT &&
+		if (stat(starter->GetWorkingDir(WD::OUTER), &si) != 0 && errno == ENOENT &&
 		    shouldHoldJobBasedOnCodes(hold_reason_code, hold_reason_subcode))
 		{
 			dprintf(D_ALWAYS, "Scratch execute directory disappeared unexpectedly, declining to put job on hold.\n");
@@ -1329,7 +1341,9 @@ JICShadow::registerStarterInfo( void )
 
 	ClassAd starter_info;
 	publishStarterInfo( &starter_info );
+	starter_info.Insert( "SlotAd", getMachineAd() );
 	rval = REMOTE_CONDOR_register_starter_info(starter_info);
+	std::ignore = starter_info.Remove( "SlotAd" );
 
 	if( rval < 0 ) {
 		return false;
@@ -1351,7 +1365,7 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 
 	ad->Assign(ATTR_STARTER_IP_ADDR, daemonCore->InfoCommandSinfulString() );
 
-	const char * sandbox_dir = starter->GetWorkingDir(false);
+	const char * sandbox_dir = starter->GetWorkingDir(WD::OUTER);
 	if (sandbox_dir && sandbox_dir[0]) {
 		ad->Assign(ATTR_CONDOR_SCRATCH_DIR, sandbox_dir);
 	}
@@ -1884,7 +1898,7 @@ JICShadow::initWithFileTransfer()
 
 	wants_file_transfer = true;
 	change_iwd = true;
-	job_iwd = strdup( starter->GetWorkingDir(0) );
+	job_iwd = strdup( starter->GetWorkingDir(WD::OUTER) );
 	job_ad->Assign( ATTR_JOB_IWD, job_iwd );
 
 		// now that we've got the iwd we're using and all our
@@ -2256,10 +2270,26 @@ JICShadow::getDelayedUpdate( const std::string &name )
 	return expr;
 }
 
-int 
+int
 JICShadow::fetch_docker_creds(const ClassAd &query, ClassAd &creds) {
 	return REMOTE_CONDOR_get_docker_creds(query, creds);
 }
+
+
+//
+// We could extend this set of variables to arbitrary custom machine resource
+// metrics, but as far as I know, nobody's using that feature, so let's just
+// keep things simple.
+//
+// These variables are globals for simplicity; if we ever allow the same
+// starter to run more than one job, they'll have to be made run-instance
+// members, instead.
+//
+double firstUptimeGPUsSecondsValue = 0;
+bool initializedFirstUptimeGPUsSecondsValue = false;
+time_t firstUptimeGPUsSecondsTimestamp = 0;
+bool initializedFirstUptimeGPUsSecondsTimestamp = false;
+
 
 bool
 JICShadow::publishStartdUpdates( ClassAd* ad ) {
@@ -2268,7 +2298,8 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 	// because you can theoretically run more than one, but we'll ignore
 	// that for now (and the startd doesn't produce the list itself).
 	if(! m_job_update_attrs_set) {
-		m_job_update_attrs.emplace_back( ATTR_CPUS_USAGE );
+		// cannot do ATTR_CPUS_USAGE here, we don't want the STARTDs value
+		// because it is over a short interval and includes things other than the job.
 
 		std::string scjl;
 		if( param( scjl, "STARTD_CRON_JOBLIST" ) ) {
@@ -2279,20 +2310,24 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 				if( param( metrics, paramName.c_str() ) ) {
 					for (const auto& pair: StringTokenIterator(metrics)) {
 						StringTokenIterator tn( pair, ":" );
-						/* const char * metricType = */ tn.first();
-						const char * resourceName = tn.next();
+						std::string metricType = * ++tn;
+						std::string resourceName = * ++tn;
+
+						if( metricType == "SUM" ) {
+							m_sum_metrics.emplace_back( resourceName );
+						}
 
 						std::string metricName;
-						formatstr( metricName, "%sUsage", resourceName );
+						formatstr( metricName, "%sUsage", resourceName.c_str() );
 						m_job_update_attrs.emplace_back( metricName.c_str() );
 
 						// We could use metricType to determine if we need
 						// this attribute or the preceeding one, but for now
 						// don't bother.
-						formatstr( metricName, "%sAverageUsage", resourceName );
+						formatstr( metricName, "%sAverageUsage", resourceName.c_str() );
 						m_job_update_attrs.emplace_back( metricName.c_str() );
 
-						formatstr( metricName, "Recent%sUsage", resourceName );
+						formatstr( metricName, "Recent%sUsage", resourceName.c_str() );
 						m_job_update_attrs.emplace_back( metricName.c_str() );
 					}
 				}
@@ -2308,11 +2343,11 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 
 		std::string updateAdPath;
 		formatstr( updateAdPath, "%s/%s",
-			starter->GetWorkingDir(0), ".update.ad"
+			starter->GetWorkingDir(WD::OUTER), ".update.ad"
 		);
 		if (param_boolean("STARTER_NESTED_SCRATCH", true)) {
 			formatstr( updateAdPath, "%s/%s",
-				starter->GetWorkingDir(0), "../htcondor/.update.ad"
+				starter->GetWorkingDir(WD::OUTER), "../htcondor/.update.ad"
 			);
 		}
 		FILE * updateAdFile = NULL;
@@ -2331,6 +2366,79 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 				CopyAttribute( attrName, *ad, updateAd );
 				published = true;
 			}
+
+
+			for( const auto & resource : m_sum_metrics ) {
+				std::string resourceName = "Uptime" + resource + "Seconds";
+				std::string timestampName = "LastUpdateUptime" + resource + "Seconds";
+
+				double value;
+				time_t timestamp;
+				if( updateAd.LookupFloat( resourceName, value )
+				    &&
+				    updateAd.LookupInteger( timestampName, timestamp )
+				) {
+					auto & av = AverageUsageByResource[resource];
+
+					if(! av.firstUpdateValueInitialized) {
+						av.firstUpdateValue = value;
+						av.firstUpdateValueInitialized = true;
+					}
+
+					if(! av.firstUpdateTimestampInitialized) {
+						av.firstUpdateTimestamp = timestamp;
+						av.firstUpdateTimestampInitialized = true;
+					}
+
+					double usage = value - av.firstUpdateValue;
+					time_t interval = timestamp - av.firstUpdateTimestamp;
+					if( interval != 0 ) {
+						double average = usage / interval;
+
+						std::string averageUsageName = resource + "AverageUsage";
+						ad->InsertAttr( averageUsageName, average );
+
+						std::string upsau = "Uptime" + resource + "SecondsAverageUsage";
+						ad->InsertAttr( upsau, average );
+					}
+				}
+			}
+
+
+/*
+			//
+			// Pure special-case code: if we're sent `UptimeGPUsSeconds` and
+			// `LastUpdateUptimeGPUsSeconds`, either store both as the initial
+			// values for this job (if we haven't yet) or compute a new
+			// `UptimeGPUsSecondsAverageUsage` value and publish it.
+			//
+			double UptimeGPUsSeconds;
+			time_t LastUpdateUptimeGPUsSeconds;
+
+			if( updateAd.LookupFloat( "UptimeGPUsSeconds", UptimeGPUsSeconds )
+			    &&
+			    updateAd.LookupInteger( "LastUpdateUptimeGPUsSeconds", LastUpdateUptimeGPUsSeconds )
+			) {
+				if(! initializedFirstUptimeGPUsSecondsValue) {
+					firstUptimeGPUsSecondsValue = UptimeGPUsSeconds;
+					initializedFirstUptimeGPUsSecondsValue = true;
+				}
+				if(! initializedFirstUptimeGPUsSecondsTimestamp) {
+					firstUptimeGPUsSecondsTimestamp = LastUpdateUptimeGPUsSeconds;
+					initializedFirstUptimeGPUsSecondsTimestamp = true;
+				}
+
+				double usage = UptimeGPUsSeconds - firstUptimeGPUsSecondsValue;
+				time_t interval = LastUpdateUptimeGPUsSeconds - firstUptimeGPUsSecondsTimestamp;
+				if( interval != 0 ) {
+					double average = usage / interval;
+					// This is the internally-correct name.
+					ad->InsertAttr( "UptimeGPUsSecondsAverageUsage", average );
+					// This is the one that people actually care about.
+					ad->InsertAttr( "GPUsAverageUsage", average );
+				}
+			}
+*/
 		} else {
 			dprintf( D_ALWAYS, "Failed to open '%s' to read update ad: %s (%d).\n",
 				updateAdPath.c_str(), strerror(errno), errno );
@@ -2356,14 +2464,15 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 	// way the ATTR_DISK_USAGE will be updated, and we won't end
 	// up on a machine without enough local disk space.
 	if ( filetrans ) {
-		auto [execsz, file_count] = starter->GetDiskUsage();
+		auto [execsz, file_count] = starter->GetDiskUsage(false);
+		dprintf( D_TEST, "sizeOnDisk = %ld (publishUpdateAd())\n", (execsz+1023) / 1024 );
 		ad->Assign(ATTR_DISK_USAGE, (execsz+1023) / 1024);
 		ad->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, file_count);
 
 		// Let's also send the stdout/stderr mtime, as a way for
 		// users to guess if their jobs are hung
 		struct stat buf;
-		const char* scratch_dir_ptr = starter->GetWorkingDir(0);
+		const char* scratch_dir_ptr = starter->GetWorkingDir(WD::OUTER);
 		if (scratch_dir_ptr) {
 			TemporaryPrivSentry p( PRIV_USER );
 
@@ -2683,14 +2792,29 @@ JICShadow::beginInputTransfer( void )
 		}
 
 		std::string job_ad_path, machine_ad_path;
-		formatstr(job_ad_path, "%s%c%s", starter->GetWorkingDir(0),
+		formatstr(job_ad_path, "%s%c%s", starter->GetWorkingDir(WD::OUTER),
 			DIR_DELIM_CHAR,
 			JOB_AD_FILENAME);
-		formatstr(machine_ad_path, "%s%c%s", starter->GetWorkingDir(0),
+		formatstr(machine_ad_path, "%s%c%s", starter->GetWorkingDir(WD::OUTER),
 			DIR_DELIM_CHAR,
 			MACHINE_AD_FILENAME);
 		filetrans->setRuntimeAds(job_ad_path, machine_ad_path);
 		dprintf(D_ALWAYS, "Set filetransfer runtime ads to %s and %s.\n", job_ad_path.c_str(), machine_ad_path.c_str());
+
+			// check knob for disabling user supplied transfer plugins
+			// it has 3 states, false = Allow, true = Fail, 2 = Ignore
+		int disable_plugins = FileTransfer::UserPluginDisableMode::Allow;
+		if (param_integer("STARTER_DISABLE_USER_SUPPLIED_TRANSFER_PLUGINS", disable_plugins,
+			/*use_default*/ true, (int)FileTransfer::UserPluginDisableMode::Allow,
+			/*validate_range*/false, INT_MIN, INT_MAX, mach_ad, job_ad, false))
+		{
+			if (disable_plugins <= 0) { disable_plugins = FileTransfer::UserPluginDisableMode::Allow; }
+			else if (disable_plugins != FileTransfer::UserPluginDisableMode::Ignore) {
+				disable_plugins = FileTransfer::UserPluginDisableMode::Fail;
+			}
+			m_ft_user_plugin_disable = (FileTransfer::UserPluginDisableMode)disable_plugins;
+		}
+		filetrans->setDisableUserSuppliedTransferPlugins(m_ft_user_plugin_disable);
 
 			// In the starter, we never want to use
 			// SpooledOutputFiles, because we are not reading the
@@ -2741,7 +2865,7 @@ JICShadow::beginInputTransfer( void )
 	else if ( wants_x509_proxy ) {
 		
 			// Get scratch directory path
-		const char* scratch_dir = starter->GetWorkingDir(0);
+		const char* scratch_dir = starter->GetWorkingDir(WD::OUTER);
 
 			// Get source path to proxy file on the submit machine
 		std::string proxy_source_path;
@@ -2889,7 +3013,7 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 		int checkpointNumber = -1;
 		std::string manifestFileName;
 		const char * currentFile = nullptr;
-		// Should this be starter->getWorkingDir(false)?
+		// Should this be starter->getWorkingDir(WD::OUTER)?
 		Directory sandboxDirectory( "." );
 		while( (currentFile = sandboxDirectory.Next()) ) {
 			checkpointNumber = manifest::getNumberFromFileName( currentFile );
@@ -2976,7 +3100,7 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 		TemporaryPrivSentry _(PRIV_USER);
 
 		std::string cmd_basename = condor_basename(cmd.c_str());
-		std::string cmd_in_scratch_dir = std::string(starter->GetWorkingDir(false)) + 
+		std::string cmd_in_scratch_dir = std::string(starter->GetWorkingDir(WD::OUTER)) + 
 			DIR_DELIM_CHAR	 + cmd_basename;
 		if (chmod(cmd_in_scratch_dir.c_str(), 0755) == -1) {
 			if (errno != ENOENT) {
@@ -3194,19 +3318,21 @@ JICShadow::initIOProxy( void )
 		condor_sockaddr *bindTo = NULL;
 
 		condor_sockaddr dockerInterface;
-		condor_sockaddr dockerInterfaceV6;   // not used;
-		condor_sockaddr dockerInterfaceBest; // also not used;
-		std::string docker_network_name;
-		param(docker_network_name, "DOCKER_NETWORK_NAME", "docker0");
-		network_interface_to_sockaddr("DOCKER_NETWORK_NAME", docker_network_name.c_str(), dockerInterface, dockerInterfaceV6, dockerInterfaceBest);
-
 		bool wantDocker = false;
 		job_ad->LookupBool(ATTR_WANT_DOCKER, wantDocker);
 		std::string dockerImage;
 		job_ad->LookupString(ATTR_DOCKER_IMAGE, dockerImage);
 		bool hasDockerImage = ! dockerImage.empty();
 		if (wantDocker || hasDockerImage) {
-			bindTo = &dockerInterface;
+			condor_sockaddr dockerInterfaceV6;   // not used;
+			condor_sockaddr dockerInterfaceBest; // also not used;
+			std::string docker_network_name;
+			param(docker_network_name, "DOCKER_NETWORK_NAME", "docker0");
+			if (network_interface_to_sockaddr("DOCKER_NETWORK_NAME", docker_network_name.c_str(), dockerInterface, dockerInterfaceV6, dockerInterfaceBest)) {
+				bindTo = &dockerInterface;
+			} else {
+				dprintf(D_ERROR, "Failed to find Docker network '%s' for IO Proxy.\n", docker_network_name.c_str());
+			}
 		}
 
 		formatstr( io_proxy_config_file, "%s%c%s" ,
@@ -3445,7 +3571,7 @@ JICShadow::refreshSandboxCredentialsKRB()
 	//
 	// securely copy the cc to sandbox.
 	//
-	sandboxccfilename = dircat(starter->GetWorkingDir(0), user, ".cc", sandboxccfile);
+	sandboxccfilename = dircat(starter->GetWorkingDir(WD::OUTER), user, ".cc", sandboxccfile);
 
 	// as user, write tmp file securely
 	priv = set_user_priv();
@@ -3530,7 +3656,7 @@ JICShadow::refreshSandboxCredentialsOAuth()
 
 	// setup .condor_creds directory in sandbox (may already exist).
 	std::string sandbox_dir_name;
-	dircat(starter->GetWorkingDir(0), ".condor_creds", sandbox_dir_name);
+	dircat(starter->GetWorkingDir(WD::OUTER), ".condor_creds", sandbox_dir_name);
 
 	ShadowCredDirCreator creds(*job_ad, sandbox_dir_name);
 	CondorError err;
@@ -3786,9 +3912,9 @@ JICShadow::recordSandboxContents( const char * filename, bool add_to_output ) {
 	// copying from OpenManifestFile(), let's do everything right.
 	std::string errMsg;
 	TmpDir tmpDir;
-	if (!tmpDir.Cd2TmpDir(starter->GetWorkingDir(0),errMsg)) {
+	if (!tmpDir.Cd2TmpDir(starter->GetWorkingDir(WD::OUTER),errMsg)) {
 		dprintf( D_ERROR, "OpenManifestFile(%s): failed to cd to job sandbox %s\n",
-			filename, starter->GetWorkingDir(0));
+			filename, starter->GetWorkingDir(WD::OUTER));
 		fclose(file);
 		return;
 	}
@@ -3921,7 +4047,7 @@ JICShadow::colorSlot( const ClassAd & colorAd, ClassAd & replyAd ) {
 
 	m_job_startd_update_sock->encode();
 	if(! m_job_startd_update_sock->put((int)STARTER_COMMAND::COLOR)) {
-		dprintf( D_ALWAYS, "colorSlot(): Failed to put(STARTER_COMMAND_COLOR)\n" );
+		dprintf( D_ALWAYS, "colorSlot(): Failed to put(STARTER_COMMAND::COLOR)\n" );
 		return false;
 	}
 	if(! putClassAd(m_job_startd_update_sock, colorAd)) {
@@ -3941,6 +4067,40 @@ JICShadow::colorSlot( const ClassAd & colorAd, ClassAd & replyAd ) {
 	}
 	if(! m_job_startd_update_sock->end_of_message()) {
 		dprintf( D_ALWAYS, "colorSlot(): Failed to end message.\n" );
+		return false;
+	}
+
+	return true;
+}
+
+
+// This should share an impl with colorCatalog(), obviously.
+bool
+JICShadow::announceCatalog( const ClassAd & catalogAd, ClassAd & replyAd ) {
+	if(! m_job_startd_update_sock) { return false; }
+
+	m_job_startd_update_sock->encode();
+	if(! m_job_startd_update_sock->put((int)STARTER_COMMAND::ANNOUNCE_CATALOG)) {
+		dprintf( D_ALWAYS, "announceCatalog(): Failed to put(STARTER_COMMAND::ANNOUNCE_CATALOG)\n" );
+		return false;
+	}
+	if(! putClassAd(m_job_startd_update_sock, catalogAd)) {
+		dprintf( D_ALWAYS, "announceCatalog(): Failed to put(catalogAd)\n" );
+		return false;
+	}
+	if(! m_job_startd_update_sock->end_of_message()) {
+		dprintf( D_ALWAYS, "announceCatalog(): Failed to end message.\n" );
+		return false;
+	}
+
+
+	m_job_startd_update_sock->decode();
+	if(! getClassAd(m_job_startd_update_sock, replyAd)) {
+		dprintf( D_ALWAYS, "announceCatalog(): Failed to get(replyAd)\n" );
+		return false;
+	}
+	if(! m_job_startd_update_sock->end_of_message()) {
+		dprintf( D_ALWAYS, "announceCatalog(): Failed to end message.\n" );
 		return false;
 	}
 

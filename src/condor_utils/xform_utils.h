@@ -48,6 +48,7 @@ public:
 //
 #define XFORM_UTILS_LOG_ERRORS      0x0001  // Log errors to stderr or dprintf
 #define XFORM_UTILS_LOG_STEPS       0x0002  // Log errors to stdout or dprintf
+#define XFORM_UTILS_LOG_MACRO_ERRS  0x0004  // Log errors in the macro set to sterr or dprintf (these are $func errors)
 #define XFORM_UTILS_LOG_TO_DPRINTF  0xFF00  // Dprintf category, if 0 log to stdout/stderr
 int TransformClassAd (
 	ClassAd * input_ad,           // the ad to be transformed

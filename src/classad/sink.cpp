@@ -429,13 +429,9 @@ UnparseAux(string &buffer, Operation::OpKind op, ExprTree *t1, ExprTree *t2,
 		// case 2: check for ternary op
 	if( op==Operation::TERNARY_OP ) {
 		Unparse( buffer, t1 );
-		if (t2) {
-			buffer += " ? ";
-			Unparse( buffer, t2 );
-			buffer += " : ";
-		} else {
-			buffer += " ?: ";
-		}
+		buffer += " ? ";
+		Unparse( buffer, t2 );
+		buffer += " : ";
 		Unparse( buffer, t3 );
 		return;
 	}
@@ -682,9 +678,7 @@ UnparseAux(string &buffer,Operation::OpKind op,ExprTree *op1,ExprTree *op2,
 	if( op==Operation::TERNARY_OP ) {
 		Unparse( buffer, op1 );
 		buffer += " ? ";
-		if (op2) {
-			Unparse( buffer, op2 );
-		}
+		Unparse( buffer, op2 );
 		buffer += " : ";
 		Unparse( buffer, op3 );
 		return;

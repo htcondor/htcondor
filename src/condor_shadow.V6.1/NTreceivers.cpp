@@ -32,9 +32,15 @@
 #include "condor_holdcodes.h"
 #include "shortfile.h"
 #include "my_popen.h"
+#include "store_cred.h"
 
 #include <optional>
 #include "guidance.h"
+
+// Maximum buffer size for remote syscall allocations (256 MB).
+// Any network-received size exceeding this is rejected to prevent
+// denial-of-service via memory exhaustion or integer overflow.
+static const size_t MAX_REMOTE_BUF_SIZE = 256 * 1024 * 1024;
 
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
@@ -159,9 +165,9 @@ static const char * shadow_syscall_name(int condor_sysnum)
 
 // If we fail to send a reply to the starter, assume the socket is borked.
 // Close it and go into reconnect mode.
-#define ON_ERROR_RETURN(x) if ((x) == 0) {dprintf(D_ERROR, "(%s:%d)  Can no longer talk to starter.\n", __FILE__, __LINE__); thisRemoteResource->disconnectClaimSock("Can no longer talk to condor_starter");return 0;}
+#define ON_ERROR_RETURN(x) if ((x) == 0) {dprintf(D_ERROR, "(%s:%d)  Can no longer talk to starter.\n", __FILE__, __LINE__); thisRemoteResource->disconnectClaimSock("Can no longer talk to condor_starter");return RemoteSyscallResult::UnexpectedClose;}
 
-int
+RemoteSyscallResult
 do_REMOTE_syscall()
 {
 	int condor_sysnum;
@@ -187,7 +193,7 @@ do_REMOTE_syscall()
 		if ( thisRemoteResource->wasClaimDeactivated() ||
 		     thisRemoteResource->gotJobDone() ) {
 			thisRemoteResource->closeClaimSock();
-			return -1;
+			return RemoteSyscallResult::ExpectedClose;
 		}
 
 		/* Tell the RemoteResource to close the socket and either
@@ -195,7 +201,7 @@ do_REMOTE_syscall()
 		 */
 		thisRemoteResource->disconnectClaimSock("Can no longer talk to condor_starter");
 
-		return 0;
+		return RemoteSyscallResult::UnexpectedClose;
 	}
 
 	dprintf(D_SYSCALLS,
@@ -226,7 +232,7 @@ do_REMOTE_syscall()
 		}
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 
 	case CONDOR_register_job_info:
@@ -251,7 +257,7 @@ do_REMOTE_syscall()
 		}
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 
 	case CONDOR_get_job_info:
@@ -282,7 +288,7 @@ do_REMOTE_syscall()
 		if ( delete_ad ) {
 			delete ad;
 		}
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 
 
@@ -310,7 +316,7 @@ do_REMOTE_syscall()
 		}
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 
 
@@ -348,7 +354,7 @@ do_REMOTE_syscall()
 			// could send a reply. Just close our end of the conneciton.
 			thisRemoteResource->closeClaimSock();
 		}
-		return -1;
+		return RemoteSyscallResult::ExpectedClose;
 	}
 
 	case CONDOR_job_termination:
@@ -373,7 +379,7 @@ do_REMOTE_syscall()
 		}
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 
 	case CONDOR_begin_execution:
@@ -395,7 +401,7 @@ do_REMOTE_syscall()
 		}
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 
 	case CONDOR_open:
@@ -446,7 +452,7 @@ do_REMOTE_syscall()
 		free( (char *)path );
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 
 	case CONDOR_close:
@@ -471,7 +477,7 @@ do_REMOTE_syscall()
 		}
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 	case CONDOR_read:
 	  {
@@ -483,9 +489,24 @@ do_REMOTE_syscall()
 		result = ( syscall_sock->code(len) );
 		ASSERT( result );
 		dprintf( D_SYSCALLS, "  len = %ld\n", (long)len );
-		buf = (void *)malloc( (unsigned)len );
+		if (len == 0 || len > MAX_REMOTE_BUF_SIZE) {
+			dprintf(D_ALWAYS, "CONDOR_read: invalid len %ld\n", (long)len);
+			result = ( syscall_sock->end_of_message() );
+			ASSERT( result );
+			rval = -1;
+			terrno = (condor_errno_t)EINVAL;
+			syscall_sock->encode();
+			result = ( syscall_sock->code(rval) );
+			ASSERT( result );
+			result = ( syscall_sock->code(terrno) );
+			ASSERT( result );
+			result = ( syscall_sock->end_of_message() );
+			ON_ERROR_RETURN( result );
+			return RemoteSyscallResult::SyscallOK;
+		}
+		buf = (void *)malloc( len );
 		ASSERT( buf );
-		memset( buf, 0, (unsigned)len );
+		memset( buf, 0, len );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 
@@ -508,7 +529,7 @@ do_REMOTE_syscall()
 		free( buf );
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 
 	case CONDOR_write:
@@ -521,9 +542,24 @@ do_REMOTE_syscall()
 		result = ( syscall_sock->code(len) );
 		ASSERT( result );
 		dprintf( D_SYSCALLS, "  len = %ld\n", (long)len );
-		buf = (void *)malloc( (unsigned)len );
+		if (len == 0 || len > MAX_REMOTE_BUF_SIZE) {
+			dprintf(D_ALWAYS, "CONDOR_write: invalid len %ld\n", (long)len);
+			// Discard the untouched payload so the socket stays usable.
+			syscall_sock->end_of_message();
+			rval = -1;
+			terrno = (condor_errno_t)EINVAL;
+			syscall_sock->encode();
+			result = ( syscall_sock->code(rval) );
+			ASSERT( result );
+			result = ( syscall_sock->code(terrno) );
+			ASSERT( result );
+			result = ( syscall_sock->end_of_message() );
+			ON_ERROR_RETURN( result );
+			return RemoteSyscallResult::SyscallOK;
+		}
+		buf = (void *)malloc( len );
 		ASSERT( buf );
-		memset( buf, 0, (unsigned)len );
+		memset( buf, 0, len );
 		result = ( syscall_sock->code_bytes_bool(buf, len) );
 		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
@@ -544,7 +580,7 @@ do_REMOTE_syscall()
 		free( buf );
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 
 	case CONDOR_lseek:
@@ -578,7 +614,7 @@ do_REMOTE_syscall()
 		}
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 
 	case CONDOR_unlink:
@@ -611,7 +647,7 @@ do_REMOTE_syscall()
 		free( (char *)path );
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 
 	case CONDOR_rename:
@@ -652,7 +688,7 @@ do_REMOTE_syscall()
 		free( (char *)from );
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 
 	case CONDOR_mkdir:
@@ -687,7 +723,7 @@ do_REMOTE_syscall()
 		free( (char *)path );
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 
 	case CONDOR_rmdir:
@@ -719,7 +755,7 @@ do_REMOTE_syscall()
 		free( path );
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 
 	case CONDOR_fsync:
@@ -744,22 +780,20 @@ do_REMOTE_syscall()
 		}
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 
 	case CONDOR_get_file_info_new:
 	  {
-		char *  logical_name;
-		char *  actual_url;
+		// This call used to perform an optional transformation of the
+		// given pathname. Now, we just echo back the given value.
+		std::string logical_name;
  
-		actual_url = NULL;
-		logical_name = NULL;
 		ASSERT( syscall_sock->code(logical_name) );
 		ASSERT( syscall_sock->end_of_message() );;
  
-		errno = (condor_errno_t)0;
-		rval = pseudo_get_file_info_new( logical_name , actual_url );
-		terrno = (condor_errno_t)errno;
+		rval = 0;
+		terrno = (condor_errno_t)0;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno );
  
 		syscall_sock->encode();
@@ -768,12 +802,10 @@ do_REMOTE_syscall()
 			ASSERT( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			ASSERT( syscall_sock->code(actual_url) );
+			ASSERT( syscall_sock->code(logical_name) );
 		}
-		free( (char *)actual_url );
-		free( (char *)logical_name );
 		ON_ERROR_RETURN( syscall_sock->end_of_message() );;
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 
 	case CONDOR_ulog:
@@ -790,7 +822,7 @@ do_REMOTE_syscall()
 
 		//NOTE: caller does not expect a response.
 
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 
 	case CONDOR_get_job_attr:
@@ -821,7 +853,7 @@ do_REMOTE_syscall()
 		}
 		free( (char *)attrname );
 		ON_ERROR_RETURN( syscall_sock->end_of_message() );;
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 
 	case CONDOR_set_job_attr:
@@ -851,7 +883,7 @@ do_REMOTE_syscall()
 		free( (char *)expr );
 		free( (char *)attrname );
 		ON_ERROR_RETURN( syscall_sock->end_of_message() );;
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 
 	case CONDOR_constrain:
@@ -878,7 +910,7 @@ do_REMOTE_syscall()
 		}
 		free( (char *)expr );
 		ON_ERROR_RETURN( syscall_sock->end_of_message() );;
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 	case CONDOR_get_sec_session_info:
 	{
@@ -932,7 +964,7 @@ do_REMOTE_syscall()
 		if( !socket_default_crypto ) {
 			syscall_sock->set_crypto_mode( false );  // restore default
 		}
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 #ifdef WIN32
 #else
@@ -949,8 +981,23 @@ do_REMOTE_syscall()
 		result = ( syscall_sock->code(offset) );
 		ASSERT( result );
 		dprintf( D_SYSCALLS, "  offset = %ld\n", (long)offset );
-		buf = (void *)malloc( (unsigned)len );
-		memset( buf, 0, (unsigned)len );
+		if (len == 0 || len > MAX_REMOTE_BUF_SIZE) {
+			dprintf(D_ALWAYS, "CONDOR_pread: invalid len %ld\n", (long)len);
+			result = ( syscall_sock->end_of_message() );
+			ASSERT( result );
+			rval = -1;
+			terrno = (condor_errno_t)EINVAL;
+			syscall_sock->encode();
+			result = ( syscall_sock->code(rval) );
+			ASSERT( result );
+			result = ( syscall_sock->code(terrno) );
+			ASSERT( result );
+			result = ( syscall_sock->end_of_message() );
+			ON_ERROR_RETURN( result );
+			return RemoteSyscallResult::SyscallOK;
+		}
+		buf = (void *)malloc( len );
+		memset( buf, 0, len );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 
@@ -973,7 +1020,7 @@ do_REMOTE_syscall()
 		free( buf );
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 	case CONDOR_pwrite:
 	  {
@@ -988,8 +1035,23 @@ do_REMOTE_syscall()
 		result = ( syscall_sock->code(offset) );
 		ASSERT( result );
 		dprintf( D_SYSCALLS, "  offset = %ld\n", (long)offset);
-		buf = malloc( (unsigned)len );
-		memset( buf, 0, (unsigned)len );
+		if (len == 0 || len > MAX_REMOTE_BUF_SIZE) {
+			dprintf(D_ALWAYS, "CONDOR_pwrite: invalid len %ld\n", (long)len);
+			// Discard the untouched payload so the socket stays usable.
+			syscall_sock->end_of_message();
+			rval = -1;
+			terrno = (condor_errno_t)EINVAL;
+			syscall_sock->encode();
+			result = ( syscall_sock->code(rval) );
+			ASSERT( result );
+			result = ( syscall_sock->code(terrno) );
+			ASSERT( result );
+			result = ( syscall_sock->end_of_message() );
+			ON_ERROR_RETURN( result );
+			return RemoteSyscallResult::SyscallOK;
+		}
+		buf = malloc( len );
+		memset( buf, 0, len );
 		result = ( syscall_sock->code_bytes_bool(buf, len) );
 		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
@@ -1010,7 +1072,7 @@ do_REMOTE_syscall()
 		free( buf );
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 	case CONDOR_sread:
 	  {
@@ -1031,8 +1093,23 @@ do_REMOTE_syscall()
 		result = ( syscall_sock->code(stride_skip) );
 		ASSERT( result );
 		dprintf( D_SYSCALLS, "  stride_skip = %ld\n", (long)stride_skip);
-		buf = (void *)malloc( (unsigned)len );
-		memset( buf, 0, (unsigned)len );
+		if (len == 0 || len > MAX_REMOTE_BUF_SIZE || stride_length > MAX_REMOTE_BUF_SIZE) {
+			dprintf(D_ALWAYS, "CONDOR_sread: invalid len %ld or stride_length %ld\n", (long)len, (long)stride_length);
+			result = ( syscall_sock->end_of_message() );
+			ASSERT( result );
+			rval = -1;
+			terrno = (condor_errno_t)EINVAL;
+			syscall_sock->encode();
+			result = ( syscall_sock->code(rval) );
+			ASSERT( result );
+			result = ( syscall_sock->code(terrno) );
+			ASSERT( result );
+			result = ( syscall_sock->end_of_message() );
+			ON_ERROR_RETURN( result );
+			return RemoteSyscallResult::SyscallOK;
+		}
+		buf = (void *)malloc( len );
+		memset( buf, 0, len );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 
@@ -1066,7 +1143,7 @@ do_REMOTE_syscall()
 			ASSERT( result );
 		}
 		else {
-			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", total, terrno );
+			dprintf( D_SYSCALLS, "\trval = %u, errno = %d\n", total, terrno );
 			result = ( syscall_sock->code(total) );
 			ASSERT( result );
 			dprintf( D_ALWAYS, "buffer: %s\n", buffer);
@@ -1076,7 +1153,7 @@ do_REMOTE_syscall()
 		free( buf );
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 	case CONDOR_swrite:
 	  {
@@ -1097,8 +1174,23 @@ do_REMOTE_syscall()
 		result = ( syscall_sock->code(stride_skip) );
 		ASSERT( result );
 		dprintf( D_SYSCALLS, "  stride_skip = %ld\n", (long)stride_skip);
-		buf = (void *)malloc( (unsigned)len );
-		memset( buf, 0, (unsigned)len );
+		if (len == 0 || len > MAX_REMOTE_BUF_SIZE || stride_length > MAX_REMOTE_BUF_SIZE) {
+			dprintf(D_ALWAYS, "CONDOR_swrite: invalid len %ld or stride_length %ld\n", (long)len, (long)stride_length);
+			// Discard the untouched payload so the socket stays usable.
+			syscall_sock->end_of_message();
+			rval = -1;
+			terrno = (condor_errno_t)EINVAL;
+			syscall_sock->encode();
+			result = ( syscall_sock->code(rval) );
+			ASSERT( result );
+			result = ( syscall_sock->code(terrno) );
+			ASSERT( result );
+			result = ( syscall_sock->end_of_message() );
+			ON_ERROR_RETURN( result );
+			return RemoteSyscallResult::SyscallOK;
+		}
+		buf = (void *)malloc( len );
+		memset( buf, 0, len );
 		result = ( syscall_sock->code_bytes_bool(buf, len) );
 		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
@@ -1134,14 +1226,14 @@ do_REMOTE_syscall()
 			ASSERT( result );
 		}
 		else {
-			dprintf( D_SYSCALLS, "\trval = %d, errno = %d (%s)\n", total, terrno, strerror(errno));
+			dprintf( D_SYSCALLS, "\trval = %u, errno = %d (%s)\n", total, terrno, strerror(errno));
 			result = ( syscall_sock->code(total) );
 			ASSERT( result );
 		}
 		free( buf );
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 	case CONDOR_rmall:
 	{
@@ -1180,7 +1272,7 @@ do_REMOTE_syscall()
 		free( (char *)path );
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 #endif // ! WIN32
 case CONDOR_getfile:
@@ -1204,10 +1296,26 @@ case CONDOR_getfile:
 			struct stat info;
 			int rc = stat(path, &info);
 			if (rc >= 0) {
-				length = info.st_size;
-				buf = (void *)malloc( (unsigned)length );
+				if (info.st_size <= 0 || (uintmax_t)info.st_size > MAX_REMOTE_BUF_SIZE) {
+					dprintf(D_ALWAYS, "CONDOR_getfile: invalid file size %lld for %s\n",
+						(long long)info.st_size, path);
+					close(fd);
+					rval = -1;
+					terrno = (condor_errno_t)EFBIG;
+					syscall_sock->encode();
+					result = ( syscall_sock->code(rval) );
+					ASSERT( result );
+					result = ( syscall_sock->code(terrno) );
+					ASSERT( result );
+					free( (char *)path );
+					result = ( syscall_sock->end_of_message() );
+					ON_ERROR_RETURN( result );
+					return RemoteSyscallResult::SyscallOK;
+				}
+				length = (int)info.st_size;
+				buf = (void *)malloc( length );
 				ASSERT( buf );
-				memset( buf, 0, (unsigned)length );
+				memset( buf, 0, length );
 
 				errno = 0;
 				rval = read( fd , buf , length);
@@ -1238,7 +1346,7 @@ case CONDOR_getfile:
 		close(fd);
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 case CONDOR_putfile:
 	{
@@ -1253,7 +1361,26 @@ case CONDOR_putfile:
 		dprintf(D_SYSCALLS, "  length: %d\n", length);
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
-		
+
+		// Reject an oversized putfile before opening the file.  The
+		// client only sends the payload when the fd reply is >= 0, so
+		// returning an error here keeps the connection and socket
+		// state clean without having to drain a huge data block.
+		if ((size_t)length > MAX_REMOTE_BUF_SIZE) {
+			dprintf(D_ALWAYS, "CONDOR_putfile: length %d exceeds maximum\n", length);
+			fd = -1;
+			terrno = (condor_errno_t)EFBIG;
+			syscall_sock->encode();
+			result = ( syscall_sock->code(fd) );
+			ASSERT( result );
+			result = ( syscall_sock->code(terrno) );
+			ASSERT( result );
+			free((char*)path);
+			result = ( syscall_sock->end_of_message() );
+			ON_ERROR_RETURN( result );
+			return RemoteSyscallResult::SyscallOK;
+		}
+
 		if (write_access(path)) {
 			errno = 0;
 			fd = safe_open_wrapper_follow(path, O_CREAT | O_WRONLY | O_TRUNC | _O_BINARY, mode);
@@ -1274,20 +1401,26 @@ case CONDOR_putfile:
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		ON_ERROR_RETURN( result );
-		free((char*)path);
+		if (result == 0) {
+			free((char*)path);
+			if (fd >= 0) { close(fd); }
+			dprintf(D_ERROR, "(%s:%d)  Can no longer talk to starter.\n", __FILE__, __LINE__);
+			thisRemoteResource->disconnectClaimSock("Can no longer talk to condor_starter");
+			return RemoteSyscallResult::UnexpectedClose;
+		}
 
         if (length <= 0) {
+			free((char*)path);
 			if (fd >= 0) close(fd);
-			return 0;
+			return RemoteSyscallResult::SyscallOK;
 		}
-		
+
 		int num = -1;
 		if(fd >= 0) {
 			syscall_sock->decode();
-			buffer = (char*)malloc( (unsigned)length );
+			buffer = (char*)malloc( length );
 			ASSERT( buffer );
-			memset( buffer, 0, (unsigned)length );
+			memset( buffer, 0, length );
 			result = ( syscall_sock->code_bytes_bool(buffer, length) );
 			ASSERT( result );
 			result = ( syscall_sock->end_of_message() );
@@ -1297,8 +1430,8 @@ case CONDOR_putfile:
 		else {
 			dprintf(D_SYSCALLS, "Unable to put file %s\n", path);
 		}
-		close(fd);
-		
+		free((char*)path);
+		if (fd >= 0) { close(fd); }
 		syscall_sock->encode();
 		result = ( syscall_sock->code(num) );
 		ASSERT( result );
@@ -1309,7 +1442,7 @@ case CONDOR_putfile:
 		free((char*)buffer);
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 case CONDOR_getlongdir:
 	{
@@ -1369,7 +1502,7 @@ case CONDOR_getlongdir:
 		free((char*)path);
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 case CONDOR_getdir:
 	{
@@ -1414,7 +1547,7 @@ case CONDOR_getdir:
 		free((char*)path);
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 // Return something more useful?
 	case CONDOR_whoami:
@@ -1424,9 +1557,22 @@ case CONDOR_getdir:
 		dprintf( D_SYSCALLS, "  length = %d\n", length );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
-		
+
+		if (length <= 0 || length > 1024) {
+			dprintf(D_ALWAYS, "CONDOR_whoami: invalid length %d\n", length);
+			rval = -1;
+			terrno = (condor_errno_t)EINVAL;
+			syscall_sock->encode();
+			result = ( syscall_sock->code(rval) );
+			ASSERT( result );
+			result = ( syscall_sock->code(terrno) );
+			ASSERT( result );
+			result = ( syscall_sock->end_of_message() );
+			ON_ERROR_RETURN( result );
+			return RemoteSyscallResult::SyscallOK;
+		}
 		errno = 0;
-		buffer = (char*)malloc( (unsigned)length );
+		buffer = (char*)malloc( length );
 		ASSERT( buffer );
 		int size = 6;
 		if(length < size) {
@@ -1453,7 +1599,7 @@ case CONDOR_getdir:
 		free((char*)buffer);
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 // Return something more useful?
 	case CONDOR_whoareyou:
@@ -1469,8 +1615,22 @@ case CONDOR_getdir:
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 
+		if (length <= 0 || length > 1024) {
+			dprintf(D_ALWAYS, "CONDOR_whoareyou: invalid length %d\n", length);
+			free((char*)host);
+			rval = -1;
+			terrno = (condor_errno_t)EINVAL;
+			syscall_sock->encode();
+			result = ( syscall_sock->code(rval) );
+			ASSERT( result );
+			result = ( syscall_sock->code(terrno) );
+			ASSERT( result );
+			result = ( syscall_sock->end_of_message() );
+			ON_ERROR_RETURN( result );
+			return RemoteSyscallResult::SyscallOK;
+		}
 		errno = 0;
-		buffer = (char*)malloc( (unsigned)length );
+		buffer = (char*)malloc( length );
 		ASSERT( buffer );
 		int size = 7;
 		if(length < size) {
@@ -1498,7 +1658,7 @@ case CONDOR_getdir:
 		free((char*)host);
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 #ifdef WIN32
 #else
@@ -1537,7 +1697,7 @@ case CONDOR_getdir:
 		}
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;	
+		return RemoteSyscallResult::SyscallOK;	
 	}
 	case CONDOR_fchown:
 	{
@@ -1567,7 +1727,7 @@ case CONDOR_getdir:
 		}
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 	case CONDOR_fchmod:
 	{
@@ -1594,7 +1754,7 @@ case CONDOR_getdir:
 		}
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 	case CONDOR_ftruncate:
 	{
@@ -1621,7 +1781,7 @@ case CONDOR_getdir:
 		}
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 	
 	
@@ -1658,7 +1818,7 @@ case CONDOR_getdir:
 		free((char*)newpath);
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 	case CONDOR_symlink:
 	{
@@ -1689,7 +1849,7 @@ case CONDOR_getdir:
 		free((char*)newpath);
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 	case CONDOR_readlink:
 	{
@@ -1702,6 +1862,20 @@ case CONDOR_getdir:
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 
+		if (length <= 0 || length > PATH_MAX) {
+			dprintf(D_ALWAYS, "CONDOR_readlink: invalid length %d\n", length);
+			free(path);
+			rval = -1;
+			terrno = (condor_errno_t)EINVAL;
+			syscall_sock->encode();
+			result = ( syscall_sock->code(rval) );
+			ASSERT( result );
+			result = ( syscall_sock->code(terrno) );
+			ASSERT( result );
+			result = ( syscall_sock->end_of_message() );
+			ON_ERROR_RETURN( result );
+			return RemoteSyscallResult::SyscallOK;
+		}
 		char *lbuffer = (char*)malloc(length);
 		errno = 0;
 		rval = readlink(path, lbuffer, length);
@@ -1722,7 +1896,7 @@ case CONDOR_getdir:
 		free(path);
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 	case CONDOR_lstat:
 	{
@@ -1760,7 +1934,7 @@ case CONDOR_getdir:
 		free( (char*)path );
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 	case CONDOR_statfs:
 	{
@@ -1798,7 +1972,7 @@ case CONDOR_getdir:
 		free( (char*)path );
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 	case CONDOR_chown:
 	{
@@ -1829,7 +2003,7 @@ case CONDOR_getdir:
 		free( (char*)path );
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 	case CONDOR_lchown:
 	{
@@ -1860,7 +2034,7 @@ case CONDOR_getdir:
 		free( (char*)path );
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 	case CONDOR_truncate:
 	{
@@ -1896,7 +2070,7 @@ case CONDOR_getdir:
 		free( (char*)path );
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 #endif // ! WIN32
 
@@ -1935,7 +2109,7 @@ case CONDOR_getdir:
 		}
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;	
+		return RemoteSyscallResult::SyscallOK;	
 	}
 	case CONDOR_stat:
 	{
@@ -1973,7 +2147,7 @@ case CONDOR_getdir:
 		free( (char*)path );
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 	case CONDOR_access:
 	{
@@ -2003,7 +2177,7 @@ case CONDOR_getdir:
 		free( (char*)path );
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 	case CONDOR_chmod:
 	{
@@ -2031,7 +2205,7 @@ case CONDOR_getdir:
 		free( (char*)path );
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 	case CONDOR_utime:
 	{
@@ -2068,7 +2242,7 @@ case CONDOR_getdir:
 		free( (char*)path );
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 	case CONDOR_dprintf_stats:
 	{
@@ -2091,7 +2265,7 @@ case CONDOR_getdir:
 
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 	case CONDOR_getcreds:
 	{
@@ -2126,7 +2300,7 @@ case CONDOR_getdir:
 			result = ( syscall_sock->end_of_message() );
 			ASSERT( result );
 			Shadow->holdJob("Job credentials are not available", CONDOR_HOLD_CODE::CorruptedCredential, 0);
-			return -1;
+			return RemoteSyscallResult::ExpectedClose;
 		}
 		std::string cred_dir_name;
 		dircat(cred_dir, user.c_str(), cred_dir_name);
@@ -2155,9 +2329,22 @@ case CONDOR_getdir:
 		ad->LookupString(ATTR_OAUTH_SERVICES_NEEDED, services_needed);
 		dprintf( D_SECURITY, "CONDOR_getcreds: for job ID %i.%i sending OAuth creds from %s for services %s\n", cluster_id, proc_id, cred_dir_name.c_str(), services_needed.c_str());
 
+		bool allow_specials = param_boolean("CREDMON_ALLOW_SPECIAL_CHAR_NAMES", false);
 		bool had_error = false;
 		for (auto& curr: StringTokenIterator(services_needed)) {
 			std::string service_name = curr;
+
+			size_t idx = 0;
+			if (allow_specials) {
+				idx = service_name.find_first_of("/\\:");
+			} else {
+				idx = service_name.find_first_not_of(OAUTH_CRED_NAME_CHARS);
+			}
+			if (idx != std::string::npos) {
+				dprintf(D_ERROR, "Rejecting illegal OAUTH2 service name '%s'\n", service_name.c_str());
+				had_error = true;
+				break;
+			}
 
 			if (service_add_use) {
 				service_name += ".use";
@@ -2185,7 +2372,7 @@ case CONDOR_getdir:
 			const int verify_mode = trust_cred_dir ? 0 : SECURE_FILE_VERIFY_ALL;
 			bool rc = read_secure_file(fullname.c_str(), (void**)(&buf), &len, as_root, verify_mode);
 			if(!rc) {
-				dprintf( D_ALWAYS, "CONDOR_getcreds: ERROR reading contents of %s\n", fullname.c_str() );
+				dprintf(D_ERROR, "CONDOR_getcreds: ERROR reading contents of %s\n", fullname.c_str());
 				had_error = true;
 				break;
 			}
@@ -2221,8 +2408,10 @@ case CONDOR_getdir:
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
 
-		// return our success or failure
-		return last_command;
+		// If we held the job, signal the shadow to begin shutdown;
+		// otherwise this was a normal RPC.
+		return had_error ? RemoteSyscallResult::ExpectedClose
+		                 : RemoteSyscallResult::SyscallOK;
 	}
 
 	case CONDOR_get_delegated_proxy:
@@ -2268,7 +2457,14 @@ case CONDOR_getdir:
 		// End of message, cleanup and return
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		return put_x509_rc;
+		// put_x509_delegation() currently only returns 0 (success) or
+		// -1 (failure on flush or x509_send_delegation); a failure is
+		// a network problem, so drop into reconnect mode.
+		switch (put_x509_rc) {
+			case 0:  return RemoteSyscallResult::SyscallOK;
+			case -1: return RemoteSyscallResult::UnexpectedClose;
+		}
+		EXCEPT("put_x509_delegation() returned unexpected value %d", put_x509_rc);
 	}
 
 	case CONDOR_get_docker_creds:
@@ -2324,7 +2520,7 @@ case CONDOR_getdir:
 			result = syscall_sock->end_of_message();
 			ON_ERROR_RETURN( result );
 
-			return 0;
+			return RemoteSyscallResult::SyscallOK;
 		}
 		args.AppendArg(pat_cstr);
 		free(pat_cstr);
@@ -2370,7 +2566,7 @@ case CONDOR_getdir:
 			result = syscall_sock->end_of_message();
 			ON_ERROR_RETURN( result );
 
-			return 0;
+			return RemoteSyscallResult::SyscallOK;
 		}
 
 		// Somehow the producer exited 0, but didn't generate a valid classad
@@ -2383,7 +2579,7 @@ case CONDOR_getdir:
 			result = syscall_sock->end_of_message();
 			ON_ERROR_RETURN( result );
 
-			return 0;
+			return RemoteSyscallResult::SyscallOK;
 		}
 
 		// The happy path -- send the result back
@@ -2394,7 +2590,7 @@ case CONDOR_getdir:
 		result = syscall_sock->end_of_message();
 		ON_ERROR_RETURN( result );
 #endif
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 
 	case CONDOR_event_notification:
@@ -2416,7 +2612,7 @@ case CONDOR_getdir:
 		result = syscall_sock->end_of_message();
 		ON_ERROR_RETURN( result );
 
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 
 	case CONDOR_request_guidance:
@@ -2433,6 +2629,13 @@ case CONDOR_getdir:
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
+		// Guidance may kill the starter; if the startd can't be reached,
+		// killStarter() disconnects and deletes the claim socket.
+		if( syscall_sock == nullptr ) {
+			dprintf( D_ALWAYS, "Claim socket closed while computing guidance, not replying.\n" );
+			return RemoteSyscallResult::UnexpectedClose;
+		}
+
 		syscall_sock->encode();
 		result = syscall_sock->code(rval);
 		ASSERT( result );
@@ -2441,7 +2644,7 @@ case CONDOR_getdir:
 		result = syscall_sock->end_of_message();
 		ON_ERROR_RETURN( result );
 
-	    return 0;
+	    return RemoteSyscallResult::SyscallOK;
 	}
 
 	default:
@@ -2449,11 +2652,11 @@ case CONDOR_getdir:
 		dprintf(D_ALWAYS, "ERROR: unknown syscall %d received\n", condor_sysnum );
 			// If we return failure, the shadow will shutdown, so
 			// pretend everything's cool...
-		return 0;
+		return RemoteSyscallResult::SyscallOK;
 	}
 
 	}	/* End of switch on system call number */
 
-	return -1;
+	return RemoteSyscallResult::ExpectedClose;
 
 }	/* End of do_REMOTE_syscall() procedure */

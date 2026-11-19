@@ -35,6 +35,8 @@
 
 #include <optional>
 #include "guidance.h"
+#include <utility>
+#include <string>
 #include "catalog_utils.h"
 
 /* Forward declaration to prevent loops... */
@@ -248,6 +250,17 @@ class BaseShadow : public Service
 	virtual void exitAfterEvictingJob( int reason ) { DC_Exit( reason ); }
 	virtual bool exitDelayed( int & /*reason*/ ) { return false; }
 
+		/** We're ending the current activation (putting the job on hold,
+			removing it, etc.), so bring CurrentWastedMemoryGBHours up to
+			date, and copy it to LastWastedMemoryGBHours, in case we exit
+			before the starter reports that the activation has ended.  If
+			the starter does report, the final values are measured until
+			then.  Call this before the job queue update for whatever is
+			ending the activation.  The default implementation does
+			nothing; shadows that support this override it.
+		*/
+	virtual void recordActivationEndingForWastedMemory() { }
+
 		/** The total number of bytes sent over the network on
 			behalf of this job.
 			Each shadow class should override this function and
@@ -424,15 +437,19 @@ class BaseShadow : public Service
 
 	virtual GuidanceResult pseudo_request_guidance( const ClassAd & request, ClassAd & guidance );
 
+	// Returns false iff there was an error computing an output parameters.
 	virtual std::optional<ListOfCatalogs> computeCommonInputFileCatalogs(
-		ClassAd * /* jobAd */
-	) { return {}; }
+		ClassAd * /* jobAd */,
+		std::map<std::string, std::string> * = NULL
+	) { return {ListOfCatalogs()}; }
 
+	// Return false iff there was an error computing an output parameter.
 	virtual bool computeCommonInputFiles(
 		ClassAd * /* jobAd */,
 		ListOfCatalogs & /* commonFileCatalogs */,
-		int & /* required_version */
-	) { return false; }
+		int & /* required_version */,
+		std::map<std::string, std::string> * = NULL
+	) { return true; }
 
 	virtual std::optional<ClassAd> getCommonTransferInfoStats() { return {}; }
 

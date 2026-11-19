@@ -25,6 +25,7 @@
 #include <limits>
 #include <regex>
 #include <set>
+#include <algorithm>
 
 #include "stl_string_utils.h"
 
@@ -622,17 +623,35 @@ matches_withwildcard_impl(const char* pattern, const char* str, bool anycase, bo
 			}
 		}
 		if ( matchend.size() && result == true) {
-			if (anycase) {
-				pos = strcasestr(&str[stringchars_consumed], matchend.c_str());
-			}
-			else {
-				pos = strstr(&str[stringchars_consumed], matchend.c_str());
-			}
-			if (!pos) {
-				result = false;
-			} else {
-				if (!prefix && pos[strlen(pos)] != '\0') {
+			const char *tail = &str[stringchars_consumed];
+			if (prefix) {
+				// In prefix mode a trailing asterisk is implied, so matchend
+				// may appear anywhere in the remaining string.
+				if (anycase) {
+					pos = strcasestr(tail, matchend.c_str());
+				} else {
+					pos = strstr(tail, matchend.c_str());
+				}
+				if (!pos) {
 					result = false;
+				}
+			} else {
+				// Otherwise matchend is anchored to the end: the remaining
+				// string must _end_ with matchend.
+				size_t tail_len = strlen(tail);
+				size_t matchend_len = matchend.size();
+				if (tail_len < matchend_len) {
+					result = false;
+				} else {
+					const char *suffix = tail + (tail_len - matchend_len);
+					if (anycase) {
+						temp = strcasecmp(suffix, matchend.c_str());
+					} else {
+						temp = strncmp(suffix, matchend.c_str(), matchend_len);
+					}
+					if (temp != MATCH) {
+						result = false;
+					}
 				}
 			}
 		}
@@ -640,19 +659,9 @@ matches_withwildcard_impl(const char* pattern, const char* str, bool anycase, bo
 	return result;
 }
 
-bool contains_withwildcard(const std::vector<std::string> &list, const char* str)
-{
-	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str, false, false);});
-}
-
 bool contains_withwildcard(const std::vector<std::string> &list, const std::string& str)
 {
 	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str.c_str(), false, false);});
-}
-
-bool contains_anycase_withwildcard(const std::vector<std::string> &list, const char* str)
-{
-	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str, true, false);});
 }
 
 bool contains_anycase_withwildcard(const std::vector<std::string> &list, const std::string& str)
@@ -660,19 +669,9 @@ bool contains_anycase_withwildcard(const std::vector<std::string> &list, const s
 	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str.c_str(), true, false);});
 }
 
-bool contains_prefix_withwildcard(const std::vector<std::string> &list, const char* str)
-{
-	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str, false, true);});
-}
-
 bool contains_prefix_withwildcard(const std::vector<std::string> &list, const std::string& str)
 {
 	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str.c_str(), false, true);});
-}
-
-bool contains_prefix_anycase_withwildcard(const std::vector<std::string> &list, const char* str)
-{
-	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str, true, true);});
 }
 
 bool contains_prefix_anycase_withwildcard(const std::vector<std::string> &list, const std::string& str)
@@ -840,5 +839,21 @@ const char * empty_if_null(const char * c_str) {
     }
 
     return c_str;
+}
+
+// malloc a buffer to hold a null terminated copy of data from a string_view
+// free the buffer like one you got from strdup().
+char * strviewdup(std::string_view sv) {
+	if (sv.empty()) {
+		return strdup("");
+	}
+	size_t len = sv.size();
+	if (sv.back()) len += 1; // add 1 to null terminate
+
+	char * str = (char*)malloc(len);
+	memcpy(str, sv.data(), sv.size());
+	str[len-1] = '\0'; // make sure of null term.
+
+	return str;
 }
 

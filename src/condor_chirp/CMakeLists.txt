@@ -26,7 +26,7 @@ endif()
 
 if (WINDOWS)
 	target_link_libraries(chirp_client ${CONDOR_WIN_LIBS})    
-endif(WINDOWS)
+endif()
 
 condor_exe( condor_chirp "condor_chirp.cpp;${SAFE_OPEN_SRC}" ${C_LIBEXEC}
 "chirp_client" OFF )
@@ -36,4 +36,4 @@ install ( FILES Chirp.jar DESTINATION ${C_LIB} )
 install ( FILES chirp_client.h DESTINATION ${C_INCLUDE})
 if (NOT WINDOWS)
     install (TARGETS chirp_client DESTINATION ${C_LIB})
-endif(NOT WINDOWS)
+endif()

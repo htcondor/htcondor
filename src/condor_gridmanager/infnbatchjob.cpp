@@ -1246,22 +1246,21 @@ void INFNBatchJob::SetRemoteJobId( const char *job_id )
 void INFNBatchJob::SetRemoteIds( const char *sandbox_id, const char *job_id )
 {
 	if ( sandbox_id != remoteSandboxId ) {
+		// strdup before free, in case sandbox_id aliases the old buffer
+		char *new_sandbox_id = sandbox_id ? strdup( sandbox_id ) : NULL;
 		free( remoteSandboxId );
-		if ( sandbox_id ) {
-			remoteSandboxId = strdup( sandbox_id );
-		} else {
-			remoteSandboxId = NULL;
-		}
+		remoteSandboxId = new_sandbox_id;
 	}
 
 	if ( job_id != remoteJobId ) {
-		free( remoteJobId );
+		// strdup before free, in case job_id aliases the old buffer
+		char *new_job_id = NULL;
 		if ( job_id ) {
 			ASSERT( remoteSandboxId );
-			remoteJobId = strdup( job_id );
-		} else {
-			remoteJobId = NULL;
+			new_job_id = strdup( job_id );
 		}
+		free( remoteJobId );
+		remoteJobId = new_job_id;
 	}
 
 	std::string full_job_id;
@@ -1347,6 +1346,18 @@ void INFNBatchJob::ProcessRemoteAd( ClassAd *remote_ad )
 		}
 	}
 
+	// Need to set ATTR_ON_EXIT_SIGNAL for a completed job. The blahp
+	// doesn't set it in the status update ad.
+	bool bool_value;
+	if (new_remote_state == COMPLETED && !jobAd->LookupBool(ATTR_ON_EXIT_SIGNAL, bool_value)) {
+		int value;
+		if (jobAd->LookupInteger(ATTR_ON_EXIT_SIGNAL, value)) {
+			jobAd->Assign(ATTR_ON_EXIT_BY_SIGNAL, true);
+		} else if (jobAd->LookupInteger(ATTR_ON_EXIT_CODE, value)) {
+			jobAd->Assign(ATTR_ON_EXIT_BY_SIGNAL, false);
+		}
+	}
+
 	requestScheddUpdate( this, false );
 
 	return;
@@ -1359,6 +1370,7 @@ BaseResource *INFNBatchJob::GetResource()
 
 ClassAd *INFNBatchJob::buildSubmitAd()
 {
+	bool xfer_exec = true;
 	std::string expr;
 	ClassAd *submit_ad;
 	ExprTree *next_expr;
@@ -1380,10 +1392,6 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		ATTR_JOB_IWD,
 		ATTR_GRID_RESOURCE,
 		ATTR_REQUEST_MEMORY,
-		"NodeNumber",
-		"HostNumber",
-		"SMPGranularity",
-		"WholeNodes",
 		"HostSMPSize",
 		ATTR_BATCH_EXTRA_SUBMIT_ARGS,
 		"StageCmd",
@@ -1482,6 +1490,51 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		submit_ad->Assign( "Queue", expr );
 	}
 
+	int cpu_count = 0;
+	int node_count = 0;
+	int request_cpus = 0;
+
+	// Treat RequestCpus>1 as a request for a single machine with the given
+	// number of cores (RequestCpus=1 is often a default not supplied by
+	// the user). The batch-specific attributes should override if they're
+	// present.
+	if (jobAd->LookupInteger(ATTR_REQUEST_CPUS, request_cpus) && request_cpus > 1) {
+		cpu_count = request_cpus;
+		node_count = 1;
+	}
+
+	// NodeNumber in the blahp job ad means total number of cpus
+	if (!jobAd->LookupInteger(ATTR_BATCH_CPU_COUNT, cpu_count)) {
+		jobAd->LookupInteger("NodeNumber", cpu_count);
+	}
+	if (cpu_count > 0) {
+		submit_ad->Assign("NodeNumber", cpu_count);
+	}
+
+	// HostNumber ion the blahp job ad means number of machines
+	if (!jobAd->LookupInteger(ATTR_BATCH_NODE_COUNT, node_count)) {
+		jobAd->LookupInteger("HostNumber", node_count);
+	}
+	if (node_count > 0) {
+		submit_ad->Assign("HostNumber", node_count);
+	}
+
+	int cpus_per_node = 0;
+	if (!jobAd->LookupInteger(ATTR_BATCH_CPUS_PER_NODE, cpus_per_node)) {
+		jobAd->LookupInteger("SMPGranularity", cpus_per_node);
+	}
+	if (cpus_per_node > 0) {
+		submit_ad->Assign("SMPGranularity", cpus_per_node);
+	}
+
+	bool whole_nodes = false;
+	if (!jobAd->LookupBool(ATTR_BATCH_WHOLE_NODES, whole_nodes)) {
+		jobAd->LookupBool("WholeNodes", whole_nodes);
+	}
+	if (whole_nodes) {
+		submit_ad->Assign("WholeNodes", whole_nodes);
+	}
+
 	int gpus = 0;
 	jobAd->LookupInteger(ATTR_REQUEST_GPUS, gpus);
 	if ( gpus > 0 ) {
@@ -1490,6 +1543,11 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 
 	GetJobExecutable( jobAd, expr );
 	submit_ad->Assign( ATTR_JOB_CMD, expr );
+
+	jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, xfer_exec );
+	if (xfer_exec == false) {
+		submit_ad->Assign("StageCmd", false);
+	}
 
 	// The blahp expects the proxy attribute to contain the full pathname
 	// of the proxy file.
@@ -1579,14 +1637,13 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		// Rewrite ad so that everything is relative to m_sandboxPath
 		std::string old_value;
 		std::string new_value;
-		bool xfer_exec = true;
 		bool xfer_stdin = true;
 		bool xfer_stdout = true;
 		bool xfer_stderr = true;
 
 		submit_ad->InsertAttr( ATTR_JOB_IWD, m_sandboxPath );
 
-		jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, xfer_exec );
+		// This was looked up earlier
 		if ( xfer_exec ) {
 			submit_ad->LookupString( ATTR_JOB_CMD, old_value );
 			formatstr( new_value, "%s/%s", m_sandboxPath.c_str(), condor_basename( old_value.c_str() ) );
@@ -1675,8 +1732,6 @@ ClassAd *INFNBatchJob::buildTransferAd()
 	//   ATTR_OWNER
 	//   ATTR_NT_DOMAIN
 	//   ATTR_ULOG_FILE
-	//   ATTR_CLUSTER_ID
-	//   ATTR_PROC_ID
 	//   ATTR_SPOOLED_OUTPUT_FILES
 	//   ATTR_STREAM_OUTPUT
 	//   ATTR_STREAM_ERROR

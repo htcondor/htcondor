@@ -23,7 +23,7 @@ import re
 master_doc = 'index'
 
 # Patterns/files to exclude from build source
-exclude_patterns = ['_build', 'extensions', 'utils', '.DS_Store']
+exclude_patterns = ['_build', 'extensions', 'utils', '.DS_Store', 'dev']
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -45,6 +45,7 @@ extensions = [
     'macro-def',
     'subcom',
     'subcom-def',
+    'docman',
     'dag-cmd-def',
     'dag-cmd',
     'index',
@@ -57,6 +58,8 @@ extensions = [
     'hidden',
     'flatten-history',
     'fake-definition',
+    'vacate_combined_table',
+    'generate_all_macros',
 ]
 
 # nbsphinx and mermaid collide, and mermaid won't load
@@ -80,9 +83,7 @@ html_theme = 'sphinx_rtd_theme'
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {
-    'display_version': False, # Note: This feature is gone in v3 of sphinx_rtd_theme (produces warning)
-}
+html_theme_options = {}
 
 # Enable Github edits
 html_context = {
@@ -537,8 +538,14 @@ class CondorDAGManLexer(lexer.RegexLexer):
             (r"^job", token.Keyword, "job"),
             (r"^submit-description", token.Keyword, "submit-description"),
             (r"^parent", token.Keyword, "parent"),
+            (
+                r"^(\[?)(weak)(\]?\s+)(parent)",
+                lexer.bygroups(token.Text, token.Keyword, token.Text, token.Keyword),
+                "parent",
+            ),
             (r"^script", token.Keyword, "script"),
             (r"^pre_skip", token.Keyword, "pre_skip"),
+            (r"^tolerance", token.Keyword, "tolerance"),
             (r"^retry", token.Keyword, "retry"),
             (r"^abort-dag-on", token.Keyword, "abort-dag-on"),
             (r"^vars", token.Keyword, "vars"),
@@ -594,6 +601,12 @@ class CondorDAGManLexer(lexer.RegexLexer):
             ),
         ] + DAGMAN_COMMON,
         "pre_skip": DAGMAN_COMMON,
+        "tolerance": [
+            (
+                r"([\s\[])(fail-fast|wait)([\s\]])",
+                lexer.bygroups(token.Text, token.Keyword, token.Text),
+            ),
+        ] + DAGMAN_COMMON,
         "retry": [
             (
                 r"([\s\[])(unless-exit)([\s\]])",
@@ -652,7 +665,7 @@ class CondorDAGManLexer(lexer.RegexLexer):
         ] + DAGMAN_COMMON,
         "node_status_file": [
             (
-                r"([\s\[])(always-update)([\s\]])",
+                r"([\s\[])(always-update|classad|json|compact)([\s\]])",
                 lexer.bygroups(token.Text, token.Keyword, token.Text),
             ),
         ] + DAGMAN_COMMON,
@@ -722,9 +735,14 @@ class CondorConfigLexer(lexer.RegexLexer):
                 "multi-line",
             ),
             (
-                r"([\$\(\)\w\.]+)( *)(=)( *)",
+                r"([\$\(\)\w\.]+)( *)(\+[,;|&*]{0,2}|)( *)(=)( *)",
                 lexer.bygroups(
-                    token.Name.Builtin, token.Text, token.Operator, token.Text,
+                    token.Name.Builtin,
+                    token.Text,
+                    token.Operator, # Plus-Equals syntax
+                    token.Text,
+                    token.Operator,
+                    token.Text,
                 ),
                 "value",
             ),

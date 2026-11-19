@@ -20,8 +20,14 @@
 #ifndef _HISTORYFILEFINDER_H_
 #define _HISTORYFILEFINDER_H_
 
+#include <ctime>
 #include <vector>
 #include <string>
+
+// Returns true if fullFilename is a rotated backup of the history file named
+// history_base (i.e. <history_base>.<ISO8601 local time>). If backup_time is
+// not NULL, it is set to the rotation time (or -1 if not a backup).
+extern bool isHistoryBackup(const char *fullFilename, time_t *backup_time, const char *history_base);
 
 // Find all of the history files that the schedd created, and put them
 // in order by time that they were created, so the current file is always last

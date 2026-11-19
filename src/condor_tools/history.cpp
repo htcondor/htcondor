@@ -42,11 +42,15 @@
 #include "condor_daemon_core.h" // for extractInheritedSocks
 #include "console-utils.h"
 #include <algorithm> //for std::reverse
+#include <charconv> // for std::from_chars
 #include <utility> // for std::move
+#include <map>
+#include <tuple>
 
 #include "classad_helpers.h"
 #include "history_utils.h"
-#include "backward_file_reader.h"
+#include "archive_reader.h"
+#include "librarian_client.h"
 #include <fcntl.h>  // for O_BINARY
 
 void Usage(const char* name, int iExitCode=1);
@@ -67,13 +71,18 @@ void Usage(const char* name, int iExitCode)
 		"\t-directory\t\tRead history data from per job epoch history directory"
 		"\t-name <schedd-name>\tRemote schedd to read from\n"
 		"\t-pool <collector-name>\tPool remote schedd lives in.\n"
-		"   If neither -file, -local, -userlog, or -name, is specified, then\n"
-		"   the SCHEDD configured by SCHEDD_HOST is queried.  If there\n"
-		"   is no configured SCHEDD (the default) the local history file(s) are read.\n"
+		"   If neither -file, -local, -userlog, nor -name is specified, then the\n"
+		"   schedd identified by SCHEDD_HOST or SCHEDD_NAME is located (as\n"
+		"   condor_q and condor_submit do).  If that schedd is on another host it\n"
+		"   is queried remotely; otherwise, or if no schedd can be located, the\n"
+		"   local history file(s) are read.\n"
 		"\n   and [restriction-list] is one or more of\n"
 		"\t<cluster>\t\tGet information about specific cluster\n"
 		"\t<cluster>.<proc>\tGet information about specific job\n"
 		"\t<owner>\t\t\tInformation about jobs owned by <owner>\n"
+		"\t-dagid <id>\t\tInformation about jobs whose DAGManJobId is <id>\n"
+		"\t-batchid <id>\t\tInformation about jobs whose JobBatchId is <id>\n"
+		"\t-batchname <name>\tInformation about jobs whose JobBatchName is <name>\n"
 		"\t-constraint <expr>\tInformation about jobs matching <expr>\n"
 		"\t-scanlimit <num>\tStop scanning when <num> jobs have been read\n"
 		"\t-since <jobid>|<expr>\tStop scanning when <expr> is true or <jobid> is read\n"
@@ -110,16 +119,17 @@ void Usage(const char* name, int iExitCode)
 		"\t    use -af:lrng to get -long equivalent format\n"
 		"\t-print-format <file>\tUse <file> to specify the attributes and formatting\n"
 		"\t-extract <file>\t\tCopy historical ClassAd entries into the specified file\n"
+		"\t-no-librarian\t\tDisable librarian index lookups\n"
 		, name);
   exit(iExitCode);
 }
 
-static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir);
+static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir, Daemon& daemon);
 static void readHistoryFromFiles(const char* matchFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromDirectory(const char* searchDirectory, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromSingleFile(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
-static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr, bool read_backwards);
+static bool readHistoryFromLibrarian(const char* constraint, ExprTree *constraintExpr);
 static void printJobAds(std::vector<ClassAd*> & jobs);
 static void printJob(ClassAd & ad);
 
@@ -160,15 +170,6 @@ struct ClusterMatchInfo {
 	int numProcs = -1; //TotalSubmitProcs of cluster (same for all procs) to be counted for found cluster procs
 	bool isDoneMatching = false;
 };
-//Structure to hold banner information for cluster/proc matching
-struct BannerInfo {
-	time_t completion = -1; //Ad completion time
-	JOB_ID_KEY jid;         //Cluster & Proc info for job
-	int runId = -1;         //Job epoch < 0 = no epochs
-	std::string owner = ""; //Job Owner
-	std::string ad_type;    //Ad Type (Not equivalent to MyType)
-	std::string line;       // Line parsed for current banner info
-};
 // What kind of source file we are reading ads from
 enum HistoryRecordSource {
 	HRS_AUTO = -1,          //Base value if not overwritten will default to schedd or startd history
@@ -198,6 +199,8 @@ static  bool customFormat=false;
 static  bool disable_user_print_files=false;
 static  bool backwards=true;
 static  AttrListPrintMask mask;
+// Tolerance for clock skew between the times individual history records were written
+static const time_t HISTORY_WRITE_DATE_SLOP_SECS = 5;
 static int cluster=-1, proc=-1;
 static int matchCount = 0, adCount = 0;
 static int printCount = 0;
@@ -215,6 +218,22 @@ static bool want_startd_history = false;
 static bool delete_epoch_ads = false;
 static std::deque<ClusterMatchInfo> jobIdFilterInfo;
 static std::deque<std::string> ownersList;
+static std::deque<std::string> batchNameList;
+static std::deque<std::string> batchIdList;
+static std::deque<int> dagIdList;
+
+// True if the restriction list has DAGMan job ID, batch ID, or batch name terms
+static bool hasDagBatchSearch() {
+	return ! dagIdList.empty() || ! batchIdList.empty() || ! batchNameList.empty();
+}
+
+// True if the restriction list has terms (owner, DAGMan job ID, batch ID, batch name)
+// that can match jobs outside the requested clusters, so finding every requested
+// cluster/cluster.proc is not a reason to stop searching.
+static bool hasNonJobIdSearch() {
+	return ! ownersList.empty() || hasDagBatchSearch();
+}
+
 static std::set<std::string> filterAdTypes; // Allow filter of Ad types specified in history banner (different from MyType)
 static HistoryRecordSource recordSrc = HRS_AUTO;
 static std::set<std::string> ALL_XFER_TYPES = {"INPUT", "OUTPUT", "CHECKPOINT"};
@@ -304,6 +323,7 @@ main(int argc, const char* argv[])
 
   bool hasSince = false;
   bool hasForwards = false;
+  bool noLibrarian = false;
   bool transferAds = false;
   bool limitSet = false;
 
@@ -317,7 +337,11 @@ main(int argc, const char* argv[])
   set_priv_initialize(); // allow uid switching if root
   config();
 
-  readfromfile = ! param_defined("SCHEDD_HOST");
+  // Whether to read the local history file(s) versus querying a schedd is
+  // decided below.  Flags like -file/-userlog/-local force local reading and
+  // -name/-pool force a remote query; those set source_is_explicit so we skip
+  // the automatic local-vs-remote detection done after argument parsing.
+  bool source_is_explicit = false;
 
   for(i=1; i<argc; i++) {
     if (is_dash_arg_prefix(argv[i],"long",1)) {
@@ -390,21 +414,24 @@ main(int argc, const char* argv[])
 		i++;
 		JobHistoryFileName=argv[i];
 		readfromfile = true;
+		source_is_explicit = true;
     }
 	else if (is_dash_arg_prefix(argv[i],"userlog",1)) {
 		if (i+1==argc || JobHistoryFileName) break;
 		i++;
 		JobHistoryFileName=argv[i];
 		readfromfile = true;
+		source_is_explicit = true;
 		fileisuserlog = true;
 	}
 	else if (is_dash_arg_prefix(argv[i],"local",2)) {
-		// -local overrides the existance of SCHEDD_HOST and forces a local query
+		// -local overrides the existance of SCHEDD_HOST/SCHEDD_NAME and forces a local query
 		if ( ! g_name.empty()) {
 			fprintf(stderr, "Error: Arguments -local and -name cannot be used together\n");
 			exit(1);
 		}
 		readfromfile = true;
+		source_is_explicit = true;
 		dash_local = true;
 	}
 	else if (is_dash_arg_prefix(argv[i],"startd",3)) {
@@ -451,6 +478,7 @@ main(int argc, const char* argv[])
 			exit(1);
 		}
 		readfromfile = true;
+		source_is_explicit = true;
 		writetosocket = true;
 		backwards = true;
 		longformat = true;
@@ -704,6 +732,50 @@ main(int argc, const char* argv[])
 
 		extractionFile = argv[i];
 	}
+	else if (is_dash_arg_prefix(argv[i], "batchname", 6)) {
+		if (++i >= argc) {
+			fprintf(stderr, "Error: Argument -batchname requires another parameter.\n");
+			exit(1);
+		}
+
+		std::string batch(argv[i]);
+		std::string batchconst, quoted;
+		formatstr(batchconst, "%s =?= %s", ATTR_JOB_BATCH_NAME, QuoteAdStringValue(batch.c_str(), quoted));
+		batchNameList.push_back(batch);
+		constraint.addCustomOR(batchconst.c_str());
+	}
+	else if (is_dash_arg_prefix(argv[i], "batchid", 6)) {
+		if (++i >= argc) {
+			fprintf(stderr, "Error: Argument -batchid requires another parameter.\n");
+			exit(1);
+		}
+
+		std::string batch(argv[i]);
+		std::string batchconst, quoted;
+		formatstr(batchconst, "%s =?= %s", ATTR_JOB_BATCH_ID, QuoteAdStringValue(batch.c_str(), quoted));
+		batchIdList.push_back(batch);
+		constraint.addCustomOR(batchconst.c_str());
+	}
+	else if (is_dash_arg_prefix(argv[i], "dagid", 3)) {
+		if (++i >= argc) {
+			fprintf(stderr, "Error: Argument -dagid requires another parameter.\n");
+			exit(1);
+		}
+
+		// Whole argument must be a positive integer (reject trailing junk like "12abc")
+		int dagid = -1;
+		const char* arg_end = argv[i] + strlen(argv[i]);
+		auto [ptr, ec] = std::from_chars(argv[i], arg_end, dagid);
+		if (ec != std::errc() || ptr != arg_end || dagid <= 0) {
+			fprintf(stderr, "Error: Invalid DAGMan job id '%s' provided to -dagid. Valid cluster id for DAGMan job expected\n", argv[i]);
+			exit(1);
+		}
+
+		std::string dagconst;
+		formatstr(dagconst, "%s == %d", ATTR_DAGMAN_JOB_ID, dagid);
+		dagIdList.push_back(dagid);
+		constraint.addCustomOR(dagconst.c_str());
+	}
     else if (sscanf (argv[i], "%d.%d", &cluster, &proc) == 2) {
 		std::string jobconst;
 		formatstr (jobconst, "%s == %d && %s == %d", 
@@ -729,6 +801,9 @@ main(int argc, const char* argv[])
           // dprintf to console
           diagnostic = true;
     }
+    else if (is_dash_arg_prefix(argv[i], "no-librarian", 12)) {
+          noLibrarian = true;
+    }
     else if (is_dash_arg_prefix(argv[i], "name", 1)) {
         i++;
         if (argc <= i)
@@ -745,6 +820,7 @@ main(int argc, const char* argv[])
         }
         g_name = argv[i];
         readfromfile = false;
+        source_is_explicit = true;
     }
     else if (is_dash_arg_prefix(argv[i], "pool", 1)) {
         i++;    
@@ -758,6 +834,7 @@ main(int argc, const char* argv[])
         }       
         g_pool = argv[i];
         readfromfile = false;
+        source_is_explicit = true;
     }
 	else if (argv[i][0] == '-') {
 		fprintf(stderr, "Error: Unknown argument %s\n", argv[i]);
@@ -774,6 +851,27 @@ main(int argc, const char* argv[])
   if (i<argc) Usage(argv[0]);
 
   condenseJobFilterList(true);
+
+  // Build the Daemon we would query for a remote history read.  This same
+  // object is reused by readHistoryRemote() below, so we only ever locate once.
+  daemon_t history_dt = want_startd_history ? DT_STARTD : DT_SCHEDD;
+  Daemon history_daemon(history_dt,
+                        g_name.empty() ? nullptr : g_name.c_str(),
+                        g_pool.empty() ? nullptr : g_pool.c_str());
+
+  // If the user did not explicitly select a source (-file/-userlog/-local, or
+  // -name/-pool), decide between reading the local history file(s) and querying
+  // a schedd the same way condor_q and condor_submit choose their schedd:
+  // locate the daemon (honoring SCHEDD_HOST first, then SCHEDD_NAME).  If it
+  // resolves to a daemon on this machine (its address came from a local
+  // address file) then read the local file(s); if it resolves to a remote
+  // daemon, query it.  If no daemon can be located at all (e.g. nothing
+  // configured, or the daemon is not running), fall back to the local file(s).
+  if ( ! source_is_explicit) {
+    if (history_daemon.locate(Daemon::LOCATE_FOR_LOOKUP) && ! history_daemon.locatedViaLocalFile()) {
+      readfromfile = false;
+    }
+  }
 
   //If record source is still AUTO then set to original history based on want_startd_history
   if (recordSrc == HRS_AUTO) {
@@ -864,7 +962,17 @@ main(int argc, const char* argv[])
           }
       }
 
+      // Direct-seek path: resolve the restriction list via the librarian DB instead
+      // of scanning the history files. See readHistoryFromLibrarian(). The librarian
+      // only indexes HISTORY, so an explicit -search path takes precedence.
+      bool tookDirectPath = false;
+      if (recordSrc == HRS_SCHEDD_JOB_HIST && ! JobHistoryFileName && ! searchPath && ! readFromDir && ! noLibrarian
+          && (! jobIdFilterInfo.empty() || hasNonJobIdSearch())) {
+          tookDirectPath = readHistoryFromLibrarian(my_constraint.c_str(), constraintExpr);
+      }
+
       // Read from single file, matching files, or a directory (if valid option)
+    if ( ! tookDirectPath) {
       if (JobHistoryFileName) { //Single file to be read passed
       readHistoryFromSingleFile(fileisuserlog, JobHistoryFileName, my_constraint.c_str(), constraintExpr);
       } else if (readFromDir) { //Searching for files in a directory
@@ -872,9 +980,10 @@ main(int argc, const char* argv[])
       } else { //Normal search with files
       readHistoryFromFiles(searchPath ? searchPath : matchFileName, my_constraint.c_str(), constraintExpr);
       }
+    }
   }
   else {
-      readHistoryRemote(constraintExpr, subsys, want_startd_history, readFromDir);
+      readHistoryRemote(constraintExpr, subsys, want_startd_history, readFromDir, history_daemon);
   }
   delete constraintExpr;
 
@@ -1003,7 +1112,7 @@ static void printFooter()
 }
 
 // Read history from a remote schedd or startd
-static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir)
+static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir, Daemon& daemon)
 {
 	ASSERT(recordSrc != HRS_AUTO);
 	printHeader(); // this has the side effect of setting the projection for the default output
@@ -1034,7 +1143,9 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string sub
 		history_cmd = GET_HISTORY;
 	}
 
-	Daemon daemon(dt, g_name.size() ? g_name.c_str() : NULL, g_pool.size() ? g_pool.c_str() : NULL);
+	// daemon is supplied by the caller (already located when the local-vs-remote
+	// decision was made; locate() here is a no-op in that case, or performs the
+	// lookup for an explicit -name/-pool query).
 	if (!daemon.locate(Daemon::LOCATE_FOR_LOOKUP)) {
 		fprintf(stderr, "Unable to locate remote %s (name=%s, pool=%s).\n", daemon_type, g_name.c_str(), g_pool.c_str());
 		exit(1);
@@ -1175,7 +1286,7 @@ static bool AddToClassAdList(void* pv, ClassAd* ad) {
 }
 
 // Read the history from the specified history file, or from all the history files.
-// There are multiple history files because we do rotation. 
+// There are multiple history files because we do rotation.
 static void readHistoryFromFiles(const char* matchFileName, const char* constraint, ExprTree *constraintExpr)
 {
 	ASSERT(recordSrc != HRS_AUTO);
@@ -1212,85 +1323,58 @@ static void readHistoryFromFiles(const char* matchFileName, const char* constrai
 	return;
 }
 
-/*	Function to take a history record sources delimiting banner line and extract
-*	the 'Ad Type' (this is different from MyType ad attribute). A banner should
-*	always be: '*** Adtype Key=Value Key=Value...' where AdType is optional but
-*	If no ad type is found (i.e. older history files) then assume type is standard job ad.
-*	@return char* to "begining" of key=value pairs
-*
-*	'*** AdType Key=Value Key=Value' -> 'AdType' return ' Key=value Key=Value'
-*	'*** Key=Value Key=Value' -> 'JOB' return 'Key=Value Key=Value'
-*/
-static const char* getAdTypeFromBanner(std::string& banner, std::string& ad_type) {
-	//Get position of equal sign for first key=value pair
-	size_t pos_firstEql = banner.find("=");
-	if (pos_firstEql == std::string::npos) { return NULL; }
-	const char * p = banner.c_str();
-	const char * endp = p + pos_firstEql;
-
-	//Clear start & end pointers of whitespace and '='/'*'
-	while (*p == '*') ++p;
-	while (isspace(*p)) ++p;
-	if (*endp == '=') --endp;
-	while (p < endp && isspace(*endp)) --endp;
-
-	//Check for a whitespace between pointers
-	size_t len = endp - p;
-	std::string temp(p, len);
-	//fprintf(stdout, "Reduced banner:%s\n",temp.c_str());
-	//If no whitespace (space/tab) then no specified Type assume standard Job
-	if (temp.find_first_of(" \t") == std::string::npos) { ad_type = "JOB"; return p; }
-
-	//Make current pointer = start pointer and increment pointer until
-	//it is equal to end pointer or whitespace is found
-	const char * curp = p;
-	while (curp != endp) {
-		++curp;
-		if (isspace(*curp)) {
-			endp = curp; //Set true end pointer to current pointer
-		}
-	}
-
-	//Get type string len and copy data to ad_type
-	len = endp - p;
-	ad_type.clear();
-	ad_type.insert(0, p, len);
-	return endp;
-}
-
-static bool parseBanner(BannerInfo& info, std::string banner);
+static bool processAd(const ArchiveRecord& arec);
 
 //History source files that we expect to only contain 1 instance of a Job Ad
 static bool hasOneJobInstInFile() {
 	return recordSrc == HRS_SCHEDD_JOB_HIST || recordSrc == HRS_STARTD_HIST;
 }
 
+// A record's write time: CurrentTime if present, else CompletionDate (which can lag
+// write order, e.g. via LeaveJobInQueue).
+static time_t getBannerCompletion(const ClassAd& bannerAd) {
+	long long completion = -1;
+	if ( ! bannerAd.LookupInteger("CurrentTime", completion)) {
+		bannerAd.LookupInteger("CompletionDate", completion);
+	}
+	return completion;
+}
+
 // Check to see if all possible job ads for cluster or cluster.proc have been found
-static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL, bool onlyCheckTime = false) {
+static bool checkMatchJobIdsFound(const ArchiveRecord &arec, ClassAd *ad = NULL, bool onlyCheckTime = false) {
+
+	const ClassAd& bannerAd = arec.Banner();
+	int cluster = 0, proc = -1, runId = -1;
+	bannerAd.LookupInteger("ClusterId", cluster);
+	bannerAd.LookupInteger("ProcId", proc);
+	bannerAd.LookupInteger("RunInstanceId", runId);
+	time_t completion = getBannerCompletion(bannerAd);
 
 	//If we have a job ad and are missing data attempt to populate banner info
 	if (ad) {
-		if (banner.jid.cluster <= 0)
-			ad->LookupInteger(ATTR_CLUSTER_ID,banner.jid.cluster);
-		if (banner.jid.proc < 0)
-			ad->LookupInteger(ATTR_PROC_ID,banner.jid.proc);
-		if (banner.completion < 0)
-			ad->LookupInteger(ATTR_COMPLETION_DATE,banner.completion);
-		if (recordSrc == HRS_JOB_EPOCH && banner.runId < 0)
-			ad->LookupInteger(ATTR_NUM_SHADOW_STARTS,banner.runId);
+		if (cluster <= 0)
+			ad->LookupInteger(ATTR_CLUSTER_ID,cluster);
+		if (proc < 0)
+			ad->LookupInteger(ATTR_PROC_ID,proc);
+		if (completion < 0)
+			ad->LookupInteger(ATTR_COMPLETION_DATE,completion);
+		if (recordSrc == HRS_JOB_EPOCH && runId < 0)
+			ad->LookupInteger(ATTR_NUM_SHADOW_STARTS,runId);
 	}
+
+	JOB_ID_KEY jid(cluster, proc);
 
 	//For each match item info check record found
 	for (auto& match : jobIdFilterInfo) {
 		//fprintf(stdout,"Clust=%d | Proc=%d | Sub=%lld | Num=%d | OCT=%s\n",match.jid.cluster,match.jid.proc,match.QDate,match.numProcs,onlyCheckTime ? "true" : "false"); //Debug Match items
-		if (match.jid.cluster == banner.jid.cluster) { //If cluster matches do checks
+		if (match.jid.cluster == jid.cluster) { //If cluster matches do checks
 			//Get QDate from job ad if not set in info
 			if (match.QDate < 0 && ad) { ad->LookupInteger(ATTR_Q_DATE,match.QDate); }
 			if (!onlyCheckTime) {
 				if (match.jid.proc >= 0) {
 					//If has a specified proc and matched proc and cluster then remove from data structure
 					//If not an epoch file then found else if epoch file reading backwards and run_instance is 0 then all epoch ads found
-					if (match.jid == banner.jid && (hasOneJobInstInFile() || (backwards && banner.runId == 0))) {
+					if (match.jid == jid && (hasOneJobInstInFile() || (backwards && runId == 0))) {
 						match.isDoneMatching = true;
 						onlyCheckTime = true;
 						continue;
@@ -1299,9 +1383,9 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL, bool o
 					//If numProcs is negative then set info to current ads info (TotalSubmitProcs)
 					if (match.numProcs < 0) {
 						int matchFoundOffset = match.numProcs; //Starts off at -1 and decrements at each match
-						if (recordSrc == HRS_JOB_EPOCH && banner.runId != 0) { ++matchFoundOffset; } //increment because initial assumed match not guaranteed with epochs
+						if (recordSrc == HRS_JOB_EPOCH && runId != 0) { ++matchFoundOffset; } //increment because initial assumed match not guaranteed with epochs
 						if (!ad || !ad->LookupInteger(ATTR_TOTAL_SUBMIT_PROCS,match.numProcs)) {
-							if (hasOneJobInstInFile() || (backwards && banner.runId == 0)) {
+							if (hasOneJobInstInFile() || (backwards && runId == 0)) {
 								match.numProcs = --matchFoundOffset;
 							}
 						} else {
@@ -1311,7 +1395,7 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL, bool o
 							}
 						}
 					} else { //If decremented numProcs is 0 then we found all procs in cluster so remove from data structure
-						if (hasOneJobInstInFile() || (backwards && banner.runId == 0)) {
+						if (hasOneJobInstInFile() || (backwards && runId == 0)) {
 							if (--match.numProcs == 0) {
 								match.isDoneMatching = true;
 							}
@@ -1322,8 +1406,10 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL, bool o
 				}
 			}
 		}
-		//If the cluster submit time is greater than the current completion date remove from data structure
-		if (banner.completion > 0 && match.QDate > banner.completion) {
+		//Cluster-only searches: records are written in order, so once we've scanned back to
+		//a record written before our target cluster was submitted, nothing further back can
+		//match. A few seconds of slop absorb clock skew between writes.
+		if (match.jid.proc < 0 && completion > 0 && match.QDate > completion + HISTORY_WRITE_DATE_SLOP_SECS) {
 			match.isDoneMatching = true;
 		}
 	}
@@ -1338,97 +1424,103 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL, bool o
 		return false;
 }
 
-static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *constraintExpr, BannerInfo& banner);
+static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *constraintExpr, const ArchiveRecord &arec);
 
-// Read the history from a single file and print it out. 
-static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
+// Print librarian-supplied records by seeking directly to each one's offset.
+// Records are put in chronological archive order, reversed unless reading
+// -forwards, so output order and -limit/-scanlimit/-since behave the same as a
+// normal file scan. Files are ordered like findHistoryFiles(): rotated files by
+// rotation time, then the active file (rotation_time 0) last. FileId only breaks
+// ties; it is not chronological after a restart that missed multiple rotations.
+static void printLibrarianRecords(const char* constraint, ExprTree *constraintExpr,
+                                  std::vector<LibrarianRecord>& records)
 {
-    bool EndFlag  = false;
-    int ErrorFlag = 0;
-    std::string buf;
+	auto key = [](const LibrarianRecord& rec) {
+		return std::make_tuple(rec.rotation_time == 0, rec.rotation_time, rec.file_id, rec.offset);
+	};
+	std::ranges::sort(records, {}, key);
+	// Dedup: the same record can come back from more than one librarian query.
+	auto dups = std::ranges::unique(records, {}, [](const LibrarianRecord& rec) {
+		return std::make_pair(rec.file_id, rec.offset);
+	});
+	records.erase(dups.begin(), dups.end());
+	if (backwards) { std::ranges::reverse(records); }
 
-	int flags = 0;
-	if( !backwards ) {
-			// Currently, the file position manipulations used in -backwards
-			// do not work with files > 2GB on platforms with 32-bit file
-			// offsets.
-		flags = O_LARGEFILE;
-	}
-	int LogFd = safe_open_wrapper_follow(JobHistoryFileName,flags,0);
-	if (LogFd < 0) {
-		fprintf(stderr,"Error opening history file %s: %s\n", JobHistoryFileName,strerror(errno));
-#ifdef EFBIG
-		if( (errno == EFBIG) && backwards ) {
-			fprintf(stderr,"The -backwards option does not support files this large.\n");
-		}
-#endif
-		exit(1);
-	}
+	// Reuse one ArchiveReader for each consecutive run of records in the same file
+	std::unique_ptr<ArchiveReader> reader;
+	int64_t reader_file_id = -1;
 
-	FILE *LogFile = fdopen(LogFd,"r");
-	if (!LogFile) {
-		fprintf(stderr,"Error opening history file %s: %s\n", JobHistoryFileName,strerror(errno));
-		exit(1);
-	}
-
-	// In case of rotated history files, check if we have already reached the number of 
-	// matches specified by the user before reading the next file
-	if ((specifiedMatch > 0 && matchCount >= specifiedMatch) || (maxAds > 0 && adCount >= maxAds)) {
-		fclose(LogFile);
-		return;
-	}
-
-	CondorClassAdFileParseHelper helper("***");
-	CompatFileLexerSource LogSource(LogFile, false);
-
-    ClassAd ad;
-    while(!EndFlag) {
-
-		ad.Clear();
-        int c_attrs = InsertFromStream(LogSource, ad, EndFlag, ErrorFlag, &helper);
-        std::string banner(helper.getDelimitorLine());
-        if( ErrorFlag ) {
-            printf( "\t*** Warning: Bad history file; skipping malformed ad(s)\n" );
-            ErrorFlag=0;
-			ad.Clear();
-            continue;
-        } 
-        //If no attribute were read during insertion reset ad and continue
-        if( c_attrs <= 0 ) {
-			ad.Clear();
-            continue;
-        }
-
-		BannerInfo ad_info;
-		parseBanner(ad_info, banner);
-		bool done = printJobIfConstraint(ad, constraint, constraintExpr, ad_info);
-
-		ad.Clear();
-
-		if (done || (specifiedMatch > 0 && matchCount >= specifiedMatch) || (maxAds > 0 && adCount >= maxAds)) {
+	for (const auto& rec : records) {
+		if ((specifiedMatch > 0 && matchCount >= specifiedMatch) || (maxAds > 0 && adCount >= maxAds) || abort_transfer) {
 			break;
 		}
+
+		if ( ! reader || reader_file_id != rec.file_id) {
+			reader = std::make_unique<ArchiveReader>(rec.file_path, ArchiveReader::Direction::Forward);
+			reader_file_id = rec.file_id;
+		}
+		if ( ! reader->IsOpen() || ! reader->SeekForward(rec.offset)) { continue; }
+
+		ArchiveRecord arec;
+		if ( ! reader->Next(arec)) { continue; }
+
+		ClassAd* ad = arec.GetAd();
+		if ( ! ad) { continue; }
+
+		bool done = printJobIfConstraint(*ad, constraint, constraintExpr, arec);
+
+		delete ad;
+		if (done) { break; }
 	}
-	fclose(LogFile);
-	return;
 }
 
-// return true if p1 starts with p2
-// if ppEnd is not NULL, return a pointer to the first non-matching char of p1
-static bool starts_with(const char * p1, const char * p2, const char ** ppEnd = NULL)
+// Resolve every restriction-list term (cluster.proc, bare cluster ID, owner name,
+// DAGMan job ID, batch ID, batch name) via the librarian DB instead of scanning the
+// history files, unioning results the same way the restriction list itself is OR'd.
+// Returns false if the librarian is unavailable (or its schema predates the DAG/batch
+// columns when those are requested), so the caller can fall back to the file scan.
+static bool readHistoryFromLibrarian(const char* constraint, ExprTree *constraintExpr)
 {
-	if ( ! p2 || ! *p2)
-		return false;
+	LibrarianClient librarian;
+	if ( ! librarian.IsValid()) { return false; }
 
-	const char * p1e = p1;
-	const char * p2e = p2;
-	while (*p2e) {
-		if (*p1e != *p2e)
-			return false;
-		++p2e; ++p1e;
+	// DAG/batch columns were added in librarian schema v3
+	if (hasDagBatchSearch() && librarian.SchemaVersion() < 3) { return false; }
+
+	std::vector<LibrarianRecord> records;
+	std::vector<std::pair<int,int>> job_ids;
+	for (const auto& item : jobIdFilterInfo) {
+		if (item.jid.proc >= 0) {
+			job_ids.emplace_back(item.jid.cluster, item.jid.proc);
+		} else {
+			auto recs = librarian.GetRecordsByCluster(item.jid.cluster);
+			records.insert(records.end(), std::make_move_iterator(recs.begin()), std::make_move_iterator(recs.end()));
+		}
 	}
-	if (ppEnd)
-		*ppEnd = p1e;
+	if ( ! job_ids.empty()) {
+		auto recs = librarian.GetRecords(job_ids);
+		records.insert(records.end(), std::make_move_iterator(recs.begin()), std::make_move_iterator(recs.end()));
+	}
+	for (const auto& name : ownersList) {
+		auto recs = librarian.GetRecordsByUser(name);
+		records.insert(records.end(), std::make_move_iterator(recs.begin()), std::make_move_iterator(recs.end()));
+	}
+	for (const auto dag_id : dagIdList) {
+		auto recs = librarian.GetRecordsByDagId(dag_id);
+		records.insert(records.end(), std::make_move_iterator(recs.begin()), std::make_move_iterator(recs.end()));
+	}
+	for (const auto& batch_id : batchIdList) {
+		auto recs = librarian.GetRecordsByBatchId(batch_id);
+		records.insert(records.end(), std::make_move_iterator(recs.begin()), std::make_move_iterator(recs.end()));
+	}
+	for (const auto& batch_name : batchNameList) {
+		auto recs = librarian.GetRecordsByBatchName(batch_name);
+		records.insert(records.end(), std::make_move_iterator(recs.begin()), std::make_move_iterator(recs.end()));
+	}
+
+	printHeader();
+	printLibrarianRecords(constraint, constraintExpr, records);
+	printFooter();
 	return true;
 }
 
@@ -1485,33 +1577,7 @@ static void printJob(ClassAd & ad)
 	printCount++;
 }
 
-// convert list of expressions into a classad
-//
-static void printJobIfConstraint(std::vector<std::string> & exprs, const char* constraint, ExprTree *constraintExpr, BannerInfo& banner)
-{
-	if ( ! exprs.size())
-		return;
-
-	ClassAd ad;
-	ad.rehash(521); // big enough to prevent regrowing hash table
-
-	size_t ix;
-
-	// convert lines vector into classad.
-	while ((ix = exprs.size()) > 0) {
-		if ( ! ad.Insert(exprs[ix-1])) {
-			const char * pexpr = exprs[ix-1].c_str();
-			dprintf(D_ALWAYS,"condor_history: failed to create classad; bad expr = '%s'\n", pexpr);
-			printf( "\t*** Warning: Bad history file; skipping malformed ad(s)\n" );
-			exprs.clear();
-			return;
-		}
-		exprs.pop_back();
-	}
-	printJobIfConstraint(ad, constraint, constraintExpr, banner);
-}
-
-static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *constraintExpr, BannerInfo& banner)
+static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *constraintExpr, const ArchiveRecord &arec)
 {
 	++adCount;
 
@@ -1524,15 +1590,16 @@ static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *
 		printJob(ad);
 		matchCount++; // if control reached here, match has occured
 		if (extractionFile) {
+			const std::string& bannerLine = arec.GetRawBanner();
 			if (backwards) {
 				std::string& copy = historyCopyAds.emplace_front();
 				sPrintAd(copy, ad);
-				copy += banner.line + "\n";
+				copy += bannerLine + "\n";
 			} else {
 				ASSERT(extractionFP);
 				std::string copy;
 				sPrintAd(copy, ad);
-				copy += banner.line + "\n";
+				copy += bannerLine + "\n";
 				size_t bytes = fwrite(copy.c_str(), sizeof(char), copy.size(), extractionFP);
 				if (bytes != copy.size()) {
 					fprintf(stderr, "Warning: Failed to write ad to extraction file %s\n", extractionFile);
@@ -1541,7 +1608,8 @@ static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *
 		}
 	}
 	if (cluster > 0) { //User specified cluster or cluster.proc.
-		if (checkMatchJobIdsFound(banner, &ad)) { //Check if all possible ads have been displayed
+		//Check if all possible ads have been displayed (owner terms can still match more ads)
+		if (checkMatchJobIdsFound(arec, &ad) && ! hasNonJobIdSearch()) {
 			maxAds = adCount;
 			return true;
 		}
@@ -1557,180 +1625,110 @@ static void printJobAds(std::vector<ClassAd*> & jobs)
 	}
 }
 
-static bool isvalidattrchar(char ch) { return isalnum(ch) || ch == '_'; }
+// Decide from the banner alone (arec.Banner()) whether the upcoming ad could
+// possibly match -type/cluster/proc/owner filters, so the caller can skip parsing
+// it if not. Returns false only when the banner rules it out; true otherwise,
+// including when the banner didn't have enough info to decide.
+static bool processAd(const ArchiveRecord& arec) {
+	// A bare "***" (or unparseable) banner has nothing to filter on.
+	if ( ! arec.HasBannerInfo()) { return true; }
 
-/*
-*	Function to parse banner information of both history and epoch files (They vary slightly)
-*	and fill info into Banner info struct. After parsing banner line we will then determine
-*	if we are only matching for Cluster, Cluster.Proc, or Owner then check if banner info
-*	matches to determine if we parse the upcoming job ad.
-*/
-static bool parseBanner(BannerInfo& info, std::string banner) {
-	//Parse Banner info
-	BannerInfo newInfo;
-	newInfo.line = banner;
-
-	const char * p = getAdTypeFromBanner(banner, newInfo.ad_type);
-	//Banner contains no Key=value pairs, no info to parse so return true to parse ad
-	if (!p) { info = newInfo; return true; }
-
-	upper_case(newInfo.ad_type);
-	if ( ! filterAdTypes.contains("ALL") && !filterAdTypes.contains(newInfo.ad_type)) {
-		//fprintf(stdout, "Banner Ad Type: %s\n", newInfo.ad_type.c_str());
+	const ClassAd& bannerAd = arec.Banner();
+	// Older banners have no leading type word; assume JOB.
+	std::string ad_type;
+	if ( ! bannerAd.LookupString("RecordType", ad_type)) {
+		ad_type = "JOB";
+	}
+	upper_case(ad_type);
+	if ( ! filterAdTypes.contains("ALL") && !filterAdTypes.contains(ad_type)) {
 		return false;
 	}
 
-	//fprintf(stdout, "parseBanner(%s)\n", p);
-	const char * endp = p + banner.size();
+	if (jobIdFilterInfo.empty() && ! hasNonJobIdSearch()) { return true; } //If no searches were specified then return true to print job ad
 
-	classad::ClassAdParser parser;
-	parser.SetOldClassAd(true);
+	int cluster = 0;
+	std::string owner;
 
-	const char * rhs;
-	std::string attr;
-	while (p < endp && SplitLongFormAttrValue(p, attr, rhs)) {
-		int end = 0;
-		ExprTree * tree = parser.ParseExpression(rhs);
-		if (!tree) { break; }
-		//fprintf(stdout, "%s=%s\n", attr.c_str(), ExprTreeToString(tree));
-		long long valueNum = 0;
-		if (strcasecmp(attr.c_str(),"ClusterId") == MATCH) {
-			if (ExprTreeIsLiteralNumber(tree,valueNum))
-				if (valueNum <= INT_MAX && valueNum > 0)
-					newInfo.jid.cluster = static_cast<int>(valueNum);
-		} else if (strcasecmp(attr.c_str(),"ProcId") == MATCH) {
-			if (ExprTreeIsLiteralNumber(tree,valueNum))
-				if (valueNum <= INT_MAX && valueNum >= 0)
-					newInfo.jid.proc = static_cast<int>(valueNum);
-		} else if (strcasecmp(attr.c_str(),"RunInstanceId") == MATCH) {
-			if (ExprTreeIsLiteralNumber(tree,valueNum))
-				if (valueNum <= INT_MAX && valueNum >= 0)
-					newInfo.runId = static_cast<int>(valueNum);
-		} else if (strcasecmp(attr.c_str(),"Owner") == MATCH) {
-			ExprTreeIsLiteralString(tree,newInfo.owner);
-		} else if (strcasecmp(attr.c_str(),"CurrentTime") == MATCH || strcasecmp(attr.c_str(),"CompletionDate") == MATCH) {
-			if (ExprTreeIsLiteralNumber(tree,valueNum))
-				newInfo.completion = valueNum;
-		}
-		delete tree;
-		// workaound the fact that the offset we get back from the parser has eaten the next attribute name
-		while (end > 0 && isspace(rhs[end-1])) --end;
-		while (end > 0 && isvalidattrchar(rhs[end-1])) --end;
-		// advance p to point to the next key=value pair
-		size_t dist = strcspn(rhs," ");
-		p = rhs + dist;
-		while (isspace(*p)) ++p;
-	}
-	info = newInfo;
-	//For testing output of banner
-	//fprintf(stdout,"Ad type: %s\n",info.ad_type.c_str());
-	//fprintf(stdout,"Parsed banner info: %s %d.%d | Comp: %ld | Epoch: %d\n",info.owner.c_str(),info.jid.cluster, info.jid.proc, info.completion, info.runId);
-
-	if(jobIdFilterInfo.empty() && ownersList.empty()) { return true; } //If no searches were specified then return true to print job ad
-	else if (info.jid.cluster <= 0 && !jobIdFilterInfo.empty()) { return true; } //If failed to get cluster info and we are searching for job id info return true
-	else if (info.owner.empty() && !ownersList.empty()) { return true; }//If failed to parse owner and we are searching for an owner return true
+	if ( ! (bannerAd.LookupInteger(ATTR_CLUSTER_ID, cluster) && cluster > 0) && !jobIdFilterInfo.empty()) { return true; } //If failed to get cluster info and we are searching for job id info return true
+	else if ( ! (bannerAd.LookupString(ATTR_OWNER, owner) && ! owner.empty()) && !ownersList.empty()) { return true; } //If failed to parse owner and we are searching for an owner return true
 
 	//Check to see if cluster exists in matching job info
-	for(auto& item : jobIdFilterInfo) { if(info.jid.cluster == item.jid.cluster){ return true; } }
+	for(auto& item : jobIdFilterInfo) { if(cluster == item.jid.cluster){ return true; } }
 	//Check to see if owner is being searched for
-	for(auto& name : ownersList) { if(strcasecmp(info.owner.c_str(),name.c_str()) == MATCH){ return true; } }
+	for(auto& name : ownersList) { if(strcasecmp(owner.c_str(),name.c_str()) == MATCH){ return true; } }
+
+	// DAGManJobId, JobBatchId, and JobBatchName are optional banner attributes (older
+	// banners never have them), so a banner missing one can't rule out the ad.
+
+	// Check to see if batch name is being searched for
+	if ( ! batchNameList.empty()) {
+		std::string batchname;
+		if ( ! bannerAd.LookupString(ATTR_JOB_BATCH_NAME, batchname) || batchname.empty()) { return true; }
+		for (auto& batch : batchNameList) { if (batch == batchname) { return true; } }
+	}
+
+	// Check to see if batch id is being searched for
+	if ( ! batchIdList.empty()) {
+		std::string batchid;
+		if ( ! bannerAd.LookupString(ATTR_JOB_BATCH_ID, batchid) || batchid.empty()) { return true; }
+		for (auto& id : batchIdList) { if (id == batchid) { return true; } }
+	}
+
+	// Check to see if dag man job id is being searched for
+	if ( ! dagIdList.empty()) {
+		int dag = -1;
+		if ( ! bannerAd.LookupInteger(ATTR_DAGMAN_JOB_ID, dag) || dag <= 0) { return true; }
+		for (auto id : dagIdList) { if (dag == id) { return true; } }
+	}
+
 	//If here then no match
 	return false;
 }
 
 static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr, bool read_backwards)
 {
-	// In case of rotated history files, check if we have already reached the number of 
+	// In case of rotated history files, check if we have already reached the number of
 	// matches specified by the user before reading the next file
 	if ((specifiedMatch > 0 && matchCount >= specifiedMatch) || (maxAds > 0 && adCount >= maxAds)) {
 		return;
 	}
 
-	// the old function doesn't work for backwards, but it does work for forwards so go ahead and call it.
-	//
-	if ( ! read_backwards) {
-		readHistoryFromFileOld(JobHistoryFileName, constraint, constraintExpr);
-		return;
-	}
-
-	// do backwards reading.
-	BackwardFileReader reader(JobHistoryFileName, O_RDONLY);
-	if (reader.LastError()) {
-		// report error??
+	ArchiveReader::Direction dir = read_backwards ? ArchiveReader::Direction::Backward : ArchiveReader::Direction::Forward;
+	ArchiveReader reader(JobHistoryFileName, dir);
+	if ( ! reader.IsOpen()) {
 		fprintf(stderr,"Error opening history file %s: %s\n", JobHistoryFileName,strerror(reader.LastError()));
 		exit(1);
 	}
 
-	std::string line;        // holds the current line from the log file.
-	std::string banner_line; // the contents of the "*** " banner line for the job we are scanning
-
-	// the last line in the file should be a "*** " banner line.
-	// we want to scan backwards until we find it, what is above that in the file is the job
-	// information for that banner line.
-	while (reader.PrevLine(line)) {
-		if (starts_with(line.c_str(), "***")) {
-			banner_line = line;
-			break;
-		}
-	}
-
-	BannerInfo curr_banner;
-	bool read_ad = parseBanner(curr_banner, banner_line);
-	std::vector<std::string> exprs;
-	while (reader.PrevLine(line)) {
-
-		// the banner is at the end of the job information, so when we get to on, we 
-		// know that we are done accumulating expressions into the vector.
-		if (starts_with(line.c_str(), "***")) {
-
-			if (exprs.size() > 0) {
-				printJobIfConstraint(exprs, constraint, constraintExpr, curr_banner);
-				exprs.clear();
-			} else if (cluster > 0 && checkMatchJobIdsFound(curr_banner, NULL, true)){
-				//If we don't print an ad we can still check for completion dates vs QDates
-				//for done jobs. If function returns true then we are done
-				break;
-			}
-
-			// the current line is the banner that starts (ends) the next job record
-			banner_line = line;
-			//Parse banner for next ad
-			read_ad = parseBanner(curr_banner, banner_line);
-			// if we already hit our match count, we can stop now.
-			if ((specifiedMatch > 0 && matchCount >= specifiedMatch) || (maxAds > 0 && adCount >= maxAds))
-				break;
-			if (abort_transfer)
-				break;
-
-		} else {
-
-			// we have to parse the lines in from the start of the file to the end
-			// to handle chained ads correctly, so here we just push the lines into
-			// a vector as they arrive.  note that this puts them in the vector backwards
-			// comments can be discarded at this point.
-			if (!read_ad) { continue; }
-
-			if ( ! line.empty()) {
-				const char * psz = line.c_str();
-				while (*psz == ' ' || *psz == '\t') ++psz;
-				if (*psz != '#') {
-					exprs.push_back(line);
+	ArchiveRecord arec;
+	while (reader.Next(arec)) {
+		// Skip building the ad if the banner alone already rules it out.
+		bool printed = false;
+		if (processAd(arec)) {
+			ClassAd* ad = arec.GetAd();
+			if (ad && ad->size() > 0) {
+				printed = true;
+				bool done = printJobIfConstraint(*ad, constraint, constraintExpr, arec);
+				delete ad;
+				if (done) break;
+			} else {
+				delete ad;
+				if ( ! arec.GetRawRecord().empty()) {
+					printf( "\t*** Warning: Bad history file; skipping malformed ad(s)\n" );
 				}
 			}
 		}
-	}
 
-	// when we hit the start of the file, we may still have 1 job record to print out.
-	if (exprs.size() > 0) {
-		if ((specifiedMatch > 0 && matchCount >= specifiedMatch) || (maxAds > 0 && adCount >= maxAds)) {
-			// do nothing
-		} else {
-			printJobIfConstraint(exprs, constraint, constraintExpr, curr_banner);
+		// No ad was built; still check completion date vs QDate for an early exit.
+		if ( ! printed && read_backwards && cluster > 0 && checkMatchJobIdsFound(arec, NULL, true) && ! hasNonJobIdSearch()) {
+			break;
 		}
-		exprs.clear();
-	}
 
-	reader.Close();
+		if ((specifiedMatch > 0 && matchCount >= specifiedMatch) || (maxAds > 0 && adCount >= maxAds))
+			break;
+		if (abort_transfer)
+			break;
+	}
 }
 
 //PRAGMA_REMIND("tj: TODO fix to handle summary print format")
@@ -1851,8 +1849,7 @@ static void readHistoryFromDirectory(const char* searchDirectory, const char* co
 		exit(1);
 	} else {
 		struct stat si = {};
-		stat(searchDirectory, &si);
-		if ( !(si.st_mode & S_IFDIR) ) {
+		if ( stat(searchDirectory, &si) != 0 || !(si.st_mode & S_IFDIR) ) {
 			fprintf(stderr, "Error: %s is not a valid directory.\n", searchDirectory);
 			exit(1);
 		}

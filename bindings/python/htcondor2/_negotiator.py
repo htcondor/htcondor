@@ -1,3 +1,5 @@
+import re
+from collections import defaultdict
 from typing import List, Optional
 
 from ._common_imports import (
@@ -204,29 +206,14 @@ class Negotiator():
     _SET_FLOOR           = _SCHED_VERS + 130
 
 
-def _convert_numbered_attributes_to_list_of_ads(ad : classad.ClassAd):
-    attrs = []
-    for attr in ad.keys():
-        if attr.endswith("1"):
-            attrs.append(attr[:-1])
+def _convert_numbered_attributes_to_list_of_ads(legacy_ad : classad.ClassAd):
+    c = re.compile( r'(.*)(\d+)' )
 
-    l = []
-    index = 1
-    carry_on = True
-    while carry_on:
-        carry_on = False
+    ads = defaultdict(classad.ClassAd)
+    for attr in legacy_ad.keys():
+        m = c.match(attr)
+        if m is not None:
+            (name, index) = m.groups()
+            ads[index][name] = legacy_ad[attr]
 
-        c = classad.ClassAd()
-        for attr in attrs:
-            indexedAttr = f"{attr}{index}"
-            e = ad.get(indexedAttr)
-            if e is not None:
-                carry_on = True
-                c[attr] = e
-
-        if carry_on:
-            l.append(c)
-
-        index += 1
-
-    return l
+    return ads.values()

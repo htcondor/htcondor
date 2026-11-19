@@ -41,16 +41,23 @@
 
 #include "spooled_job_files.h"
 #include "job_ad_instance_recording.h"
+#include "wasted_memory.h"
+#include <utility>
+#include <string>
+#include <optional>
 #include "catalog_utils.h"
 #include "condor_holdcodes.h"
 #include "basename.h"
 #include "shadow.h"
+#include "pseudo_ops.h"
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
 
-// for remote syscalls, this is currently in NTreceivers.C.
-extern int do_REMOTE_syscall();
+// To know if the schedd wants us to do common file transfer.  If not, this
+// is where we alter the input list to compensate.
+#include "cxfer_state.h"
+extern CXFER_STATE cxfer_type;
 
 // for remote syscalls...
 ReliSock *syscall_sock;
@@ -138,6 +145,7 @@ RemoteResource::~RemoteResource()
 	if ( machineName   ) free( machineName );
 	if ( starterAddress) free( starterAddress );
 	if ( starterAd ) { delete starterAd; starterAd = nullptr; }
+	if ( slotAd ) { delete slotAd; slotAd = nullptr; }
 	closeClaimSock();
 	if ( jobAd && jobAd != shadow->getJobAd() ) {
 		delete jobAd;
@@ -542,12 +550,21 @@ RemoteResource::handleSysCalls( Stream * /* sock */ )
 	syscall_sock = claim_sock;
 	thisRemoteResource = this;
 
-	if (do_REMOTE_syscall() < 0) {
-		dprintf(D_SYSCALLS,"Shadow: do_REMOTE_syscall returned < 0\n");
+	switch(do_REMOTE_syscall()) {
+	case RemoteSyscallResult::ExpectedClose:
+		// The socket closed at the expected time. Start shutdown.
+		dprintf(D_SYSCALLS,"do_REMOTE_syscall returned ExpectedClose, assume starter is exiting after job exit\n");
 		attemptShutdown();
-		return KEEP_STREAM;
+		break;
+	case RemoteSyscallResult::UnexpectedClose:
+		// Unexpected network trouble. We'll be in reconnect mode now.
+		dprintf(D_SYSCALLS, "do_REMOTE_syscall returned UnexpectedClose, assume starter may still be alive\n");
+		break;
+	case RemoteSyscallResult::SyscallOK:
+		// Normal RPC, note contact from starter
+		hadContact();
+		break;
 	}
-	hadContact();
 	return KEEP_STREAM;
 }
 
@@ -654,6 +671,11 @@ void
 RemoteResource::closeClaimSock( void )
 {
 	if( claim_sock ) {
+			// do_REMOTE_syscall() may still be on the stack using the
+			// global alias; null it so it can tell the socket is gone.
+		if( syscall_sock == claim_sock ) {
+			syscall_sock = nullptr;
+		}
 		daemonCore->Cancel_Socket( claim_sock );
 		delete claim_sock;
 		claim_sock = NULL;
@@ -883,6 +905,19 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 void
 RemoteResource::setStarterInfo( ClassAd* ad )
 {
+	// If we're talking to a newer starter, it's sent its slot ad along.
+	ClassAd * tSlotAd = dynamic_cast<ClassAd *>(ad->Lookup( "SlotAd" ));
+	if( tSlotAd ) {
+		if( slotAd ) { delete slotAd; }
+		slotAd = new ClassAd(* tSlotAd);
+		// The copy constructor also copies parentScope, which points at the
+		// (soon to be destroyed) ClassAd that tSlotAd was nested in.  We're
+		// keeping this copy long after that scope is gone, so detach it to
+		// avoid a dangling scope pointer when expressions in slotAd (or ads
+		// nested within it) are later evaluated.
+		slotAd->SetParentScope( nullptr );
+	}
+
 	// This seems like the obvious place to change the job ad so that we
 	// can properly initialize the FTO if the starter we're talking to is too
 	// old to handle common file transfer.  However, the FTO is actually
@@ -963,25 +998,40 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	// If the starter is too old for common file transfer, fall back on
 	// per-proc file transfer.
 	//
-	CondorVersionInfo cvi( starter_version.c_str() );
 	// `#define CFT_VERSION 2` went in with HTCONDOR-3168, which was first
-	// actually released as part of 25.2.FIXME.
+	// actually released as part of 25.2.x.
 	//
 	// CFT_VERSION = 1 starters (set in HTCONDOR-3051, and released as 24.9.0)
 	// can successfully do common file transfer if and only if there were no
 	// catalogs specified and the job ad has the test syntax from HTC25.  As
 	// a result, those will be treated as needing the fall-back as well.
 	//
+	CondorVersionInfo cvi( starter_version.c_str() );
+	bool impossible = (! cvi.built_since_version( 25, 2, 0 ));
+
+	//
+	// If the admin has turned off common file transfer, fall back on
+	// per-proc file transfer.
+	//
 	bool disallowed = param_boolean("FORBID_COMMON_FILE_TRANSFER", false);
-	if( disallowed || (! cvi.built_since_version( 25, 2, 0 )) ) {
+
+	//
+	// If the schedd did not specify staging or mapping, fall back on
+	// per-proc file transfer.  (The schedd checks the previous conditions
+	// before deciding to specify staging or mapping, so these checks
+	// ought to be redundant.)
+	//
+	bool required = cxfer_type == CXFER_STATE::INVALID;
+
+    if( impossible || disallowed || required ) {
 		auto common_file_catalogs = shadow->computeCommonInputFileCatalogs( jobAd );
 		if(! common_file_catalogs) {
-			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
+			dprintf( D_ERROR, "Failed to compute common input file catalogs, can't run job!\n" );
 
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
-			shadow->holdJob( "Internal error: failed to construct unique name for catalog.",
-				CONDOR_HOLD_CODE::JobNotStarted, 4
+			shadow->holdJob( "Internal error: failed to compute common input file catalogs.",
+				CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::CatalogNameError
 			);
 
 			return;
@@ -989,12 +1039,12 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 
 		int required_version = 2;
 		if(! shadow->computeCommonInputFiles( jobAd, *common_file_catalogs, required_version )) {
-			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
+			dprintf( D_ERROR, "Failed to compute common input files, can't run job!\n" );
 
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
-			shadow->holdJob( "Internal error: failed to construct unique name for catalog.",
-				CONDOR_HOLD_CODE::JobNotStarted, 4
+			shadow->holdJob( "Internal error: failed to comput input files.",
+				CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::CatalogNameError
 			);
 
 			return;
@@ -1265,10 +1315,10 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 	double real_value;
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, real_value) ) {
-		double prevUsage;
-		if (!jobAd->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, prevUsage)) {
-			prevUsage = 0.0;
-		}
+		// Use remote_rusage for previous per-node usage rather than jobAd,
+		// because for parallel universe node 0, jobAd is shared with the
+		// shadow and may contain the aggregate sum across all nodes.
+		double prevUsage = (double)remote_rusage.ru_stime.tv_sec;
 
 		// Remote cpu usage should be strictly increasing
 		if (real_value > prevUsage) {
@@ -1285,10 +1335,10 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	}
 
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, real_value) ) {
-		double prevUsage;
-		if (!jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, prevUsage)) {
-			prevUsage = 0.0;
-		}
+		// Use remote_rusage for previous per-node usage rather than jobAd,
+		// because for parallel universe node 0, jobAd is shared with the
+		// shadow and may contain the aggregate sum across all nodes.
+		double prevUsage = (double)remote_rusage.ru_utime.tv_sec;
 
 		// Remote cpu usage should be strictly increasing
 		if (real_value > prevUsage) {
@@ -1354,6 +1404,9 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			jobAd->Assign(ATTR_PROPORTIONAL_SET_SIZE, long_value);
 		}
 	}
+
+		// MemoryUsage may have changed, and time has passed.
+	updateWastedMemory(ActivationPhase::Running);
 
     CopyAttribute(ATTR_NETWORK_IN, *jobAd, *update_ad);
     CopyAttribute(ATTR_NETWORK_OUT, *jobAd, *update_ad);
@@ -1447,6 +1500,17 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		if( long_value > scratch_dir_file_count ) {
 			scratch_dir_file_count = long_value;
 			jobAd->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, scratch_dir_file_count);
+		}
+	}
+
+		// The docker image the starter actually ran, identified by its
+		// content hash.  While it doesn't change during any particular
+		// instance, it may change from instance to instance, so update
+		// it if it's new or if it changed.
+	if( update_ad->LookupString(ATTR_DOCKER_IMAGE_HASH, string_value) ) {
+		std::string prev_hash;
+		if( ! jobAd->LookupString(ATTR_DOCKER_IMAGE_HASH, prev_hash) || prev_hash != string_value ) {
+			jobAd->Assign(ATTR_DOCKER_IMAGE_HASH, string_value);
 		}
 	}
 
@@ -1561,7 +1625,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			if( 0 == strcasecmp( prefix.c_str(), "Common" ) ) {
 				auto stats = shadow->getCommonTransferInfoStats();
 				if( stats ) {
-					c.Insert( "TransferCommonStats", (* stats).Copy() );
+					c.Insert( ATTR_TRANSFER_COMMON_STATS, (* stats).Copy() );
 				}
 			}
 
@@ -2001,6 +2065,8 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 		shadow->updateJobInQueue( U_STATUS );
 	}
 
+	updateWastedMemory(ActivationPhase::Ended);
+
 	// record the start time of transfer output into the job ad.
 	time_t tStart = -1, tEnd = -1;
 	if (filetrans.GetDownloadTimestamps(&tStart, &tEnd)) {
@@ -2133,7 +2199,6 @@ RemoteResource::hadContact( void )
 {
 	last_job_lease_renewal = time(0);
 	jobAd->Assign( ATTR_LAST_JOB_LEASE_RENEWAL, last_job_lease_renewal );
-	shadow->m_reconnect_record.m_last_contact_time = last_job_lease_renewal;
 }
 
 
@@ -2175,6 +2240,15 @@ RemoteResource::reconnect( void )
 		}
 		shadow->m_reconnect_record.m_activation_time = activation.StartTime;
 	}
+
+		// T2 in the ShadowReconnectLog is the last contact before the
+		// disconnect.  Nothing renews the lease while we're reconnecting,
+		// so last_job_lease_renewal still holds that time (or the value
+		// from the job ad, if this shadow was started in reconnect mode).
+		// Don't set this in hadContact(), because the successful reconnect
+		// itself calls hadContact() right before the record is logged.
+	shadow->m_reconnect_record.m_last_contact_time = last_job_lease_renewal;
+
 	if( lease_duration < 0 ) {
 			// if it's our first time, figure out what we've got to
 			// work with...
@@ -2861,7 +2935,10 @@ RemoteResource::checkX509Proxy( int /* timerID */ )
 	}
 
 	struct stat si = {};
-	stat(proxy_path.c_str(), &si);
+	if( stat(proxy_path.c_str(), &si) != 0 ) {
+		dprintf(D_FULLDEBUG, "checkX509Proxy() failed to stat proxy '%s': %s\n",
+				proxy_path.c_str(), strerror(errno));
+	}
 	time_t lastmod = si.st_mtime;
 	dprintf(D_FULLDEBUG, "Proxy timestamps: remote estimated %ld, local %ld (%ld difference)\n",
 		(long)last_proxy_timestamp, (long)lastmod,lastmod - last_proxy_timestamp);
@@ -2998,4 +3075,34 @@ RemoteResource::recordActivationExitExecutionTime(time_t when) {
     // Where would this attribute get rotated?  Here?
     jobAd->InsertAttr( ATTR_JOB_ACTIVATION_EXECUTION_DURATION, ActivationExecutionDuration );
     shadow->updateJobInQueue( U_STATUS );
+}
+
+void
+RemoteResource::updateWastedMemory( ActivationPhase phase )
+{
+		// Nothing to do if the activation never started, or if we
+		// already recorded its end.
+	if ( ! tracksWastedMemory() || activation.StartTime <= 0 ||
+		m_wasted_memory_activation_ended) {
+		return;
+	}
+
+		// The activation spans from when the startd accepted it until
+		// the starter reported that it's done (after output transfer),
+		// the same span as ActivationDuration.  Until the starter
+		// reports, measure until now.
+	time_t now = time(nullptr);
+	if (phase == ActivationPhase::Ending) {
+		m_wasted_memory_activation_ending = true;
+	} else if (phase == ActivationPhase::Ended) {
+		if (activation.TerminationTime > 0) {
+			now = activation.TerminationTime;
+		}
+		m_wasted_memory_activation_ended = true;
+	}
+
+		// Once the activation is ending, keep Last up to date too, since
+		// the shadow may exit before the activation has ended.
+	bool set_last = m_wasted_memory_activation_ending || m_wasted_memory_activation_ended;
+	UpdateWastedMemoryAttrs(*jobAd, activation.StartTime, now, set_last);
 }

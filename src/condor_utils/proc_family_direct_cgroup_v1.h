@@ -51,7 +51,6 @@ public:
 	
 	bool register_subfamily(pid_t pid, pid_t /*ppid*/, int /*snapshot_interval*/) {
 		family_root_pid = pid;
-		start_time = time(nullptr);
 		return true;
 	}
 
@@ -106,7 +105,7 @@ private:
 
 	bool cgroupify_myself(const std::string &cgroup_name);
 
-	time_t start_time;
+	time_t start_time = 0;
 	pid_t family_root_pid;
 	uint64_t cgroup_memory_limit;
 	uint64_t cgroup_memory_and_swap_limit;

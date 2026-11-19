@@ -101,12 +101,25 @@ sub Initialize
 	}
 }
 
+# pid of the process that built its derived config, so that we only build it
+# once per process and a forked child builds its own rather than naming a file
+# that does not exist.
+my $derived_config_pid = 0;
+
 sub deriveMasterConfig {
 	# since we still are in the impact of the initial condor
 	# get all of the actual settings
 	my @outres = ();
-	my $derivedconfig = "derived_condor_config";
-	if(-f "$derivedconfig") {
+	# Every test in a run shares one condor_tests directory, so this file must be
+	# private to this process. condor_config_val -writeconfig also dumps a
+	# "from <Environment>" section holding per-process _CONDOR_ANCESTOR_<pid>
+	# entries, so two processes emit different-length output; writing that
+	# non-atomically to one shared path splices them together and leaves a
+	# trailing partial line. A single bad line makes every later
+	# condor_config_val exit 1, and then no personal condor can be built for the
+	# rest of the run.
+	my $derivedconfig = "derived_condor_config.$$";
+	if($derived_config_pid == $$) {
 		return($derivedconfig);
 	} else {
 		# we need gererate the effective current config and
@@ -116,13 +129,15 @@ sub deriveMasterConfig {
 		if($res != 1) {
 			die "Error while getting the effective current configuration\n";
 		}
-		open(DR,"<derived_condor_config") or die "Failed to create derived_condor_config: $!\n";
+		open(DR,"<$derivedconfig") or die "Failed to create $derivedconfig: $!\n";
 		my $line = "";
 		while(<DR>) {
 			$line = $_;
 			fullchomp($line);
 			print "$line\n";
 		}
+		close(DR);
+		$derived_config_pid = $$;
 	}
 	return($derivedconfig);
 }
@@ -1580,7 +1595,7 @@ sub NewIsRunningYet {
 	#print "Checking running of: $name config:$config \n";
 	# ON going up or down, first number total time to allow a full up state, but
 	# master has to be alive by second number or bail
-	my $res = StateChange("up", $config, 120, 30);
+	my $res = StateChange("up", $config, 300, 30);
 	return $res;
 }
 
@@ -1627,6 +1642,51 @@ sub NewIsDownYet {
 #
 #
 
+# Returns 1 if a condor_master process with the given pid is running,
+# 0 if not, and -1 if we can't tell (bad pid or no process table).
+sub MasterPidState
+{
+	my $pid = shift;
+	if((! defined $pid) || ($pid !~ /^\d+$/)) {
+		return(-1);
+	}
+	if(CondorUtils::is_windows() == 1) {
+		my @tasks = `tasklist`;
+		if(@tasks == 0) {
+			return(-1);
+		}
+		foreach my $process (@tasks) {
+			# image name, pid, session name, ...
+			if($process =~ /(.*?)\s+(\d+)\s+(\w+).*/) {
+				if(($2 eq $pid) && ($1 =~ /condor_master/)) {
+					return(1);
+				}
+			}
+		}
+		return(0);
+	}
+	# ps is kind of expensive.  Skip the wait on linux
+	my $master_name = "";
+	if (-f ("/proc/self/comm")) {
+		if(open(my $fh, "<", "/proc/$pid/comm")) {
+			$master_name = <$fh> // "";
+			close($fh);
+		}
+	} else {
+		my @psdata = `ps $pid`;
+		if(@psdata == 0) {
+			return(-1);
+		}
+		if(@psdata >= 2) {
+			$master_name = $psdata[1];
+		}
+	}
+	if($master_name =~ /condor_master/) {
+		return(1);
+	}
+	return(0);
+}
+
 sub CollectWhoData
 {
 	my $desiredstate = shift;
@@ -1643,6 +1703,15 @@ sub CollectWhoData
 	#$condor->DisplayWhoDataInstances();
 	# condor_who -quick is best before master is alive
 	if($condor != 0) {
+		# Once the master is marked alive, only a parsed condor_who poll can
+		# mark it dead, and those polls can stall or fail, leaving it "alive"
+		# long after it exited. So check the process table directly.
+		if($condor->HasLiveMaster() == 1) {
+			my $masterpid = $condor->GetMasterPid();
+			if(MasterPidState($masterpid) == 0) {
+				CondorTest::LoadWhoData("Master","no",$masterpid,"","","","");
+			}
+		}
 		if(defined $desiredstate) {
 			if($desiredstate eq "down"){
 				print "going down and using quick mode\n";
@@ -1678,48 +1747,10 @@ sub CollectWhoData
 				#print "condor_who -quick fields. $1 daemon name $2 pid\n";
 				#id this is the master is pid real?
 				my $savepid = $2;
-				my $processstring = "";
 				if($1 eq "Master") {
 					#print "Master found\n";
-					if(CondorUtils::is_windows() == 1) {
-				    	my @grift = `tasklist | grep $savepid`;
-						foreach my $process (@grift) {
-							#print "consider:$process saved pid: $savepid\n";
-							if($process =~ /(.*?)\s+(\d+)\s+(\w+).*/) {
-								$processstring = $1;
-								if($2 eq $savepid) {
-									#print "Pids equal:$processstring\n";
-									# does this process have master in binary
-									if($processstring =~ /condor_master/) {
-										#print "Is master, thus master alive\n";
-										CondorTest::LoadWhoData("Master","yes",$savepid,"","","","");
-									}
-								}
-							}
-						}
-					} else {
-						#print "Master record\n";
-						if($savepid ne "no") {
-							# ps is kind of expensive.  Skip the wait on linux
-							my $master_name;
-							if (-f ("/proc/self/comm")) {
-								open F,"</proc/$savepid/comm";
-								$master_name = <F>;
-								close(F);
-							} else {
-								my @psdata = `ps $savepid`;
-								my $pssize = @psdata;
-								if($pssize >= 2) {
-									$master_name = $psdata[1];
-								}
-							}
-							if($master_name =~ /condor_master/) {
-								#Mark master alive
-								#print "Marking Master Alive*************************************************************\n";
-								#print "Before LoadWhoData:\n";
-								CondorTest::LoadWhoData("Master","yes",$savepid,"","","","");
-							}
-						}
+					if(MasterPidState($savepid) == 1) {
+						CondorTest::LoadWhoData("Master","yes",$savepid,"","","","");
 					}
 				} #else {
 					#print "Not Master but $1\n";

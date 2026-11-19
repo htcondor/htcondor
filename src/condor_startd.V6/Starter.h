@@ -40,7 +40,7 @@ public:
 
 	static void config();
 
-	void	dprintf( int, const char* ... );
+	void	dprintf( int, const char*, ... );
 	void	set_dprintf_prefix(const char * prefix) { if (prefix) { s_dpf = prefix; } else { s_dpf.clear(); } }
 
 	char*	path() {return s_path;};
@@ -159,8 +159,8 @@ private:
 	ReliSock*       s_job_update_sock;
 	std::string     s_execute_dir;
 	std::string     s_lv_name; // LogicalVolume name for use with LVM 
-	DCMsgCallback*  m_vacate_job_soft_cb;
-	DCMsgCallback*  m_vacate_job_hard_cb;
+	std::shared_ptr<DCMsgCallback>  m_vacate_job_soft_cb;
+	std::shared_ptr<DCMsgCallback>  m_vacate_job_hard_cb;
 	std::string     m_starter_addr;
 };
 

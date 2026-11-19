@@ -10,12 +10,6 @@ but we've prepared a few examples for job submitters already.
     :glob:
 
     prefer-gpu-to-cpu
+    request-variable-cpus
     convert-multi-q-statements
     transfer-files-on-rm
-    anvil
-    bridges2
-    delta
-    expanse
-    path-facility
-    perlmutter
-    annex-example-job

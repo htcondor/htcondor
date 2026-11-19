@@ -245,3 +245,9 @@ class TestClassAds:
 
         for key in c.keys():
             assert c[key] == d[key]
+
+
+    def test_debug_comparisons(self):
+        e = classad.ExprTree('debug(7 == "7")')
+        r = e.eval()
+        assert classad.lastError() == 'strings can only be compared to strings'

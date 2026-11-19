@@ -24,7 +24,7 @@ RUN rm -f \
     /update-secrets \
     /etc/condor/config.d/01-security.conf
 
-EXPOSE 8080
+ENV RESTD_PORT=8080
 
 CMD ["/start.sh"]
 

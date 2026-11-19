@@ -75,7 +75,7 @@ public:
 			NULL if you want local
 			@param type What kind up updates to use for it
 		*/
-	DCCollector( const char* name, UpdateType type = CONFIG );
+	DCCollector( const char* name, UpdateType type = CONFIG, time_t start=0, time_t reconfig=0 );
 
 		/// Copy constructor (implemented using deepCopy())
 	DCCollector( const DCCollector& );
@@ -95,7 +95,7 @@ public:
 			@param ad ClassAd you want to use for the update
 			file)
 		*/
-	bool sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& seq, ClassAd* ad2, bool nonblocking, StartCommandCallbackType=nullptr, void *miscdata=nullptr );
+	bool sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& seq, ClassAd* ad2, bool nonblocking, StartCommandCallback callback = {} );
 
 	void reconfig( void );
 
@@ -127,7 +127,7 @@ private:
 
 	std::string constructorName;
 
-	void init( bool needs_reconfig );
+	void init( bool needs_reconfig, time_t _start_time, time_t _reconfig_time );
 
 	void deepCopy( const DCCollector& copy );
 	void theRealDeepCopy( const DCCollector & copy );
@@ -148,15 +148,15 @@ private:
 	void clearAndNotifyUpdateQueue(Sock* sock, const std::string &trust_domain, bool should_try_token_request, class UpdateData*& failed);
 	std::deque<class UpdateData*> pending_update_list;
 
-	bool sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallbackType callback_fn, void* miscdata );
-	bool sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallbackType callback_fn, void *miscdata );
+	bool sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallback callback );
+	bool sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallback callback );
 
-	static bool finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd* ad2, StartCommandCallbackType callback_fn, void *miscdata );
+	static bool finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd* ad2, const StartCommandCallback &callback );
 
 	void parseTCPInfo( void );
 	void initDestinationStrings( void );
 
-	bool initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallbackType callback_fn, void *miscdata );
+	bool initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallback callback );
 
 	char* update_destination;
 

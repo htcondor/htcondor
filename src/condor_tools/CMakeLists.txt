@@ -65,7 +65,7 @@ endif()
 
 if (HAVE_SSH_TO_JOB)
 	condor_exe(condor_ssh_to_job "ssh_to_job.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
-endif(HAVE_SSH_TO_JOB)
+endif()
 
 condor_exe(condor_tail "tail.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 
@@ -105,6 +105,5 @@ condor_shared_lib( libgetpwnam "getpwnam.cpp" )
 set_target_properties( libgetpwnam PROPERTIES OUTPUT_NAME "getpwnam" )
 endif()
 
-# htcondor tool + Python htcondor_cli module
+# htcondor tool (htcondor_cli module is installed via bindings/python/setup.py)
 install ( FILES htcondor DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-install ( DIRECTORY htcondor_cli DESTINATION ${C_PYTHON3ARCHLIB} )

@@ -48,8 +48,8 @@ public:
     /** @name detect_port Used to make the initialization find
         the WOL port automatically.
         */
-    static const int detect_port  /* = -1 */,
-                     default_port /* =  9 */;
+    static const unsigned short detect_port  /* =  0 */,
+                                default_port /* =  9 */;
 
 	//@}
 

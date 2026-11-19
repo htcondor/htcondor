@@ -93,6 +93,11 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 		"VARS D foo=\"\" bar=''\n"
 		"PRIORITY D -82\n"
 		"PRE-SKIP E 12\n"
+		"TOLERANCE E 3\n"
+		"TOLERANCE D 25% FAIL-FAST\n"
+		"TOLERANCE C 10 WAIT\n"
+		"TOLERANCE A 15 % FAIL-FAST\n"
+		"TOLERANCE B 150%\n"
 		"SAVE-POINT-FILE B\n"
 		"SAVE_POINT_FILE C ../custom/path/important.save\n"
 		"CATEGORY C CAT-1\n"
@@ -103,6 +108,9 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 		"DOT visual-2.dot UPDATE OVERWRITE\n"
 		"DOT visual-3.dot DONT-UPDATE DONT-OVERWRITE INCLUDE ../path/to/header.dot\n"
 		"NODE_STATUS_FILE foo 82 ALWAYS-UPDATE 1000\n"
+		"NODE_STATUS_FILE bar 60 JSON COMPACT\n"
+		"NODE_STATUS_FILE baz 30 CLASSAD COMPACT ALWAYS-UPDATE\n"
+		"NODE_STATUS_FILE qux 45 JSON\n"
 		"ENV GET   foo bar baz \n"
 		"ENV SET  foo=bar;baz=10;      \n"
 		"CONNECT S1 S2\n"
@@ -115,7 +123,10 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 		// Check that multiline backslash escapes work
 		"DONE \\\n"
 		"     \\\n"
-		"B\n",
+		"B\n"
+		// Weak dependencies: single and multi parent/child
+		"WEAK PARENT A CHILD B\n"
+		"WEAK PARENT G H I J K CHILD L M N O P\n",
 	},
 	{
 		// Each command in this file is invalid/produces an error
@@ -226,6 +237,17 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 		"VARS A foo = \n"
 		"VARS A foo         \n"
 		"VARS A foo = bar = baz\n"
+		"WEAK\n"
+		"WEAK CHILD A\n"
+		"WEAK PARENT CHILD A B C\n"
+		"TOLERANCE\n"
+		"TOLERANCE A\n"
+		"TOLERANCE A foo\n"
+		"TOLERANCE A 5 garbage\n"
+		"TOLERANCE A %\n"
+		"TOLERANCE A 5 WAIT garbage\n"
+		"TOLERANCE A -1\n"
+		"TOLERANCE A 5 % garbage\n"
 	},
 	{
 		// DAG with missing final newline
@@ -302,6 +324,11 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		"VARS > D [bar=] [foo=]",
 		"PRIORITY > D -82",
 		"PRE_SKIP > E 12",
+		"TOLERANCE > E 3 F AUTO",
+		"TOLERANCE > D 25 T FAIL-FAST",
+		"TOLERANCE > C 10 F WAIT",
+		"TOLERANCE > A 15 T FAIL-FAST",
+		"TOLERANCE > B 150 T AUTO",
 		"SAVE_POINT_FILE > B B-" + SUCCESS_DAG + ".save",
 		"SAVE_POINT_FILE > C ../custom/path/important.save",
 		"CATEGORY > CAT-1 C",
@@ -310,7 +337,10 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		"DOT > visual.dot  F F",
 		"DOT > visual-2.dot  T T",
 		"DOT > visual-3.dot ../path/to/header.dot F F",
-		"NODE_STATUS_FILE > foo 1000 T",
+		"NODE_STATUS_FILE > foo 1000 T CLASSAD F",
+		"NODE_STATUS_FILE > bar 60 F JSON T",
+		"NODE_STATUS_FILE > baz 30 T CLASSAD T",
+		"NODE_STATUS_FILE > qux 45 F JSON F",
 		"ENV > GET foo,bar,baz",
 		"ENV > SET foo=bar;baz=10;",
 		"CONNECT > [S1]--[S2]",
@@ -321,6 +351,8 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		"JOBSTATE_LOG > some.log",
 		"SET_JOB_ATTR > foo=bar",
 		"DONE > B",
+		"PARENT > WEAK [ A ] --> [ B ]",
+		"PARENT > WEAK [ G H I J K ] --> [ L M N O P ]",
 	},
 	{
 		// *All expected command parsing failures (note some internal developer errors not included)
@@ -431,6 +463,17 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		FAILURE_DAG + ":102 Failed to parse VARS command: Key value pair missing value: No value specified",
 		FAILURE_DAG + ":103 Failed to parse VARS command: Key value pair missing operator and value",
 		FAILURE_DAG + ":104 Failed to parse VARS command: Key value pair missing key",
+		FAILURE_DAG + ":105 Failed to parse PARENT command: WEAK dependency missing PARENT keyword",
+		FAILURE_DAG + ":106 Failed to parse PARENT command: WEAK dependency missing PARENT keyword",
+		FAILURE_DAG + ":107 Failed to parse PARENT command: No parent node(s) specified",
+		FAILURE_DAG + ":108 Failed to parse TOLERANCE command: No node name specified",
+		FAILURE_DAG + ":109 Failed to parse TOLERANCE command: Missing failure tolerance value",
+		FAILURE_DAG + ":110 Failed to parse TOLERANCE command: Invalid tolerance value 'foo'",
+		FAILURE_DAG + ":111 Failed to parse TOLERANCE command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":112 Failed to parse TOLERANCE command: Empty percentage specified for failure tolerance",
+		FAILURE_DAG + ":113 Failed to parse TOLERANCE command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":114 Failed to parse TOLERANCE command: Invalid tolerance value '-1'",
+		FAILURE_DAG + ":115 Failed to parse TOLERANCE command: Unexpected token 'garbage'",
 	},
 };
 
@@ -482,6 +525,8 @@ static bool test_dag_file_parser_search_filter() {
 		"PARENT > [ A ] --> [ C D E ]",
 		"PARENT > [ C D E ] --> [ F ]",
 		"PARENT > [ G H I J K ] --> [ L M N O P ]",
+		"PARENT > WEAK [ A ] --> [ B ]",
+		"PARENT > WEAK [ G H I J K ] --> [ L M N O P ]",
 	};
 	DagParser test(dag);
 	test.SearchFor(DAG::CMD::PARENT_CHILD);
@@ -531,6 +576,8 @@ static bool test_dag_file_parser_ignore_filter() {
 		"PARENT > [ A ] --> [ C D E ]",
 		"PARENT > [ C D E ] --> [ F ]",
 		"PARENT > [ G H I J K ] --> [ L M N O P ]",
+		"PARENT > WEAK [ A ] --> [ B ]",
+		"PARENT > WEAK [ G H I J K ] --> [ L M N O P ]",
 	};
 
 	std::set<DAG::CMD> search = {

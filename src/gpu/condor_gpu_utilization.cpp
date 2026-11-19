@@ -211,7 +211,6 @@ int main() {
 		runningSampleCounts[i] = 0;
 	}
 
-
 	// The documented minimum duration for a sample is 1/6 of a second,
 	// so the minimum sampling rate in seconds is the size of the smallest
 	// sample buffer divided by six (assuming that each max sample count
@@ -226,8 +225,46 @@ int main() {
 	unsigned long long sampleIntervalMicrosec = (minMaxSampleCount * 1'000'000ull)/6;
 
 
-	time_t lastReport = time( NULL );
+	// If a job starts before we make our first utilization report,
+	// we won't be able to report utilization for that job.  Minimize
+	// that delay with an immediate all-zeroes report.
+	time_t lastReport = time( NULL ) - reportInterval;
 	while( 1 ) {
+		if( time( NULL ) - lastReport >= reportInterval ) {
+			for( unsigned i = 0; i < deviceCount; ++i ) {
+				if( devices[i] == NULL ) { continue; }
+				if(! cudaDevices[i].uuid.empty()) {
+					std::string gpuID = gpuIDFromUUID(cudaDevices[i].uuid, 0);
+					std::string short_gpuID = gpuIDFromUUID(cudaDevices[i].uuid, 1);
+
+					fprintf(stdout, "SlotMergeConstraint = "
+						"StringListMember(\"CUDA%u\", AssignedGPUs) "
+						"|| StringListMember(\"%s\", AssignedGPUs) "
+						"|| StringListMember(\"%s\", AssignedGPUs)\n",
+						i, short_gpuID.c_str(), gpuID.c_str() );
+				} else {
+					fprintf(stdout, "SlotMergeConstraint = "
+						"StringListMember(\"CUDA%u\", AssignedGPUs)\n", i);
+				}
+				fprintf( stdout, "UptimeGPUsSeconds = %.6f\n", elapsedTimes[i] / 1'000'000.0 );
+				fprintf( stdout, "UptimeGPUsMemoryPeakUsage = %llu\n", (memoryUsage[i] + (1024 * 1024) -1) / (1024 * 1024) );
+				fprintf( stdout, "- GPUsDevice%u\n", i );
+				fflush( stdout );
+
+				/* debug fprintf( stderr, "Used %lu samples to cover %lu microseconds (%2.2f samples per second)\n",
+					runningSampleCounts[i], lastSamples[i] - firstSamples[i],
+					1000000/((lastSamples[i] - firstSamples[i])/(1.0 * runningSampleCounts[i])) ); */
+
+				// Report only the usage for each reporting period.
+				elapsedTimes[i] = 0;
+				firstSamples[i] = lastSamples[i];
+				memoryUsage[i] = 0;
+				runningSampleCounts[i] = 0;
+			}
+			lastReport = time( NULL );
+		}
+
+
 		// Take samples three times as often as we have to minimize aliasing.
 		usleep((unsigned int)(sampleIntervalMicrosec / 3));
 
@@ -255,40 +292,6 @@ int main() {
 			if( mi.used > memoryUsage[i] ) {
 				memoryUsage[i] = mi.used;
 			}
-		}
-
-		if( time( NULL ) - lastReport >= reportInterval ) {
-			for( unsigned i = 0; i < deviceCount; ++i ) {
-				if( devices[i] == NULL ) { continue; }
-				if(! cudaDevices[i].uuid.empty()) {
-					std::string gpuID = gpuIDFromUUID(cudaDevices[i].uuid, 0);
-					std::string short_gpuID = gpuIDFromUUID(cudaDevices[i].uuid, 1);
-
-					fprintf(stdout, "SlotMergeConstraint = "
-						"StringListMember(\"CUDA%u\", AssignedGPUs) "
-						"|| StringListMember(\"%s\", AssignedGPUs) "
-						"|| StringListMember(\"%s\", AssignedGPUs)\n",
-						i, short_gpuID.c_str(), gpuID.c_str() );
-				} else {
-					fprintf(stdout, "SlotMergeConstraint = "
-						"StringListMember(\"CUDA%u\", AssignedGPUs)\n", i);
-				}
-				fprintf( stdout, "UptimeGPUsSeconds = %.6f\n", elapsedTimes[i] / 1'000'000.0 );
-				fprintf( stdout, "UptimeGPUsMemoryPeakUsage = %llu\n", (memoryUsage[i] + (1024 * 1024) -1) / (1024 * 1024) );
-				fprintf( stdout, "- GPUsSlot%u\n", i );
-				fflush( stdout );
-
-				/* debug fprintf( stderr, "Used %lu samples to cover %lu microseconds (%2.2f samples per second)\n",
-					runningSampleCounts[i], lastSamples[i] - firstSamples[i],
-					1000000/((lastSamples[i] - firstSamples[i])/(1.0 * runningSampleCounts[i])) ); */
-
-				// Report only the usage for each reporting period.
-				elapsedTimes[i] = 0;
-				firstSamples[i] = lastSamples[i];
-				memoryUsage[i] = 0;
-				runningSampleCounts[i] = 0;
-			}
-			lastReport = time( NULL );
 		}
 	}
 

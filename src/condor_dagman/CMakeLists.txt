@@ -16,7 +16,7 @@
  # 
  ############################################################### 
 
-set(DAGSrcs 
+set(DAGSrcs
 dag.cpp
 dagman_classad.cpp
 dagman_commands.cpp
@@ -24,6 +24,7 @@ dagman_main.cpp
 dagman_metrics.cpp
 dagman_submit.cpp
 debug.cpp
+edge.cpp
 node.cpp
 jobstate_log.cpp
 parse.cpp
@@ -37,4 +38,4 @@ condor_exe(condor_dagman "${DAGSrcs}" ${C_BIN} "${CONDOR_LIBS}" ON)
 
 # Client tools
 condor_exe(condor_submit_dag "condor_submit_dag.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
-condor_exe(condor_dag_checker "condor_dag_checker.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_dag_checker "condor_dag_checker.cpp;edge.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)

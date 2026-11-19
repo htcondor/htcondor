@@ -44,6 +44,17 @@
 #define ATTR_SCALE "Scale"
 #define ATTR_LIFETIME "Lifetime"
 #define ATTR_STASH_COLLECTOR_NAME "_condorColName"
+#define ATTR_EXPORT_METRIC "ExportMetric"
+#define ATTR_PROMETHEUS_LABELS "PrometheusLabels"
+#define ATTR_COUNTER "Counter"
+
+// Pseudo-attributes that metricd itself supplies when evaluating a label
+// expression.  They are not attributes of any daemon ad; they carry the
+// metric's own resolved identity into the label, so that a label can say
+// what Metric::machine says rather than only what the sampled daemon ad
+// says.  See Metric::evaluateLabelAd().
+#define ATTR_METRIC_MACHINE "MetricMachine"
+#define ATTR_METRIC_POOL "MetricPool"
 
 Metric::Metric():
 	derivative(false),
@@ -161,12 +172,55 @@ Metric::whichMetric() const {
 	return result;
 }
 
+// Substitute \1, \2, ... in a string-valued result with the corresponding
+// capture group from a RegEx metric.  A no-op for non-strings and for metrics
+// that are not RegEx metrics.
+static void
+applyRegexGroups(classad::Value &result,std::vector<std::string> *regex_groups)
+{
+	if( !regex_groups || regex_groups->empty() ) return;
+
+	std::string str_value;
+	if( !result.IsStringValue(str_value) || str_value.find("\\")==std::string::npos ) return;
+
+	std::string new_str_value;
+	const char *ch = str_value.c_str();
+	while( *ch ) {
+		if( *ch == '\\' ) {
+			ch++;
+			if( !isdigit(*ch) ) {
+				new_str_value += *(ch++);
+			}
+			else {
+				char *endptr = NULL;
+				long index = strtol(ch,&endptr,10);
+				ch = endptr;
+				if( index < (ssize_t) regex_groups->size() ) {
+					new_str_value += (*regex_groups)[index];
+				}
+			}
+		}
+		else {
+			new_str_value += *(ch++);
+		}
+	}
+	result.SetStringValue(new_str_value);
+}
+
 bool
 Metric::evaluate(char const *attr_name,classad::Value &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,MetricTypeEnum type,std::vector<std::string> *regex_groups,char const *regex_attr) const
 {
 	bool retval = true;
 	ExprTree *expr = NULL;
-	if( !(expr=metric_ad.Lookup(attr_name)) ) {
+	// If this metric is being evaluated for a specific backend, a
+	// backend-decorated attribute (e.g. Ganglia_Name) overrides the generic
+	// one (e.g. Name) for that backend only.  Look for the decorated form
+	// first and fall back to the undecorated attribute if it is not present.
+	if( !backend.empty() ) {
+		std::string decorated_attr = backend + "_" + attr_name;
+		expr = metric_ad.Lookup(decorated_attr);
+	}
+	if( !expr && !(expr=metric_ad.Lookup(attr_name)) ) {
 		return true;
 	}
 	classad::ClassAd const *ad = &daemon_ad;
@@ -202,34 +256,7 @@ Metric::evaluate(char const *attr_name,classad::Value &result,classad::ClassAd &
 	}
 	expr->SetParentScope(&metric_ad);
 
-	// do regex macro substitutions
-	if( regex_groups && regex_groups->size() > 0 ) {
-		std::string str_value;
-		if( result.IsStringValue(str_value) && str_value.find("\\")!=std::string::npos ) {
-			std::string new_str_value;
-			const char *ch = str_value.c_str();
-			while( *ch ) {
-				if( *ch == '\\' ) {
-					ch++;
-					if( !isdigit(*ch) ) {
-						new_str_value += *(ch++);
-					}
-					else {
-						char *endptr = NULL;
-						long index = strtol(ch,&endptr,10);
-						ch = endptr;
-						if( index < (ssize_t) regex_groups->size() ) {
-							new_str_value += (*regex_groups)[index];
-						}
-					}
-				}
-				else {
-					new_str_value += *(ch++);
-				}
-			}
-			result.SetStringValue(new_str_value);
-		}
-	}
+	applyRegexGroups(result,regex_groups);
 
 	return retval;
 }
@@ -249,20 +276,313 @@ Metric::evaluateOptionalString(char const *attr_name,std::string &result,classad
 }
 
 bool
-Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,int max_verbosity,StatsD *statsd,std::vector<std::string> *regex_groups,char const *regex_attr)
+Metric::evaluateOptionalBool(char const *attr_name,bool &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups)
 {
+	classad::Value val;
+	if( !evaluate(attr_name,val,metric_ad,daemon_ad,BOOLEAN,regex_groups) ) {
+		return false;
+	}
+	if( val.IsUndefinedValue() ) {
+		return true;
+	}
+	ASSERT( val.IsBooleanValue(result) );
+	return true;
+}
+
+bool
+Metric::evaluateOptionalInt(char const *attr_name,int &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups)
+{
+	// Checked as DOUBLE rather than INT32 so that IsNumber() accepts a real
+	// and converts, matching what ClassAd::EvaluateAttrInt() used to do here.
+	classad::Value val;
+	if( !evaluate(attr_name,val,metric_ad,daemon_ad,DOUBLE,regex_groups) ) {
+		return false;
+	}
+	if( val.IsUndefinedValue() ) {
+		return true;
+	}
+	ASSERT( val.IsNumber(result) );
+	return true;
+}
+
+bool
+Metric::evaluateOptionalDouble(char const *attr_name,double &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups)
+{
+	classad::Value val;
+	if( !evaluate(attr_name,val,metric_ad,daemon_ad,DOUBLE,regex_groups) ) {
+		return false;
+	}
+	if( val.IsUndefinedValue() ) {
+		return true;
+	}
+	ASSERT( val.IsNumber(result) );
+	return true;
+}
+
+bool
+Metric::isValidLabelName(std::string const &label_name)
+{
+	// Prometheus label names must match [a-zA-Z_][a-zA-Z0-9_]* and names
+	// beginning with "__" are reserved for Prometheus' own internal use.
+	if( label_name.empty() ) return false;
+	if( label_name.starts_with("__") ) return false;
+	if( !isalpha((unsigned char)label_name[0]) && label_name[0] != '_' ) return false;
+	for( char c : label_name ) {
+		if( !isalnum((unsigned char)c) && c != '_' ) return false;
+	}
+	return true;
+}
+
+// Convert a CamelCase HTCondor name to the snake_case Prometheus conventionally
+// uses.  HTCondor ClassAd attributes -- which is where most metric names come
+// from -- are CamelCase with embedded all-caps acronyms, so a naive "insert an
+// underscore before every capital" turns MonitorSelfCPUUsage into the unreadable
+// monitor_self_c_p_u_usage.
+//
+// Instead, insert a separator only at a real word boundary, of which there are
+// exactly two kinds:
+//
+//   lower|digit -> Upper    TotalJobs      -> total_jobs
+//   Upper -> Upper + lower  MonitorSelfCPUUsage -> monitor_self_cpu_usage
+//
+// The second rule is what handles acronyms: in a run of capitals, the boundary
+// falls before the *last* one, because that capital is the start of the next
+// word only if a lowercase letter follows it.  So "CPUUsage" splits as
+// CPU|Usage, while "CPU" at the end of a name does not split at all.  The same
+// rule gets HTTPSProxyURL -> https_proxy_url and IOWait -> io_wait for free,
+// with no table of known acronyms to maintain.
+//
+// Characters that are already separators pass through: an existing underscore
+// never doubles, and ':' (legal in a Prometheus metric name, and reserved by
+// convention for recording rules) is left alone and suppresses a split after
+// it.  The transform is idempotent, so a name an admin already wrote in
+// snake_case is unchanged.
+std::string
+Metric::toSnakeCase(const std::string &in)
+{
+	std::string out;
+	out.reserve(in.size() + 8);
+	for (size_t i = 0; i < in.size(); i++) {
+		const unsigned char c = (unsigned char)in[i];
+		if (isupper(c) && i > 0) {
+			const unsigned char prev = (unsigned char)in[i-1];
+			const unsigned char next = (i+1 < in.size()) ? (unsigned char)in[i+1] : 0;
+			const bool boundary = islower(prev) || isdigit(prev) ||
+			                      (isupper(prev) && islower(next));
+			if (boundary && !out.empty() && out.back() != '_') {
+				out += '_';
+			}
+		}
+		if (c == '_' && !out.empty() && out.back() == '_') {
+			continue; // never emit a run of underscores
+		}
+		out += (char)tolower(c);
+	}
+	return out;
+}
+
+int
+Metric::reportLabelNameCollisions(classad::ClassAd const &label_ad, char const *source)
+{
+	// Two attribute names that differ by more than case -- AccountingGroup and
+	// Accounting_Group, say -- are distinct to ClassAds but normalize to the
+	// same Prometheus label name, so only one of them can ever be published.
+	// evaluateLabelAd() resolves that by keeping the first, which is stable but
+	// arbitrary from the admin's point of view; say so here, once per reconfig,
+	// rather than leaving them to wonder which label went missing.
+	std::map<std::string,std::string> first_seen;   // normalized -> as written
+	int collisions = 0;
+
+	for( auto const &[label_name,label_expr] : label_ad ) {
+		if( !label_expr ) continue;
+		if( !isValidLabelName(label_name) ) continue;   // reported separately
+
+		std::string norm_name = toSnakeCase(label_name);
+		auto [it,inserted] = first_seen.emplace(norm_name,label_name);
+		if( !inserted ) {
+			collisions++;
+			dprintf(D_ERROR,
+			        "CONFIGURATION ERROR: '%s' and '%s' in %s both name the Prometheus "
+			        "label '%s'; only '%s' will be published\n",
+			        it->second.c_str(),label_name.c_str(),source,
+			        norm_name.c_str(),it->second.c_str());
+		}
+	}
+	return collisions;
+}
+
+// Render an evaluated label expression as a label value string.  Returns
+// false for values that have no sensible scalar rendering (UNDEFINED, ERROR,
+// lists, nested ads, times), in which case the caller omits the label.
+static bool
+labelValueToString(classad::Value const &val,std::string &result)
+{
+	switch( val.GetType() ) {
+	case classad::Value::STRING_VALUE:
+		val.IsStringValue(result);
+		return true;
+	case classad::Value::INTEGER_VALUE: {
+		long long i = 0;
+		val.IsIntegerValue(i);
+		result = std::to_string(i);
+		return true;
+	}
+	case classad::Value::REAL_VALUE: {
+		double d = 0.0;
+		val.IsRealValue(d);
+		// %.15g for the same reason as Metric::getValueString(): %g rounds to
+		// 6 significant digits, which would quietly corrupt a label value.
+		formatstr(result,"%.15g",d);
+		return true;
+	}
+	case classad::Value::BOOLEAN_VALUE: {
+		bool b = false;
+		val.IsBooleanValue(b);
+		result = b ? "true" : "false";
+		return true;
+	}
+	default:
+		return false;
+	}
+}
+
+void
+Metric::evaluateLabelAd(classad::ClassAd const &label_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups,std::map<std::string,std::string> &result) const
+{
+	// Label expressions are evaluated against a small overlay ad whose parent
+	// scope is the daemon ad, so an unqualified reference finds a pseudo-
+	// attribute here if there is one and otherwise falls through to the
+	// daemon ad.  The overlay holds no copy of the daemon ad, so this costs
+	// nothing per ad; EvalState::SetRootScope() walks to the top of the
+	// parent chain, which keeps the daemon ad reachable.
+	//
+	// Only non-empty values are inserted: an unresolvable pseudo-attribute
+	// should evaluate to UNDEFINED and drop its label, not emit an empty one.
+	classad::ClassAd overlay;
+	if( !machine.empty() ) overlay.InsertAttr(ATTR_METRIC_MACHINE,machine);
+	if( !pool.empty() )    overlay.InsertAttr(ATTR_METRIC_POOL,pool);
+	overlay.SetParentScope(&daemon_ad);
+
+	// Label names are normalized to snake_case as they go in, not after the
+	// caller has merged the sources together.  Normalizing afterwards would
+	// decide precedence by the collation order of the merged map: a default
+	// of accounting_group and a per-metric AccountingGroup survive the merge
+	// as two distinct keys, and whichever sorted later would win -- which is
+	// the default, exactly backwards.  Normalizing here means the two are the
+	// same key by the time the caller merges, so the documented rule that
+	// per-metric labels override pool-wide defaults actually holds.
+	//
+	// Within one source, two attributes can still normalize together (say
+	// AccountingGroup and Accounting_Group, which ClassAds treat as distinct
+	// since they differ by more than case).  That is a configuration mistake,
+	// reported once per reconfig by the config-read checks; here we keep the
+	// first and skip the rest, so the choice is at least not silently made by
+	// map order.
+	std::set<std::string> seen_here;
+
+	for( auto const &[label_name,label_expr] : label_ad ) {
+		if( !label_expr ) continue;
+
+		// Bad label names are reported once at config-read time; here we
+		// just skip them rather than emitting invalid exposition text.
+		if( !isValidLabelName(label_name) ) continue;
+
+		std::string norm_name = toSnakeCase(label_name);
+		if( !seen_here.insert(norm_name).second ) continue;
+
+		// Evaluate in the overlay/daemon-ad scope rather than in label_ad's
+		// own scope.  ClassAd attribute lookup is case-insensitive, so
+		// evaluating in label_ad's scope would turn the most natural thing an
+		// admin can write -- machine = Machine -- into a circular
+		// self-reference.  The consequence is that labels cannot refer to one
+		// another, which is intentional.
+		label_expr->SetParentScope(&overlay);
+		classad::Value val;
+		bool ok = overlay.EvaluateExpr(label_expr,val);
+		label_expr->SetParentScope(&label_ad);
+
+		if( !ok ) {
+			dprintf(D_FULLDEBUG,"Failed to evaluate Prometheus label %s of metric %s; omitting it\n",
+			        label_name.c_str(),name.c_str());
+			continue;
+		}
+
+		applyRegexGroups(val,regex_groups);
+
+		std::string label_value;
+		if( !labelValueToString(val,label_value) ) {
+			// UNDEFINED and ERROR land here, and that is the documented way
+			// to make a label conditional; do not emit an empty label.
+			dprintf(D_FULLDEBUG,"Prometheus label %s of metric %s did not evaluate to a scalar; omitting it\n",
+			        label_name.c_str(),name.c_str());
+			continue;
+		}
+
+		result[norm_name] = label_value;
+	}
+}
+
+void
+Metric::evaluateLabels(char const *attr_name,classad::ClassAd const *default_label_ad,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups,char const *regex_attr)
+{
+	prometheus_labels.clear();
+
+	// Honor backend-decorated overrides the same way evaluate() does.
+	classad::ExprTree *expr = NULL;
+	if( !backend.empty() ) {
+		std::string decorated_attr = backend + "_" + attr_name;
+		expr = metric_ad.Lookup(decorated_attr);
+	}
+	if( !expr ) {
+		expr = metric_ad.Lookup(attr_name);
+	}
+
+	if( !expr && !default_label_ad ) return;
+
+	classad::ClassAd const *ad = &daemon_ad;
+	ClassAd daemon_ad_copy;
+	if( regex_attr ) {
+		// as in evaluate(): let label expressions refer to the RegEx attribute
+		daemon_ad_copy = daemon_ad;
+		ad = &daemon_ad_copy;
+		daemon_ad_copy.AssignExpr(ATTR_REGEX,regex_attr);
+	}
+
+	// Pool-wide defaults first, so that same-named per-metric labels win.
+	if( default_label_ad ) {
+		evaluateLabelAd(*default_label_ad,*ad,regex_groups,prometheus_labels);
+	}
+
+	if( expr ) {
+		if( expr->GetKind() != classad::ExprTree::CLASSAD_NODE ) {
+			// Already reported at config-read time by ParseMetrics().
+			return;
+		}
+		evaluateLabelAd(*static_cast<classad::ClassAd const *>(expr),*ad,regex_groups,prometheus_labels);
+	}
+}
+
+bool
+Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,int max_verbosity,StatsD &statsd,std::vector<std::string> *regex_groups,char const *regex_attr)
+{
+	// Record which backend this metric is being evaluated for, so that
+	// evaluate() can honor backend-decorated attribute overrides such as
+	// Ganglia_Name overriding Name when publishing to ganglia.
+	char const *backend_name = statsd.backendName();
+	backend = backend_name ? backend_name : "";
+
 	if( regex_attr ) {
 		name = regex_attr;
 	}
 	if( !evaluateOptionalString(ATTR_NAME,name,metric_ad,daemon_ad,regex_groups) ) return false;
 
-	metric_ad.EvaluateAttrInt(ATTR_VERBOSITY,verbosity);
+	if( !evaluateOptionalInt(ATTR_VERBOSITY,verbosity,metric_ad,daemon_ad,regex_groups) ) return false;
 	if( verbosity > max_verbosity ) {
 		// avoid doing more work; this metric requires higher verbosity
 		return false;
 	}
 
-	metric_ad.EvaluateAttrInt(ATTR_LIFETIME, lifetime);
+	if( !evaluateOptionalInt(ATTR_LIFETIME,lifetime,metric_ad,daemon_ad,regex_groups) ) return false;
 
 	std::string target_type_str;
 	if( !evaluateOptionalString(ATTR_TARGET_TYPE,target_type_str,metric_ad,daemon_ad,regex_groups) ) return false;
@@ -319,7 +639,7 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 				std::vector<std::string> the_regex_groups;
 				if( re.match(itr->first.c_str(),&the_regex_groups) ) {
 					// make a new Metric for this attribute that matched the regex
-					std::shared_ptr<Metric> metric(statsd->newMetric());
+					std::unique_ptr<Metric> metric(statsd.newMetric());
 					metric->evaluateDaemonAd(metric_ad,daemon_ad,max_verbosity,statsd,&the_regex_groups,itr->first.c_str());
 				}
 			}
@@ -355,17 +675,17 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	}
 	else if( !strcasecmp(my_type.c_str(),"machine") ) {
 		group = "HTCondor Startd";
-		if( !statsd->publishPerExecuteNodeMetrics() ) {
+		if( !statsd.publishPerExecuteNodeMetrics() ) {
 			return false;
 		}
 	}
 	else if( !strcasecmp(my_type.c_str(),"daemonmaster") ) {
 		group = "HTCondor Master";
 
-		if( !statsd->publishPerExecuteNodeMetrics() ) {
+		if( !statsd.publishPerExecuteNodeMetrics() ) {
 			std::string machine_name;
 			daemon_ad.EvaluateAttrString(ATTR_MACHINE,machine_name);
-			if( statsd->isExecuteOnlyNode(machine_name) ) {
+			if( statsd.isExecuteOnlyNode(machine_name) ) {
 				return false;
 			}
 		}
@@ -375,18 +695,27 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	}
 
 	if( isAggregateMetric() ) {
-		// This is like GROUP BY in SQL.
-		// By default, group by the name of the metric.
-		// If this GangliaD is configured to monitor multiple pools, however, then
-		// the default is the name of the metric PLUS the collector name since we typically 
-		// want an aggregate metric per pool.
+		// This is like GROUP BY in SQL: one aggregate result per distinct key.
+		//
+		// The key always begins with this metric's own name.  StatsD keeps a
+		// single map of aggregates keyed by this string and shared by every
+		// metric, so two metrics whose keys collided would silently accumulate
+		// into one another -- which is why AggregateGroup names only the
+		// dimension to group by (the submitter, the accounting group, ...)
+		// rather than having to spell out the metric name as well.
+		aggregate_group = name;
+		std::string group_by;
+		if( !evaluateOptionalString(ATTR_AGGREGATE_GROUP,group_by,metric_ad,daemon_ad,regex_groups) ) return false;
+		if( !group_by.empty() ) {
+			aggregate_group += "/" + group_by;
+		}
+		// If this daemon came from one of several monitored pools, append the
+		// collector name as well: we want an aggregate per pool however the
+		// group was chosen.
 		std::string collector_name;
 		if (daemon_ad.LookupString(ATTR_STASH_COLLECTOR_NAME,collector_name)) {
-			aggregate_group = name + "/" + collector_name;
-		} else {
-			aggregate_group = name;
+			aggregate_group += "/" + collector_name;
 		}
-		if( !evaluateOptionalString(ATTR_AGGREGATE_GROUP,aggregate_group,metric_ad,daemon_ad,regex_groups) ) return false;
 	}
 
 	if( !evaluateOptionalString(ATTR_GROUP,group,metric_ad,daemon_ad,regex_groups) ) return false;
@@ -394,10 +723,20 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	if( !evaluateOptionalString(ATTR_TITLE,title,metric_ad,daemon_ad,regex_groups) ) return false;
 	if( !evaluateOptionalString(ATTR_DESC,desc,metric_ad,daemon_ad,regex_groups) ) return false;
 	if( !evaluateOptionalString(ATTR_UNITS,units,metric_ad,daemon_ad,regex_groups) ) return false;
+	std::string export_str;
+	if( !evaluateOptionalString(ATTR_EXPORT_METRIC,export_str,metric_ad,daemon_ad,regex_groups) ) return false;
+	export_systems = split(export_str);
 	if( !evaluateOptionalString(ATTR_CLUSTER,cluster,metric_ad,daemon_ad,regex_groups) ) return false;
 
-	metric_ad.EvaluateAttrBool(ATTR_DERIVATIVE,derivative);
-    metric_ad.EvaluateAttrNumber(ATTR_SCALE,scale);
+	// Counter is an alias for Derivative; either marks the metric as one.
+	// Both go through the override-aware evaluator, so Prometheus_Counter
+	// marks a counter for Prometheus only, Ganglia_Derivative for Ganglia
+	// only, and so on.
+	if( !evaluateOptionalBool(ATTR_DERIVATIVE,derivative,metric_ad,daemon_ad,regex_groups) ) return false;
+	if( !derivative ) {
+		if( !evaluateOptionalBool(ATTR_COUNTER,derivative,metric_ad,daemon_ad,regex_groups) ) return false;
+	}
+	if( !evaluateOptionalDouble(ATTR_SCALE,scale,metric_ad,daemon_ad,regex_groups) ) return false;
 
 	std::string type_str;
 	if( !evaluateOptionalString(ATTR_TYPE,type_str,metric_ad,daemon_ad,regex_groups) ) return false;
@@ -466,10 +805,18 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
         }
     }
 
+	// Which pool this daemon ad came from.  When several pools are monitored
+	// (MONITOR_MULTIPLE_COLLECTORS / MONITOR_COLLECTOR) the name was stashed
+	// into the ad as it came back from that pool's collector; otherwise it is
+	// the collector host of our own pool.
+	if( !daemon_ad.LookupString(ATTR_STASH_COLLECTOR_NAME,pool) ) {
+		pool = statsd.getDefaultAggregateHost();
+	}
+
 	if( isAggregateMetric() ) {
-		if (!daemon_ad.LookupString(ATTR_STASH_COLLECTOR_NAME,machine)) {
-			machine = statsd->getDefaultAggregateHost();
-		}
+		// An aggregate is not associated with any single daemon, so it is
+		// published against the pool's central manager.
+		machine = pool;
 	}
 	else {
 		if( (!strcasecmp(my_type.c_str(),"machine") && restrict_slot1) || !strcasecmp(my_type.c_str(),"collector") ) {
@@ -490,14 +837,72 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	}
 	if( !evaluateOptionalString(ATTR_MACHINE,machine,metric_ad,daemon_ad,regex_groups) ) return false;
 
-	statsd->getDaemonIP(machine,ip);
+	statsd.getDaemonIP(machine,ip);
 	if( !evaluateOptionalString(ATTR_IP,ip,metric_ad,daemon_ad,regex_groups) ) return false;
 
+	// Labels are evaluated last so that they can refer to the metric's own
+	// resolved machine and pool, which are only settled above.
+	evaluateLabels(ATTR_PROMETHEUS_LABELS,statsd.defaultLabelAd(),metric_ad,daemon_ad,regex_groups,regex_attr);
+
+	if ( isAggregateMetric() && 
+		 derivative && 
+		 value.IsNumber() &&
+		 value.IsBooleanValue() == false )
+	{
+		// For aggregate derivative metrics, we want to keep track of the previous value reported in the
+		// daemon ad in order to calculate the derivative.
+		// The key into the map is the metric name, the daemon ad name, the daemon ad type, the collector name
+		// plus daemon start time, as this uniquely identifies a metric derived from a specific daemon instance.
+		std::string daemon_name;
+		daemon_ad.EvaluateAttrString(ATTR_NAME,daemon_name);
+		std::string ad_type;
+		daemon_ad.EvaluateAttrString(ATTR_MY_TYPE,ad_type);
+		std::string collector_name;
+		if (!daemon_ad.LookupString(ATTR_STASH_COLLECTOR_NAME,collector_name)) {
+			collector_name = statsd.getDefaultAggregateHost();
+		}
+		time_t start_time = 0;
+		daemon_ad.LookupInteger(ATTR_DAEMON_START_TIME,start_time);
+		// Create the map key
+		std::string key = name + "/" + daemon_name + "/" + ad_type + "/" + collector_name + "/" + std::to_string(start_time);
+		double current_numeric_value, previous_numeric_value;
+		value.IsNumber(current_numeric_value); // we know this is a number because we checked above
+		bool have_previous_value = statsd.getPreviousValue(key, previous_numeric_value);
+		// Store the value into our previous value map for use in calculating the derivative the next time we see this metric from this daemon instance.
+		statsd.storePreviousValue(key, current_numeric_value);
+		if( have_previous_value ) {
+			// we have a previous value, so we can calculate the derivative
+			double delta_value = current_numeric_value - previous_numeric_value;
+			if ( delta_value < 0.0 ) {
+				// if the value decreased, this likely means the daemon restarted and thus the previous value is meaningless
+				dprintf(D_FULLDEBUG,"Metric %s has decreased from %g to %g\n",name.c_str(),previous_numeric_value,current_numeric_value);
+				have_previous_value = false;
+			} else {
+				// delta value did not decrease, so change current metric value to the delta value
+				if ( value.IsIntegerValue() ) {
+					// long long for the same reason as the aggregate paths
+					// below: a per-daemon delta of a bytes counter over a
+					// long interval can exceed 2^31.
+					value.SetIntegerValue((long long)delta_value);
+				} else {
+					value.SetRealValue(delta_value);
+				}
+			}
+		}
+		if (!have_previous_value) {
+			// we don't have a legitimate previous value to calculate a derivative, so we should not publish this metric since it would be misleading.  Instead, we'll wait until the next time we see this metric from this daemon instance when we will have a previous value and can calculate a valid derivative, and we'll publish then.
+			dprintf(D_FULLDEBUG,"Not publishing derivative metric %s because no previous value to calculate a delta\n",name.c_str());
+			return false;	
+		}
+	}
+
+	daemon_ad.EvaluateAttrInt(ATTR_LAST_HEARD_FROM, timestamp);
+
 	if( isAggregateMetric() ) {
-		statsd->addToAggregateValue(*this);
+		statsd.addToAggregateValue(*this);
 	}
 	else {
-		statsd->publishMetric(*this);
+		statsd.publishMetric(*this);
 	}
 	return true;
 }
@@ -510,7 +915,13 @@ Metric::getValueString(std::string &result) const {
 			double dbl = 0.0;
 			if( zero_value || value.IsNumber(dbl) ) {
                 dbl *= scale;
-				formatstr(result,"%g",dbl);
+				// %g would give only 6 significant digits, which silently
+				// mangles ordinary values: 5000000123 prints as "5e+09".  For
+				// a counter that is fatal -- consecutive scrapes report the
+				// same rounded number and the computed rate is zero.  %.15g
+				// is exact for integers up to 1e15 and still prints 0.1 as
+				// "0.1" rather than "0.10000000000000001" the way %.17g would.
+				formatstr(result,"%.15g",dbl);
 				return true;
 			}
 			break;
@@ -527,10 +938,13 @@ Metric::getValueString(std::string &result) const {
         case UINT16:
         case INT32:
         case UINT32: {
-            int i = 0;
+            // long long, not int: ClassAd stores the value as 64 bits and
+            // IsIntegerValue(int&) narrows with no range check, so an int
+            // here silently wraps any aggregate above 2^31.
+            long long i = 0;
             if( zero_value || value.IsIntegerValue(i) ) {
                 i *= scale;
-                formatstr(result,"%d",i);
+                formatstr(result,"%lld",i);
                 return true;
             }
             break;
@@ -601,7 +1015,14 @@ Metric::addToAggregateValue(Metric const &datapoint) {
 }
 
 void
-Metric::convertToNonAggregateValue() {
+Metric::convertToNonAggregateValue(StatsD &statsd) {
+	// Only a SUM of a derivative metric is itself a counter.  addToAggregateValue()
+	// summed the per-daemon deltas, so for SUM 'sum' holds this interval's pooled
+	// increment across the daemons.  MIN/MAX/AVG of counters are rate-like
+	// quantities (functions of the per-daemon rates), not cumulative counts, so
+	// they remain gauges.  Capture this before we clear the aggregate function.
+	bool is_counter = derivative && (aggregate == SUM);
+
 	switch(aggregate) {
 		case NO_AGGREGATE:
 			break;
@@ -611,7 +1032,7 @@ Metric::convertToNonAggregateValue() {
             if (type == FLOAT || type == DOUBLE) {
                 value.SetRealValue(sum);
             } else {
-                value.SetIntegerValue((int)sum);
+                value.SetIntegerValue((long long)sum);
             }
 			break;
 		}
@@ -620,7 +1041,7 @@ Metric::convertToNonAggregateValue() {
                 if (type == FLOAT || type == DOUBLE) {
                     value.SetRealValue(sum/count);
                 } else {
-                    value.SetIntegerValue((int)(sum/count));
+                    value.SetIntegerValue((long long)(sum/count));
                 }
 			}
 			else {
@@ -630,6 +1051,31 @@ Metric::convertToNonAggregateValue() {
 		}
 	}
 	aggregate = NO_AGGREGATE;
+
+	if( is_counter ) {
+		// 'sum' was this interval's pooled per-daemon delta.  Integrate it into a
+		// persistent running total so the summed counter is published as a proper
+		// monotonic counter (Prometheus counter / Ganglia --slope=derivative) and
+		// the backend computes the rate itself, just like a non-aggregate counter,
+		// instead of publishing a per-interval gauge.  Keep derivative=true so the
+		// publisher treats it as a counter.  The total stays monotonic because
+		// negative per-daemon deltas (e.g. a daemon restart) were already dropped
+		// before aggregation in evaluateDaemonAd().
+		double total = statsd.accumulateAggregateCounter(aggregate_group, sum);
+		if (type == FLOAT || type == DOUBLE) {
+			value.SetRealValue(total);
+		} else {
+			// SetIntegerValue takes a long long and the ClassAd stores 64
+			// bits; an (int) cast here would wrap a pool-wide counter that
+			// exceeds 2^31, which a bytes-transferred total does routinely.
+			value.SetIntegerValue((long long)total);
+		}
+	}
+	else {
+		// Set derivative to false since we have already calculated the derivative if needed when we
+		// added datapoints to the aggregate value, and we don't want to calculate the derivative again when we publish this metric.
+		derivative = false;
+	}
 }
 
 StatsD::StatsD():
@@ -652,10 +1098,11 @@ StatsD::~StatsD()
 {
 	clearMetricDefinitions();
 	clearAggregateMetrics();
+	clearPreviousAggregateMetrics();
 }
 
 void
-StatsD::initAndReconfig(char const *service_name)
+StatsD::base_initAndReconfig(char const *service_name, bool as_backend)
 {
 	std::string param_name;
 
@@ -666,34 +1113,36 @@ StatsD::initAndReconfig(char const *service_name)
 	int old_stats_pub_interval = m_stats_pub_interval;
 	formatstr(param_name,"%s_INTERVAL",service_name);
 	m_stats_pub_interval = param_integer(param_name.c_str(),60);
-	if( m_stats_pub_interval < 0 ) {
-		dprintf(D_ALWAYS,
-				"%s is less than 0, so no stats publications will be made.\n",
-				param_name.c_str());
-		if( m_stats_pub_timer != -1 ) {
-			daemonCore->Cancel_Timer(m_stats_pub_timer);
-			m_stats_pub_timer = -1;
+	if( !as_backend ) {
+		if( m_stats_pub_interval < 0 ) {
+			dprintf(D_ALWAYS,
+					"%s is less than 0, so no stats publications will be made.\n",
+					param_name.c_str());
+			if( m_stats_pub_timer != -1 ) {
+				daemonCore->Cancel_Timer(m_stats_pub_timer);
+				m_stats_pub_timer = -1;
+			}
 		}
-	}
-	else if( m_stats_pub_timer >= 0 ) {
-		if( old_stats_pub_interval != m_stats_pub_interval ) {
-            m_stats_time_till_pub = m_stats_time_till_pub + (m_stats_pub_interval - old_stats_pub_interval );
+		else if( m_stats_pub_timer >= 0 ) {
+			if( old_stats_pub_interval != m_stats_pub_interval ) {
+	            m_stats_time_till_pub = m_stats_time_till_pub + (m_stats_pub_interval - old_stats_pub_interval );
+			}
 		}
-	}
-	else {
-		m_stats_heartbeat_interval = std::min(m_stats_pub_interval,m_stats_heartbeat_interval);
-		m_stats_pub_timer = daemonCore->Register_Timer(
-			m_stats_heartbeat_interval,
-			m_stats_heartbeat_interval,
-			(TimerHandlercpp)&StatsD::publishMetrics,
-			"Statsd::publishMetrics",
-			this );
-	}
-	if( old_stats_pub_interval != m_stats_pub_interval && m_stats_pub_interval > 0 )
-	{
-		dprintf(D_ALWAYS,
-				"Will perform stats publication every %s=%d "
-				"seconds.\n", param_name.c_str(),m_stats_pub_interval);
+		else {
+			m_stats_heartbeat_interval = std::min(m_stats_pub_interval,m_stats_heartbeat_interval);
+			m_stats_pub_timer = daemonCore->Register_Timer(
+				m_stats_heartbeat_interval,
+				m_stats_heartbeat_interval,
+				(TimerHandlercpp)&StatsD::publishMetrics,
+				"Statsd::publishMetrics",
+				this );
+		}
+		if( old_stats_pub_interval != m_stats_pub_interval && m_stats_pub_interval > 0 )
+		{
+			dprintf(D_ALWAYS,
+					"Will perform stats publication every %s=%d "
+					"seconds.\n", param_name.c_str(),m_stats_pub_interval);
+		}
 	}
 
 	formatstr(param_name,"%s_VERBOSITY",service_name);
@@ -702,76 +1151,33 @@ StatsD::initAndReconfig(char const *service_name)
 	formatstr(param_name,"%s_REQUIREMENTS",service_name);
 	param(m_requirements,param_name.c_str());
 
-	m_reset_metrics_filename.clear();
-	formatstr(param_name,"%s_WANT_RESET_METRICS",service_name);
-	if (param_boolean(param_name.c_str(),false)) {
-		formatstr(param_name,"%s_RESET_METRICS_FILE",service_name);
-		param(m_reset_metrics_filename,param_name.c_str());
-		
-		if (!m_reset_metrics_filename.empty()) {
-			// If filename from the user is a relative path, stick it in SPOOL dir
-			if ( !IS_ANY_DIR_DELIM_CHAR(m_reset_metrics_filename[0]) ) {
-				std::string fname = m_reset_metrics_filename;
-				std::string dirname;
-				param(dirname,"SPOOL");
-				dircat(dirname.c_str(),fname.c_str(),m_reset_metrics_filename);
-			}
-
-			// If filename from user does not end with the expected suffix,
-			// then append it.  This is required so preen doesn't go removing it.
-			if (!m_reset_metrics_filename.ends_with(".ganglia_metrics")) {
-				m_reset_metrics_filename += ".ganglia_metrics";
-			}
-		}
-	}
-
 	formatstr(param_name,"%s_PER_EXECUTE_NODE_METRICS",service_name);
 	m_per_execute_node_metrics = param_boolean(param_name.c_str(),true);
 
-	formatstr(param_name,"%s_DEFAULT_CLUSTER",service_name);
-	std::string default_cluster_expr;
-	param(default_cluster_expr,param_name.c_str());
-
-	if( !default_cluster_expr.empty() ) {
-		classad::ClassAdParser parser;
-		classad::ExprTree *expr=parser.ParseExpression(default_cluster_expr,true);
-		if( !expr ) {
-			EXCEPT("Invalid %s=%s",param_name.c_str(),default_cluster_expr.c_str());
+	if (!g_legacy_gangliad_mode) {
+		std::string default_export;
+		param(default_export,"METRICD_DEFAULT_EXPORT_METRIC");
+		if (!default_export.empty()) {
+			std::string expr_str = "\"";
+			for (char c : default_export) {
+				if (c == '\\' || c == '"') expr_str += '\\';
+				expr_str += c;
+			}
+			expr_str += "\"";
+			classad::ClassAdParser parser;
+			classad::ExprTree *expr = parser.ParseExpression(expr_str,true);
+			if (expr) {
+				m_default_metric_ad.Insert(ATTR_EXPORT_METRIC,expr);
+			}
 		}
-		// The classad takes ownership of expr
-		m_default_metric_ad.Insert(ATTR_CLUSTER,expr);
 	}
 
-	formatstr(param_name,"%s_DEFAULT_MACHINE",service_name);
-	std::string default_machine_expr;
-	param(default_machine_expr,param_name.c_str());
-
-	if( !default_machine_expr.empty() ) {
-		classad::ClassAdParser parser;
-		classad::ExprTree *expr=parser.ParseExpression(default_machine_expr,true);
-		if( !expr ) {
-			EXCEPT("Invalid %s=%s",param_name.c_str(),default_machine_expr.c_str());
-		}
-		// The classad takes ownership of expr
-		m_default_metric_ad.Insert(ATTR_MACHINE,expr);
-	}
-
-	formatstr(param_name,"%s_DEFAULT_IP",service_name);
-	std::string default_ip_expr;
-	param(default_ip_expr,param_name.c_str());
-
-	if( !default_ip_expr.empty() ) {
-		classad::ClassAdParser parser;
-		classad::ExprTree *expr=parser.ParseExpression(default_ip_expr,true);
-		if( !expr ) {
-			EXCEPT("Invalid %s=%s",param_name.c_str(),default_ip_expr.c_str());
-		}
-		// The classad takes ownership of expr
-		m_default_metric_ad.Insert(ATTR_IP,expr);
-	}
-
-	m_want_projection = param_boolean("GANGLIAD_WANT_PROJECTION", false);
+	formatstr(param_name,"%s_WANT_PROJECTION",service_name);
+	// no need for backends to compute the projection since they won't be talking to the collector
+	m_want_projection = as_backend ? false : param_boolean(param_name.c_str(), false);
 	m_projection_references.clear();
+	m_has_wildcard_backend_metric = false;
+	m_metric_counts_by_backend.clear();
 	clearMetricDefinitions();
 	std::string config_dir;
 	formatstr(param_name,"%s_METRICS_CONFIG_DIR",service_name);
@@ -793,6 +1199,12 @@ StatsD::initAndReconfig(char const *service_name)
 		// In addition to the projection attributes discovered by ParseMetrics, we always want
 		// these metrics since we look them up during metric evaluation, for example the daemon name
 		// so we know which machine to associate the metric with.
+		// MetricMachine / MetricPool are supplied by metricd itself when it
+		// evaluates a label expression; they are not collector attributes, so
+		// asking the collector for them would just be noise in the query.
+		m_projection_references.erase(ATTR_METRIC_MACHINE);
+		m_projection_references.erase(ATTR_METRIC_POOL);
+
 		m_projection_references.insert(ATTR_TYPE);
 		m_projection_references.insert(ATTR_MY_TYPE);
 		m_projection_references.insert(ATTR_TARGET_TYPE);
@@ -812,8 +1224,22 @@ StatsD::initAndReconfig(char const *service_name)
 			collector_projection += it;
 		}
 		dprintf(D_FULLDEBUG,"collector projection = %s\n",collector_projection.c_str());
-	} else {
-		dprintf(D_ALWAYS,"Not using a collector projection\n");
+	}
+
+	if (!as_backend) {
+		if (m_want_projection) {
+			dprintf(D_ALWAYS,"Will publish metrics with collector projection of %lu attributes\n",m_projection_references.size());
+		} else {
+			dprintf(D_ALWAYS,"Will publish metrics without a collector projection\n");
+		}
+	}
+
+	if (!as_backend && !g_legacy_gangliad_mode) {
+		// If we are not a backend, and not in legacy mode, then we may as well clear the metrics definitions from memory since we won't be using them; we only
+		// needed them in the driver class (MetricD) in order to determine the collector projection and backends referenced, but
+		// now that we have that information, we can free up the memory used by the metric definitions since we
+		// won't be using them anymore in this class instance.
+		clearMetricDefinitions();
 	}
 }
 
@@ -882,11 +1308,69 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 		delete ad;
 		ad = ad2;
 
+		// Pre-filter on Verbosity, honoring backend-decorated overrides the
+		// same way Metric::evaluate() does at publication time.  Without that
+		// a metric carrying both Verbosity and, say, Prometheus_Verbosity
+		// would be discarded here on the strength of the undecorated value,
+		// and the override would never get a chance to apply.
+		//
+		// A backend instance uses its own decorated value if there is one.
+		// MetricD has no backend of its own, but it is the instance that
+		// queries the collector and so computes the projection on behalf of
+		// all of them; dropping a metric here would strip the attributes that
+		// metric references from the query and leave some backend publishing
+		// UNDEFINED.  So MetricD takes the most permissive value it can find.
 		int verbosity = 0;
-		ad->EvaluateAttrInt(ATTR_VERBOSITY,verbosity);
+		char const *backend_name = backendName();
+		if( backend_name ) {
+			std::string decorated = std::string(backend_name) + "_" + ATTR_VERBOSITY;
+			if( !ad->Lookup(decorated) || !ad->EvaluateAttrInt(decorated,verbosity) ) {
+				ad->EvaluateAttrInt(ATTR_VERBOSITY,verbosity);
+			}
+		} else {
+			ad->EvaluateAttrInt(ATTR_VERBOSITY,verbosity);
+			std::string const suffix = std::string("_") + ATTR_VERBOSITY;
+			for( auto const &[attr,_] : *ad ) {
+				if( attr.size() <= suffix.size() ) continue;
+				if( strcasecmp(attr.c_str() + attr.size() - suffix.size(),
+				               suffix.c_str()) != 0 ) continue;
+				int decorated_verbosity = 0;
+				if( ad->EvaluateAttrInt(attr,decorated_verbosity) &&
+				    decorated_verbosity < verbosity )
+				{
+					verbosity = decorated_verbosity;
+				}
+			}
+		}
 		if( verbosity > m_verbosity ) {
 			delete ad;
 			continue;
+		}
+
+		// Classify which backend(s) this metric could publish to, so MetricD
+		// can skip initializing backends that have no metrics. A literal-string
+		// ExportMetric naming one or more backends bumps those counters; an
+		// expression, or a missing/empty value, sets the wildcard flag (meaning
+		// the metric could land in any backend at evaluation time).
+		{
+			classad::ExprTree *export_expr = ad->Lookup(ATTR_EXPORT_METRIC);
+			std::string export_literal;
+			if( !export_expr ) {
+				m_has_wildcard_backend_metric = true;
+			} else if( ExprTreeIsLiteralString(export_expr,export_literal) ) {
+				std::vector<std::string> export_systems = split(export_literal);
+				if( export_systems.empty() ) {
+					m_has_wildcard_backend_metric = true;
+				} else {
+					for( auto &s : export_systems ) {
+						std::string lower = s;
+						for( auto &c : lower ) c = (char)tolower((unsigned char)c);
+						m_metric_counts_by_backend[lower]++;
+					}
+				}
+			} else {
+				m_has_wildcard_backend_metric = true;
+			}
 		}
 
 		// for efficient queries to the collector, keep track of
@@ -902,6 +1386,75 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 				   ad_str.c_str());
 		}
 
+		// If this StatsD only publishes to a single backend, and this metric's
+		// ExportMetric keyword is a literal string that does not name that
+		// backend, then we will never publish it.  Discard it now so we don't
+		// store it, evaluate it against every daemon ad each cycle, or waste time
+		// computing the collector projection.  We only do this when
+		// ExportMetric is a string literal; if it is an expression that depends
+		// on the daemon ad, we cannot evaluate it here and must keep the metric.
+		const char *backend = exportFilterName();
+		if(backend) {
+			std::string export_literal;
+			if( ExprTreeIsLiteralString(ad->Lookup(ATTR_EXPORT_METRIC),export_literal) ) {
+				std::vector<std::string> export_systems = split(export_literal);
+				if( !export_systems.empty() && !contains_anycase(export_systems,backend) ) {
+					delete ad;
+					continue;
+				}
+			}
+		}
+
+		// Check the shape of PrometheusLabels and the legality of each label
+		// name once here, at config-read time, rather than silently dropping
+		// them on every publication cycle.  Only the instance that processes
+		// every metric (MetricD, i.e. exportFilterName()==nullptr) does this,
+		// so each problem is reported exactly once per reconfig rather than
+		// once per backend.
+		if( !g_legacy_gangliad_mode && !backend ) {
+			classad::ExprTree *labels_expr = ad->Lookup(ATTR_PROMETHEUS_LABELS);
+			if( labels_expr ) {
+				std::string metric_name;
+				if( !ad->EvaluateAttrString(ATTR_NAME,metric_name) ) {
+					metric_name = "(name is an expression)";
+				}
+				if( labels_expr->GetKind() != classad::ExprTree::CLASSAD_NODE ) {
+					dprintf(D_ERROR,
+					        "CONFIGURATION ERROR: %s of metric %s defined in %s must be a ClassAd of "
+					        "label expressions, e.g. [ machine = Machine ]; ignoring it\n",
+					        ATTR_PROMETHEUS_LABELS,metric_name.c_str(),param_name);
+				} else {
+					for( auto const &[label_name,label_expr] : *static_cast<classad::ClassAd *>(labels_expr) ) {
+						if( !Metric::isValidLabelName(label_name) ) {
+							dprintf(D_ERROR,
+							        "CONFIGURATION ERROR: '%s' in %s of metric %s defined in %s is not a legal "
+							        "Prometheus label name ([a-zA-Z_][a-zA-Z0-9_]*, not starting with __); "
+							        "that label will not be published\n",
+							        label_name.c_str(),ATTR_PROMETHEUS_LABELS,metric_name.c_str(),param_name);
+						}
+					}
+					// Two legal names can still collide once normalized to
+					// snake_case, leaving one of them unpublishable.
+					std::string source;
+					formatstr(source,"%s of metric %s defined in %s",
+					          ATTR_PROMETHEUS_LABELS,metric_name.c_str(),param_name);
+					Metric::reportLabelNameCollisions(
+						*static_cast<classad::ClassAd *>(labels_expr),source.c_str());
+				}
+			}
+		}
+
+		// Add this metric ad to our list of metrics
+		stats_metrics.push_back(ad);
+
+		if (backend) {
+			// If we are a backend, then we don't need to do any of the below since we won't
+			// be talking to the collector, so just continue to the next metric.
+			continue;
+		}
+
+		// Figure out what types of daemons this metric applies so we can refine our query
+		// to the collector to only fetch ad types needed
 		struct caselt {
 			bool operator()(const std::string &l, const std::string &r) {return strcasecmp(l.c_str(), r.c_str()) < 0;};
 		};
@@ -916,9 +1469,6 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 		std::ranges::sort(m_target_types, caselt{});
 		const auto duplicates_range = std::ranges::unique(m_target_types, caseeq{});
 		m_target_types.erase(duplicates_range.begin(), duplicates_range.end());
-
-		// Add this metric ad to our list of metrics
-		stats_metrics.push_back(ad);
 
 		// For even more efficient queries to the collector, keep track of 
 		// which ad attributes we need (attribute projection).
@@ -966,13 +1516,25 @@ StatsD::getCollectorsToMonitor()
 	if (monitor_collector.empty()) {
 		return false;
 	}
-	param(collector_name_attr,"MONTITOR_COLLECTOR_NAME_ATTR",ATTR_NAME);
-	param(collector_addr_attr,"MONTITOR_COLLECTOR_ADDR_ATTR",ATTR_COLLECTOR_HOST);
+	// The historical spelling of these three knobs has a typo in it.  Honor it
+	// when it is explicitly set, so existing configurations keep working, but
+	// fall back to the correctly spelled name, which is what is documented.
+	// Test param()'s return value rather than whether the string is empty:
+	// param() assigns the default argument when the knob is undefined, so the
+	// string is never empty here and an emptiness test would never fire.
+	if (!param(collector_name_attr,"MONTITOR_COLLECTOR_NAME_ATTR",ATTR_NAME)) {
+		param(collector_name_attr,"MONITOR_COLLECTOR_NAME_ATTR",ATTR_NAME);
+	}
+	if (!param(collector_addr_attr,"MONTITOR_COLLECTOR_ADDR_ATTR",ATTR_COLLECTOR_HOST)) {
+		param(collector_addr_attr,"MONITOR_COLLECTOR_ADDR_ATTR",ATTR_COLLECTOR_HOST);
+	}
 	param(collector_constraint,"MONITOR_COLLECTOR_CONSTRAINT","True");
-	param(collector_ad_type,"MONTITOR_COLLECTOR_AD_TYPE",AdTypeToString(SCHEDD_AD));
+	if (!param(collector_ad_type,"MONTITOR_COLLECTOR_AD_TYPE",AdTypeToString(SCHEDD_AD))) {
+		param(collector_ad_type,"MONITOR_COLLECTOR_AD_TYPE",AdTypeToString(SCHEDD_AD));
+	}
 	AdTypes type = StringToAdType(collector_ad_type.c_str());
 	if (type == NO_AD) {
-		EXCEPT("Unrecognized value for config parameter MONITOR_COLLECTOR_ADTYPE");
+		EXCEPT("Unrecognized value for config parameter MONITOR_COLLECTOR_AD_TYPE");
 	}
 	
 	// First, formulate the query we will send to the collector(s)
@@ -1176,7 +1738,7 @@ StatsD::publishMetrics( int /* timerID */ )
 {
 	dprintf(D_ALWAYS,"Starting update...\n");
 
-    double start_time = condor_gettimestamp_double();
+    m_start_time = condor_gettimestamp_double();
 
     m_stats_time_till_pub -= m_stats_heartbeat_interval;
 
@@ -1189,9 +1751,6 @@ StatsD::publishMetrics( int /* timerID */ )
 
     initializeHostList();
 
-	// reset all aggregate sums, counts, etc.
-	clearAggregateMetrics();
-
 	// Query collector(s) to get daemon ads to process metric upon
 	std::vector<ClassAd> daemon_ads;
 	getDaemonAds(daemon_ads);
@@ -1200,6 +1759,29 @@ StatsD::publishMetrics( int /* timerID */ )
 		// No ads means no more work to do
 		return;
 	}
+
+	publishMetricsFromAds(daemon_ads);
+
+    sendHeartbeats();
+
+	cleanupOldPreviousValues();
+
+	postPublishMetrics();
+
+    // Did we take longer than a heartbeat period?
+    int heartbeats_missed = (int)(condor_gettimestamp_double() - m_start_time) /
+                            m_stats_heartbeat_interval;
+    if (heartbeats_missed) {
+        dprintf(D_ALWAYS, "Skipping %d heartbeats\n", heartbeats_missed);
+        m_stats_time_till_pub -= (heartbeats_missed * m_stats_heartbeat_interval);
+    }
+}
+
+void
+StatsD::publishMetricsFromAds(std::vector<ClassAd> &daemon_ads)
+{
+	// reset all aggregate sums, counts, etc.
+	clearAggregateMetrics();
 
 	mapDaemonIPs(daemon_ads);
 
@@ -1212,16 +1794,6 @@ StatsD::publishMetrics( int /* timerID */ )
 	}
 
 	publishAggregateMetrics();
-
-    sendHeartbeats();
-
-    // Did we take longer than a heartbeat period?
-    int heartbeats_missed = (int)(condor_gettimestamp_double() - start_time) /
-                            m_stats_heartbeat_interval;
-    if (heartbeats_missed) {
-        dprintf(D_ALWAYS, "Skipping %d heartbeats\n", heartbeats_missed);
-        m_stats_time_till_pub -= (heartbeats_missed * m_stats_heartbeat_interval);
-    }
 }
 
 void
@@ -1267,9 +1839,9 @@ StatsD::publishDaemonMetrics(ClassAd& daemon_ad)
 		 itr != m_metrics.end();
 		 itr++ )
 	{
-		std::shared_ptr<Metric> metric(newMetric());
+		std::unique_ptr<Metric> metric(newMetric());
 		// This calls publishMetric() (possibly multiple times) or addToAggregateValue()
-		metric->evaluateDaemonAd(**itr, daemon_ad, m_verbosity, this);
+		metric->evaluateDaemonAd(**itr, daemon_ad, m_verbosity, *this);
 	}
 }
 
@@ -1320,10 +1892,17 @@ StatsD::publishAggregateMetrics()
 		 itr++ )
 	{
 		Metric *metric = newMetric(itr->second);
-		metric->convertToNonAggregateValue();
+		metric->convertToNonAggregateValue(*this);
 		publishMetric(*metric);
+		// Note: convertToNonAggregateValue() leaves derivative==true only for
+		// aggregate counters (a SUM of a derivative metric).  Such counters must
+		// NOT be reset to zero when they disappear: forcing a counter to zero
+		// looks like a counter reset to the backend and corrupts its rate
+		// calculation.  A counter should simply plateau, which it does because
+		// accumulateAggregateCounter() stops growing when no daemons report.
 		if ( want_reset_metrics &&
-			 metric->type != Metric::MetricTypeEnum::STRING && 
+			 !metric->derivative &&
+			 metric->type != Metric::MetricTypeEnum::STRING &&
 			 metric->type != Metric::MetricTypeEnum::BOOLEAN )
 		{
 			m_previous_aggregate_metrics[itr->first] = metric;
@@ -1366,7 +1945,8 @@ StatsD::ReadMetricsToReset()
 		return false;
 	}
 
-	fseek(fp, 0 , SEEK_SET);
+	// any seek/read failure is caught below when we deserialize the contents
+	std::ignore = fseek(fp, 0 , SEEK_SET);
 	std::string buf(fileSize,'\0');
 	size_t actual = fread(&buf[0], sizeof(char), static_cast<size_t>(fileSize), fp);
 	if (actual != static_cast<size_t>(fileSize)) {
@@ -1439,6 +2019,17 @@ StatsD::WriteMetricsToReset()
 	return ret_val;
 }
 
+bool
+StatsD::hasMetricsForBackend(const char *backend_name) const
+{
+	if( !backend_name ) return false;
+	if( m_has_wildcard_backend_metric ) return true;
+	std::string lower(backend_name);
+	for( auto &c : lower ) c = (char)tolower((unsigned char)c);
+	auto it = m_metric_counts_by_backend.find(lower);
+	return it != m_metric_counts_by_backend.end() && it->second > 0;
+}
+
 void
 StatsD::clearMetricDefinitions()
 {
@@ -1464,6 +2055,15 @@ StatsD::clearAggregateMetrics()
 }
 
 void
+StatsD::clearPreviousAggregateMetrics()
+{
+	for( auto &entry : m_previous_aggregate_metrics ) {
+		delete entry.second;
+	}
+	m_previous_aggregate_metrics.clear();
+}
+
+void
 StatsD::addToAggregateValue(Metric const &metric) {
 	AggregateMetricList::iterator map_item = m_aggregate_metrics.find(metric.aggregate_group);
 	if( map_item == m_aggregate_metrics.end() ) {
@@ -1473,6 +2073,27 @@ StatsD::addToAggregateValue(Metric const &metric) {
 	map_item->second->addToAggregateValue(metric);
 }
 
+bool
+StatsD::getPreviousValue(std::string const &key, double &value)
+{
+	auto it = m_previous_values.find(key);
+	if (it != m_previous_values.end()) {
+		value = it->second;
+		return true;
+	}
+	return false;
+}
+
+void
+StatsD::cleanupOldPreviousValues()
+{
+	// Remove any previous values that are from before the start of this update,
+	// as they are now stale and we don't want to use them for future updates.
+	// Plus this keeps the maps from growing without bounds as daemons come and go over time.
+	m_previous_values.clear();
+	// Now, swap the current values into the previous values map so they can be used for the next update.
+	std::swap(m_previous_values,m_current_values);
+}
 
 void
 StatsD::mapDaemonIPs(std::vector<ClassAd> &daemon_ads) {
@@ -1496,6 +2117,17 @@ StatsD::mapDaemonIPs(std::vector<ClassAd> &daemon_ads) {
 			m_daemon_ips.insert( std::map< std::string,std::string >::value_type(name,ip) );
 		}
 	}
+}
+
+void
+StatsD::adoptCollectorState(StatsD const &src) {
+	// See the comment on the declaration in statsd.h.  The assignment (rather
+	// than a merge) is deliberate: it gives this instance a fresh snapshot
+	// each cycle, so m_daemon_ips does not grow without bound or keep serving
+	// the IP a daemon had the first time we ever saw it.  mapDaemonIPs() then
+	// layers this cycle's daemon ads on top.
+	m_default_aggregate_host = src.m_default_aggregate_host;
+	m_daemon_ips = src.m_daemon_ips;
 }
 
 void

@@ -362,8 +362,9 @@ _ping( PyObject *, PyObject * args ) {
 
 	sock.close();
 
-	PyObject * pyClassAd = py_new_classad2_classad(reply_ad.Copy());
-	return pyClassAd;
+	// We could probably construct this on the heap initially, pass the
+	// dereferenced pointer to getClassAd(), and skip this copy.
+	return py_new_classad2_classad_via_copy(& reply_ad);
 }
 
 
@@ -470,7 +471,14 @@ _send_generic_payload_command( PyObject *, PyObject * args ) {
 		return result_tuple;
 	}
 
-	PyTuple_SetItem(result_tuple, 0, py_new_classad2_classad(returnPayload.Copy()));
+	// We could probably construct this on the heap initially, pass the
+	// dereferenced pointer to getClassAd(), and skip this copy.
+	PyObject * pyClassAd = py_new_classad2_classad_via_copy(& returnPayload);
+	if( pyClassAd == NULL ) {
+		// py_new_classad2_classad_via_copy() has already set an exception for us.
+		return NULL;
+	}
+	PyTuple_SetItem(result_tuple, 0, pyClassAd);
 	PyTuple_SetItem(result_tuple, 1, PyLong_FromLong(0));
 	PyTuple_SetItem(result_tuple, 2, Py_None);
 

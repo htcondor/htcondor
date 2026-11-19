@@ -22,21 +22,16 @@ if (HAVE_SQLITE3_H)
 	set(LibrarianSources
 	  librarian_main.cpp
 	  librarian.cpp
-	  readHistory.cpp
-	  archiveMonitor.cpp
 	  dbHandler.cpp
 	)
 
-	# Temporary build as a one off executable
-	condor_exe(condor_librarian "${LibrarianSources}" ${C_BIN} "${CONDOR_LIBS};${SQLITE3_LIB}" ON)
-
-	# Future: Build as daemon
-	#condor_daemon(
-	#	EXE condor_librarian
-	#	SOURCES "${LibrarianSources}"
-	#	LIBRARIES "${CONDOR_LIBS}"
-	#	INSTALL ${C_SBIN}
-	#)
+	# Build as daemon
+	condor_daemon(
+		EXE condor_librarian
+		SOURCES "${LibrarianSources}"
+		LIBRARIES "${CONDOR_LIBS};${SQLITE3_LIB}"
+		INSTALL ${C_SBIN}
+	)
 endif()
 
 

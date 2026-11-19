@@ -19,6 +19,7 @@ It is not intended as a tutorial for new users.
     negotiator
     remoteparam
     schedd
+    securitycontext
     startd
     submit
     submitresult

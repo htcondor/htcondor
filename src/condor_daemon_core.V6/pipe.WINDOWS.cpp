@@ -100,6 +100,19 @@ void PipeEnd::set_unregistered()
 	SetEvent(m_watched_event);
 }
 
+// Called by the PID-watcher thread as its final action on a PidEntry after
+// post_wait() reported the pipe ready.  Signaling m_watched_event releases a
+// main thread that may be blocked in cancel(), which is then free to delete
+// the PidEntry.  It is therefore essential that the watcher does NOT touch the
+// PidEntry (or this PipeEnd) again after calling this.  Previously post_wait()
+// itself signaled the event, but the watcher then went on to write the
+// PidEntry's pipeReady/watcherEvent fields, racing with that deletion (an
+// observed use-after-free at daemon/starter shutdown).
+void PipeEnd::watcher_done()
+{
+	SetEvent(m_watched_event);
+}
+
 // this is called from Cancel_Pipe - it returns
 // when we know that there is no longer a PID-watcher
 // thread watching this PipeEnd and this PipeEnd
@@ -179,10 +192,10 @@ bool ReadPipeEnd::post_wait()
 
 	ASSERT(m_async_io_state == IO_DONE);
 
-	// tell the main thread that the PID-watcher is done with
-	// this object
-	SetEvent(m_watched_event);
-
+	// The pipe is ready.  We do NOT signal m_watched_event here: the
+	// watcher still has to update the PidEntry (pipeReady/watcherEvent).
+	// It signals via watcher_done() once it is finished, so that a
+	// concurrent Cancel_Pipe cannot free the PidEntry before then.
 	return true;
 }
 
@@ -394,10 +407,10 @@ bool WritePipeEnd::post_wait()
 		return false;
 	}
 	else {
-		// the write is complete! signal the Event object that the
-		// PID-watcher is done with this thread
-		SetEvent(m_watched_event);
-
+		// the write is complete!  We do NOT signal m_watched_event here:
+		// the watcher still has to update the PidEntry and will signal via
+		// watcher_done() once finished, so that a concurrent Cancel_Pipe
+		// cannot free the PidEntry out from under the watcher.
 		return true;
 	}
 }

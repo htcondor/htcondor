@@ -73,7 +73,7 @@ see :ref:`admin-manual/networking:reducing port usage with the
     this way.
 
     On Linux platforms, daemons use abstract named sockets instead of
-    normal named sockets. Abstract sockets are not not tied to a file in
+    normal named sockets. Abstract sockets are not tied to a file in
     the file system. The :tool:`condor_master` picks a random prefix for
     abstract socket names and shares it privately with the other
     daemons. When searching for the recipient of an incoming connection,

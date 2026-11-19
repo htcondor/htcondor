@@ -10,7 +10,8 @@ Synopsis
 
 **condor_history** [**-help**]
 
-**condor_history** [*OPTIONS*] [*cluster*... | *cluster.proc*... | *user*...]
+**condor_history** [*OPTIONS*] [*cluster*... | *cluster.proc*... | *user*... |
+**-dagid** *id*... | **-batchid** *id*... | **-batchname** *name*...]
 
 **condor_history** [**-debug**] [**-name** *name*] [**-pool** *hostname[:port]*]
 [**-backwards** | **-forwards**] [**-constraint**] [**-since** *jobid | expr*]
@@ -20,14 +21,65 @@ Synopsis
 [**-format** *FormatString* *Attribute*] [**-af/-autoformat[:jlhVr,tng]** *Attribute [Attribute ...]*]
 [**-print-format** *filename*] [**-l/-long**] [**-attributes** *Attribute[,Attribute,...]*]
 [**-xml**] [**-json**] [**-jsonl**] [**-wide[:N]**]
-[**-extract** *filename*]
+[**-extract** *filename*] [**-no-librarian**]
 
 Description
 -----------
 
-Read historical ClassAds from local history files. By default read
-job ClassAds from the :macro:`HISTORY` files. With the command line
-option ``-name``, read from remote APs.
+Read historical ClassAds from local history files. With the command line
+option ``-name``, read from a remote AP or EP instead.
+
+The *cluster*, *cluster.proc*, *user*, **-dagid**, **-batchid**, and
+**-batchname** restrictions may each be given multiple times and in any
+combination; a ClassAd is displayed if it matches any one of them.
+
+HTCondor records four distinct kinds of historical ClassAd, in three different
+files, and :tool:`condor_history` reads whichever one the options select.
+Because they answer different questions, knowing which is which matters more
+than it might appear:
+
+**Completed job ads** (the default, or ``-schedd``)
+    One ClassAd per job that has left the queue, whether it ran to completion
+    or was removed, read from the file named by :macro:`HISTORY`. This is the
+    job's final state. A job that was evicted and restarted several times
+    appears here exactly once, describing only its last attempt.
+
+**Job epoch ads** (``-epochs``)
+    One ClassAd per *run attempt*, read from the file named by
+    :macro:`JOB_EPOCH_HISTORY`. An ad is recorded each time a job stops
+    running, whether it finished, was held, or was evicted and returned to
+    idle to run again. Each is a full snapshot of the job ad as it stood at
+    the end of that run.
+
+    The completed job ad already summarizes a job's history through counters
+    and totals such as :ad-attr:`NumJobStarts`, :ad-attr:`NumShadowStarts`,
+    :ad-attr:`TotalSuspensions` and :ad-attr:`RemoteWallClockTime`, so
+    questions answerable by a count or a sum do not need epoch ads. What the
+    completed ad cannot give you is the per-attempt detail behind those
+    numbers, because attributes that describe a single run are overwritten by
+    each new one: :ad-attr:`RemoteHost` names only where the job ran last.
+    Epoch ads keep every run's values separately, so they are what to use when
+    you need to know each individual machine a job ran on, or what the job ad
+    looked like at the end of one particular attempt.
+
+**File transfer ads** (``-transfer-history``)
+    One ClassAd per transfer of a job's input, output or checkpoint files,
+    also read from :macro:`JOB_EPOCH_HISTORY` and carrying a
+    ``TransferClass`` attribute naming which kind it was. These record
+    per-transfer timing, byte counts and file transfer plugin results. The
+    option may be narrowed to just input, output or checkpoint transfers.
+
+**Startd history ads** (``-startd``)
+    One ClassAd per job that ran on a given EP, read on that machine from the
+    file named by :macro:`STARTD_HISTORY`. This is the machine's record rather
+    than the AP's, and remains available on the EP independently of the AP.
+
+The first three are written by the AP, and the fourth by each EP. All of them
+can also be pushed into Elasticsearch or OpenSearch with :tool:`condor_adstash`;
+see :ref:`admin-manual/monitoring:What is in the job archive`.
+
+Separately, ``-daemon`` reads daemon rather than job ClassAds, and
+``-userlog`` reads a job event log instead of any history file.
 
 Options
 -------
@@ -49,6 +101,10 @@ Options
 **-forwards**
     List ClassAds in chronological order. The ClassAd most recently added to the
     history file is last.
+**-no-librarian**
+    Ignore using the *condor_librarian* record index database regardless of
+    :macro:`USING_LIBRARIAN` being ``True``. The database is not used when
+    **-file**, **-search**, or **-dir** is specified.
 *cluster*
     Only display ClassAds containing the specified :ad-attr:`ClusterId`'s.
 *cluster.process*
@@ -56,11 +112,21 @@ Options
     (:ad-attr:`ClusterId`\. :ad-attr:`ProcId`).
 *user*
     Only display ClassAds containing the specified :ad-attr:`Owner`.
+**-dagid** *id*
+    Only display ClassAds whose :ad-attr:`DAGManJobId` is *id*. This
+    will show all jobs associated with a specific DAGMan job.
+**-batchid** *id*
+    Only display ClassAds whose :ad-attr:`JobBatchId` is *id*. This
+    will show all jobs associated with a specific DAGMan workflow when
+    *id* is the root DAGMan :ad-attr:`ClusterId`.
+**-batchname** *name*
+    Only display ClassAds whose :ad-attr:`JobBatchName` is *name*. The
+    comparison is case-sensitive.
 **-constraint** *expr*
     Display ClassAds that satisfy the expression.
 **-since** *jobid or expr*
     Stop scanning when the ClassAd contains the specified JobId or when
-    the expresion evaluates to ``True``.
+    the expression evaluates to ``True``.
 **-completedsince** *timestamp*
     Scan until the first ClassAd that completed on or before the given unix
     timestamp. The argument can be any expression that evaluates to a unix timestamp.
@@ -163,7 +229,7 @@ Options
     Display ClassAds in long format.
 **-attributes** *Attribute[,Attribute,...]*
     Display only the *Attribute*\s specified when using the **-long** option.
-    Display only the given attributes when the **-long** *o* ption is
+    Display only the given attributes when the **-long** option is
     used.
 **-xml**
     Display job ClassAds in XML format.
@@ -175,7 +241,7 @@ Options
     Restrict output to the given column width.  Default width is 80 columns, if **-wide** is
     used without the optional *N* argument, the width of the output is not restricted.
 **-extract** *filename*
-    Copy all constraint matching ClassAd entries from history files into the spceifed
+    Copy all constraint matching ClassAd entries from history files into the specified
     *filename* to create a miniature history file for faster queries via **-file** *filename*.
     By default this option will copy up to ``100,000`` matching ads. To increase or decrease
     this limit use the **-limit** option. To disable the limit use **-limit -1**.
@@ -216,59 +282,71 @@ By default this tool queries for historical HTCondor Job ClassAds that have comp
 The default listing summarizes in reverse chronological order each ClassAd on a
 single line, and contains the following items:
 
- ID
-    The :ad-attr:`ClusterId`\. :ad-attr:`ProcId` of the job.
- OWNER
-    The :ad-attr:`Owner` of the job.
- SUBMITTED
-    The month, day, hour, and minute the job was submitted to the queue.
- RUN_TIME
-    Remote wall clock time accumulated by the job to date in days,
-    hours, minutes, and seconds, given as the job ClassAd attribute
-    :ad-attr:`RemoteWallClockTime`.
- ST
-    Completion status of the job (C = completed and X = removed).
- COMPLETED
-    The time the job was completed.
- CMD
-    The name of the job's executable.
+.. list-table::
+   :header-rows: 1
+   :widths: auto
+
+   * - Field
+     - Description
+   * - ID
+     - The :ad-attr:`ClusterId`\. :ad-attr:`ProcId` of the job.
+   * - OWNER
+     - The :ad-attr:`Owner` of the job.
+   * - SUBMITTED
+     - The month, day, hour, and minute the job was submitted to the queue.
+   * - RUN_TIME
+     - Remote wall clock time accumulated by the job to date in days,
+       hours, minutes, and seconds, given as the job ClassAd attribute
+       :ad-attr:`RemoteWallClockTime`.
+   * - ST
+     - Completion status of the job (C = completed and X = removed).
+   * - COMPLETED
+     - The time the job was completed.
+   * - CMD
+     - The name of the job's executable.
 
 The default information displayed for historical Schedd ClassAds queried from
 the :macro:`SCHEDD_DAEMON_HISTORY` are the following:
 
- TIMESTAMP
-    The UNIX timestamp representing exactly when the record was
-    written to the history file.
- DUTY_CYCLE
-    The Schedd's :ad-attr:`RecentDaemonCoreDutyCycle` at the time
-    the record was written.
- RunningJobs
-    The Schedd's :ad-attr:`TotalRunningJobs` at the time the record
-    was written.
- IdleJobs
-    The Schedd's :ad-attr:`TotalIdleJobs` at the time the record was
-    written.
- HeldJobs
-    The Schedd's :ad-attr:`TotalHeldJobs` at the time the record was
-    written.
- Download
-    The Schedd's :ad-attr:`TransferQueueNumDownloading` at the time
-    the record was written.
- Waiting
-    The Schedd's :ad-attr:`TransferQueueNumWaitingToDownload` at the time
-    the record was written.
- WaitingMB
-    The Schedd's :ad-attr:`FileTransferMBWaitingToDownload` at the time
-    the record was written.
- Upload
-    The Schedd's :ad-attr:`TransferQueueNumUploading` at the time
-    the record was written.
- Waiting
-    The Schedd's :ad-attr:`TransferQueueNumWaitingToUpload` at the time
-    the record was written.
- WaitingMB
-    The Schedd's :ad-attr:`FileTransferMBWaitingToUpload` at the time
-    the record was written.
+.. list-table::
+   :header-rows: 1
+   :widths: auto
+
+   * - Field
+     - Description
+   * - TIMESTAMP
+     - The UNIX timestamp representing exactly when the record was
+       written to the history file.
+   * - DUTY_CYCLE
+     - The Schedd's :ad-attr:`RecentDaemonCoreDutyCycle` at the time
+       the record was written.
+   * - RunningJobs
+     - The Schedd's :ad-attr:`TotalRunningJobs` at the time the record
+       was written.
+   * - IdleJobs
+     - The Schedd's :ad-attr:`TotalIdleJobs` at the time the record was
+       written.
+   * - HeldJobs
+     - The Schedd's :ad-attr:`TotalHeldJobs` at the time the record was
+       written.
+   * - Download
+     - The Schedd's :ad-attr:`TransferQueueNumDownloading` at the time
+       the record was written.
+   * - Waiting (download)
+     - The Schedd's :ad-attr:`TransferQueueNumWaitingToDownload` at the time
+       the record was written.
+   * - WaitingMB (download)
+     - The Schedd's :ad-attr:`FileTransferMBWaitingToDownload` at the time
+       the record was written.
+   * - Upload
+     - The Schedd's :ad-attr:`TransferQueueNumUploading` at the time
+       the record was written.
+   * - Waiting (upload)
+     - The Schedd's :ad-attr:`TransferQueueNumWaitingToUpload` at the time
+       the record was written.
+   * - WaitingMB (upload)
+     - The Schedd's :ad-attr:`FileTransferMBWaitingToUpload` at the time
+       the record was written.
 
 Exit Status
 -----------

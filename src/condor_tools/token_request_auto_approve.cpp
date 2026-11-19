@@ -28,7 +28,6 @@
 #include "dc_collector.h"
 #include "directory.h"
 
-#include <iostream>
 
 void printRemainingRequests(std::unique_ptr<Daemon> daemon);
 

@@ -1,5 +1,8 @@
 name: Run tests with Address Sanitizer
 
+permissions:
+  contents: read
+
 on:
   pull_request:
     types: [labeled, pull_request]
@@ -23,14 +26,15 @@ jobs:
 
   ubuntu_asan_build:
     needs: resolve-ubunturoot-image
-    runs-on: ubuntu-latest
+    # Ubuntu 26 stack randomization breaks asan.
+    runs-on: ubuntu-24.04
 
     # Use htcondor build containers for the real work
     container:
       image: ${{ needs.resolve-ubunturoot-image.outputs.image }}
       env:
         OMP_NUM_THREADS: 4
-      options: --cpus 4
+      options: --cpus 4 --hostname build-asan.chtc.wisc.edu
     steps:
       - name: Checkout code
         uses: actions/checkout@v6

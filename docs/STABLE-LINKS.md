@@ -41,7 +41,7 @@ URL.
 **Example:**
 
 ```
-?category=example&tag=example
+?category=example&tag=jdl-example1
 ```
 
 ## Adding/Updating Options

@@ -31,6 +31,8 @@
 #include <generic_stats.h>
 #include <vector>
 
+#include "transfer_proc.h"
+
 // the pedantic idiots at gcc generate this warning whenever you use offsetof on a struct or class that has a constructor....
 GCC_DIAG_OFF(invalid-offsetof)
 
@@ -179,6 +181,10 @@ const int CLUSTERPRIVATE_qkey2 = -2;
 // have the job nature, as they are sent to the negotiator.
 // OCU_qkey2 identifies an OCU record.
 const int OCU_qkey2 = -99;
+
+// The magic procid value for slot bundle requests.  Like OCUs, bundle
+// requests are not jobs but are sent to the negotiator.
+const int BUNDLE_qkey2 = -98;
 
 // jobset ids are id.-100
 inline int JOBSETID_to_qkey1(unsigned int jobset_id) {
@@ -530,6 +536,7 @@ protected:
 	//char entry_type (defined in JobQueueBase)
 	char universe{0};      // this is in sync with ATTR_JOB_UNIVERSE
 	char status{0};        // this is in sync with committed job status and used when tracking job counts by state
+	bool parallel{false};  // parallel/mpi universe or ATTR_WANT_PARALLEL_SCHEDULING
 public:
 	JobRunnableState run{JobRunnableState::Unset};
 	int dirty_flags{0};	// one or more of JQJ_CHACHE_DIRTY_ flags indicating that the job ad differs from the JobQueueJob 
@@ -556,11 +563,11 @@ public:
 
 	int  Universe() const { return universe; }
 	int  Status() const { return status; }
+	bool UseParallelScheduler() const { return parallel; } // true if parallel/mpi or ATTR_WANT_PARALLEL_SCHEDULING
 	unsigned int  Jobset() const { return set_id < 0 ? 0 : set_id; }
 	void SetUniverse(int uni) { universe = uni; }
 	void SetStatus(int st) { status = st; }
 	bool IsNoopJob();
-	bool IsOCUClaimer() const; // True if this job holds the ocu claim. It is not a real job
 	void DirtyNoopAttr() { run = JobRunnableState::DirtyNoop; }
 #if 0
 	// FUTURE:
@@ -588,6 +595,7 @@ protected:
 	int num_idle{0};
 	int num_running{0};
 	int num_held{0};
+	int num_blocked{0}; // JOB_STATUS_BLOCKED or JOB_STATUS_PREPARING
 
 public:
 	JobQueueCluster(JOB_ID_KEY & job_id)
@@ -757,7 +765,7 @@ JobQueueJob* GetJobAd(int cluster, int proc);
 JobQueueCluster* GetClusterAd(const PROC_ID& jid);
 JobQueueCluster* GetClusterAd(int cluster);
 JobQueueJobSet* GetJobSetAd(unsigned int jobset_id);
-ClassAd * GetJobAd_as_ClassAd(int cluster_id, int proc_id, bool expStardAttrs = false, bool persist_expansions = true );
+ClassAd * GetJobAd_as_ClassAd(int cluster_id, int proc_id);
 ClassAd *GetJobByConstraint_as_ClassAd(const char *constraint);
 ClassAd *GetNextJobByConstraint_as_ClassAd(const char *constraint, int initScan);
 #define FreeJobAd(ad) ad = NULL
@@ -837,6 +845,7 @@ public:
 	ConstructClassAdLogTableEntry(class Scheduler * _schedd) : schedd(_schedd) {}
 	virtual ClassAd* New(const char * /*key*/, const char * /*mytype*/) const;
 	virtual void Delete(ClassAd* &val) const;
+	virtual LogRecord * NewLogRec(int optype) const;
 	class Scheduler* schedd = nullptr;
 };
 
@@ -922,7 +931,8 @@ private:
 #define JOB_QUEUE_ITERATOR_OPT_INCLUDE_CLUSTERS     0x0001
 #define JOB_QUEUE_ITERATOR_OPT_INCLUDE_JOBSETS      0x0002
 #define JOB_QUEUE_ITERATOR_OPT_NO_PROC_ADS          0x0004
-JobQueueLogType::filter_iterator GetJobQueueIterator(const classad::ExprTree &requirements, int timeslice_ms);
+#define JOB_QUEUE_ITERATOR_OPT_CLUSTER_BEFORE_PROC  0x0008
+JobQueueLogType::filter_iterator GetJobQueueIterator(const classad::ExprTree &requirements);
 JobQueueLogType::filter_iterator GetJobQueueIteratorEnd();
 
 
@@ -987,7 +997,7 @@ enum class runnable_reason_code : int {
 	IsNoopJob,
 	NotIdle,
 	UniverseNotInService,
-	IsOCUClaimer, // job is an OCU claimer, not a real job
+//	IsOCUClaimer,    // job is an OCU claimer, not a real job (obsolete)
 	InLongCooldown,  // cooldown > 5min
 	InShortCooldown, // cooldown <= 5min
 	AlreadyMatched,

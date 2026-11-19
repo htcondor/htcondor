@@ -46,4 +46,10 @@ unsigned int get_csrng_uint(void);
 // are more suitable for long-term key material, which HTCondor does not
 // currently use.
 
+// Constant-time comparison to avoid timing side-channel attacks.
+// Returns true if the two buffers are identical, false otherwise.
+// Both buffers must be exactly len bytes; the comparison always
+// examines all len bytes regardless of where they differ.
+bool timing_safe_compare(const unsigned char *a, const unsigned char *b, int len);
+
 #endif /* _CONDOR_RANDOM_NUM */

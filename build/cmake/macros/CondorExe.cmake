@@ -33,7 +33,7 @@ MACRO (CONDOR_EXE _CNDR_TARGET _SRCS_PARAM _INSTALL_LOC _LINK_LIBS _COPY_PDBS)
 
         CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/msconfig/versioninfo.rc.in ${CMAKE_CURRENT_BINARY_DIR}/versioninfo_${CONDOR_EXECUTABLE_NAME}.rc)
         list(APPEND _SRCS ${CMAKE_CURRENT_BINARY_DIR}/versioninfo_${CONDOR_EXECUTABLE_NAME}.rc)
-    endif( WINDOWS )
+    endif()
 
     add_executable( ${_CNDR_TARGET} ${_SRCS})
 
@@ -48,27 +48,26 @@ MACRO (CONDOR_EXE _CNDR_TARGET _SRCS_PARAM _INSTALL_LOC _LINK_LIBS _COPY_PDBS)
         #dprint ("${_CNDR_TARGET} install destination (${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC})")
     endif()
     
-    # the following will install the .pdb files, some hackery needs to occur because of build configuration is not known till runtime.
-    if ( WINDOWS )   
-        set( ${_CNDR_TARGET}_pdb ${_COPY_PDBS} )
-
-        if ( ${_CNDR_TARGET}_pdb )
-            INSTALL(CODE "FILE(INSTALL DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC}\" TYPE EXECUTABLE FILES \"${CMAKE_CURRENT_BINARY_DIR}/\${CMAKE_INSTALL_CONFIG_NAME}/${_CNDR_TARGET}.pdb\")")
+    # Install the .pdb alongside the exe. The TARGET_PDB_FILE generator
+    # expression resolves the config-specific path and pdb name, and OPTIONAL
+    # keeps install from failing when a configuration produces no pdb.
+    if ( WINDOWS )
+        if ( _COPY_PDBS )
+            install(FILES $<TARGET_PDB_FILE:${_CNDR_TARGET}>
+                    DESTINATION ${_INSTALL_LOC}
+                    OPTIONAL)
         endif ()
-        
+
         set_property( TARGET ${_CNDR_TARGET} PROPERTY FOLDER "executables" )
 
-        #add updated manifest only for VS2012 and above
-        if(NOT (MSVC_VERSION LESS 1700))
-            add_custom_command( TARGET ${_CNDR_TARGET} POST_BUILD 
-                COMMAND mt.exe -nologo /manifest ${CMAKE_SOURCE_DIR}/msconfig/win7.manifest /outputresource:${CMAKE_CURRENT_BINARY_DIR}/$(Configuration)/${_CNDR_TARGET}.exe)
-        endif(NOT (MSVC_VERSION LESS 1700))
+        add_custom_command( TARGET ${_CNDR_TARGET} POST_BUILD
+            COMMAND mt.exe -nologo /manifest ${CMAKE_SOURCE_DIR}/msconfig/win7.manifest /outputresource:${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/${_CNDR_TARGET}.exe)
 
-    endif( WINDOWS )
+    endif()
 
     if ( APPLE )
         # Fix up the share library dependencies
         install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC}/${_CNDR_TARGET})" )
-    endif ( APPLE )
+    endif()
 
 ENDMACRO (CONDOR_EXE)

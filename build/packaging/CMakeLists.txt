@@ -21,5 +21,5 @@ if ( RPM_SYSTEM_NAME )
         add_custom_target( rpm_with_all_sources COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/srpm/makesrpm.sh -ba --bundle-all-externals
                            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/rpm DEPENDS rpm_dir )
 
-endif ( RPM_SYSTEM_NAME )
+endif()
 

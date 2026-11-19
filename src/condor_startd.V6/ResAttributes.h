@@ -164,6 +164,24 @@ typedef struct _AttribValue {
 
 } AttribValue;
 
+struct NFRSlotId
+{
+	unsigned short int slot{0};
+	unsigned short int dslot{0};
+	NFRSlotId() = default;
+	NFRSlotId(int i, int j=0) : slot(i), dslot(j) {};
+};
+
+struct NFRSlotIdSort {
+	typedef void is_transparent; // magic to enable transparent comparators
+	bool operator()( const NFRSlotId & aa, const NFRSlotId & bb ) const {
+		if (aa.slot == bb.slot) { return aa.dslot < bb.dslot; }
+		return aa.slot < bb.slot;
+	}
+};
+
+typedef flat_set<NFRSlotId, NFRSlotIdSort> NFRConsumers;
+
 //
 class NFROwner
 {
@@ -184,6 +202,7 @@ public:
 	std::string id;
 	NFROwner  owner;
 	NFROwner  bkowner;
+	NFRConsumers refs; // shared NFRs track consumer refs
 
 	// report if resource is "owned" by the given slot
 	// if the given slot matches the primary owner, then return 1
@@ -214,6 +233,12 @@ public:
 		}
 		return 0;
 	}
+
+	bool is_subscribed(int slot_id, int sub_id) const {
+		NFRSlotId sid(slot_id, sub_id);
+		return refs.contains(sid);
+	}
+
 };
 
 class NonFungibleType
@@ -221,29 +246,37 @@ class NonFungibleType
 public:
 	std::vector<NonFungibleRes> ids;
 	std::map<std::string, ClassAd> props;
+	bool shared{false}; // this type of resource is shared
 };
 
 // Machine-wide attributes.  
 class MachAttributes
 {
 public:
+	typedef std::string res_tag;
 	// quantity (double) of resource for each resource tag
-	typedef std::map<std::string, double, classad::CaseIgnLTStr> slotres_map_t;
+	typedef std::map<res_tag, double, classad::CaseIgnLTStr> slotres_map_t;
+	// slotres_map_t["GPUs"] = 2.0
 
 	// these are used for non-fungible ids to track resource IDs that cannot be assigned
 	// for each resource tag, which resource IDs are offline. note that this is a SET rather than a VECTOR
 	typedef std::set<std::string> slotres_offline_ids_t;
-	typedef std::map<std::string, slotres_offline_ids_t, classad::CaseIgnLTStr> slotres_offline_ids_map_t;
+	typedef std::map<res_tag, slotres_offline_ids_t, classad::CaseIgnLTStr> slotres_offline_ids_map_t;
+	// slotres_offline_ids_map_t["GPUs"] = std::set("GPU-AAA", ...)
 
 	// some slots may have constraints on which non-fungible resources they can use, this is handled
 	// by having an optional property classad for each unique non-fungible id, and a optional constraint
 	// for each type of nonfungible id for each slot
-	typedef std::map<std::string, std::string, classad::CaseIgnLTStr> slotres_constraint_map_t;
+	typedef std::map<res_tag, std::string, classad::CaseIgnLTStr> slotres_constraint_map_t;
+	// slotres_constraint_map_t["GPUs"]  = "Capability >= 7.5" or "GPU-AAA" or "1"
 
-	typedef std::map<std::string, NonFungibleType, classad::CaseIgnLTStr> slotres_nft_map_t;
+	typedef std::map<res_tag, NonFungibleType, classad::CaseIgnLTStr> slotres_nft_map_t;
+	// slotres_nft_map_t["GPUs"] ={[("GPU-AAA", 1_1), ("GPU-BBB", 1_2), ...], [ "GPU-AAA" -> props; "GPU-BBB" -> props] }
+
 	// these are used as lists of non-fungible ids for various purposes
 	typedef std::vector<std::string> slotres_assigned_ids_t;
-	typedef std::map<std::string, slotres_assigned_ids_t, classad::CaseIgnLTStr> slotres_devIds_map_t;
+	typedef std::map<res_tag, slotres_assigned_ids_t, classad::CaseIgnLTStr> slotres_devIds_map_t;
+	// slotres_devIds_map_t["GPUs"] = ["GPU-AAA", ...]
 
 	MachAttributes();
 	~MachAttributes();
@@ -347,18 +380,24 @@ public:
 	double		machine_condor_load()	const { return m_condor_load; };
 	time_t		machine_keyboard_idle() const { return m_idle; };
 	time_t		machine_console_idle()	const { return m_console_idle; };
+
 	const slotres_map_t& machres() const { return m_machres_map; }
-	const slotres_nft_map_t& machres_devIds() const { return m_machres_nft_map; }
 	const ClassAd& machres_attrs() const { return m_machres_attr; }
+	NonFungibleType* getNFT(const res_tag & tag) { // returns a pointer to the NonFungibleType object if the resource type is non-fungible
+		auto found = m_machres_nft_map.find(tag);
+		if (found == m_machres_nft_map.end()) { return nullptr; } else { return &found->second; }
+	}
 	const char * AllocateDevId(const std::string & tag, const char* request, int assign_to, int assign_to_sub, bool backfill, int assign_from_sub);
 	bool         ReleaseDynamicDevId(const std::string & tag, const char * id, int was_assign_to, int was_assign_to_sub, int new_sub=0);
 	bool         DevIdMatches(const NonFungibleType & nft, int ixid, ConstraintHolder & require);
+	bool         DevIdMatches(const NonFungibleType & nft, const NonFungibleRes & nfr, const char * request);
 	const char * DumpDevIds(std::string & buf, const char * tag = NULL, const char * sep = "\n");
 	void         ReconfigOfflineDevIds();
 	int          RefreshDevIds(const std::string & tag, slotres_assigned_ids_t & slot_res_devids, int assign_to, int assign_to_sub);
 	int          ReportBrokenDevIds(const std::string & tag, slotres_assigned_ids_t & devids, int broken_sub_id);
 	bool         ComputeDevProps(ClassAd & ad, const std::string & tag, const slotres_assigned_ids_t & ids);
 	//bool ReAssignDevId(const std::string & tag, const char * id, void * was_assigned_to, void * assign_to);
+
 
 	// return WithinResourceLimits, these also calculates it on the first call
 	const char * withinLimitsExpression(); // regular WithinResourceLimits
@@ -417,6 +456,7 @@ private:
 
 	static bool init_machine_resource(MachAttributes * pme, HASHITER & it);
 	double init_machine_resource_from_script(const char * tag, const char * script_cmd);
+	double init_machine_resource_from_ad(const char * tag, ClassAd & ad);
 	ClassAd         m_machres_attr;
 
 	std::string		m_within_limits_expr_str;       // Expression for WithinResourceLimits

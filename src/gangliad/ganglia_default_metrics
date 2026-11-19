@@ -1,25 +1,33 @@
 [
-  Name   = strcat(MyType,"CondorVersion");
+  Name   = "CondorVersion";
+  Ganglia_Name = strcat(MyType,"CondorVersion");
+  PrometheusLabels = [ daemon = MyType ];
   Value  = CondorVersion;
   Desc   = "Version String";
   TargetType = "Scheduler,Negotiator";
 ]
 [
-  Name   = strcat(MyType,"UpdatesLost");
+  Name   = "UpdatesLost";
+  Ganglia_Name = strcat(MyType,"UpdatesLost");
+  PrometheusLabels = [ daemon = MyType ];
   Value  = UpdatesLost;
   Verbosity = 2;
   Desc   = "Number of ClassAd updates that were sent by this daemon but not received by the collector";
   TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
-  Name   = strcat(MyType,"UpdatesTotal");
+  Name   = "UpdatesTotal";
+  Ganglia_Name = strcat(MyType,"UpdatesTotal");
+  PrometheusLabels = [ daemon = MyType ];
   Value  = UpdatesTotal;
   Verbosity = 2;
   Desc   = "Number of ClassAd updates that were sent by this daemon";
   TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
-  Name   = strcat(MyType,"RecentDaemonCoreDutyCycle");
+  Name   = "RecentDaemonCoreDutyCycle";
+  Ganglia_Name = strcat(MyType,"RecentDaemonCoreDutyCycle");
+  PrometheusLabels = [ daemon = MyType ];
   Value  = RecentDaemonCoreDutyCycle;
   Desc   = "Recent fraction of busy time in the daemon event loop";
   Scale  = 100;
@@ -28,7 +36,9 @@
 ]
 /* Not a useful graph. Should be converted to a human readable string metric */
 [
-  Name   = strcat(MyType,"MonitorSelfAge");
+  Name   = "MonitorSelfAge";
+  Ganglia_Name = strcat(MyType,"MonitorSelfAge");
+  PrometheusLabels = [ daemon = MyType ];
   Value  = MonitorSelfAge;
   Verbosity = 99;
   Desc   = "Age of this daemon";
@@ -36,14 +46,18 @@
   TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
-  Name   = strcat(MyType,"MonitorSelfCPUUsage");
+  Name   = "MonitorSelfCPUUsage";
+  Ganglia_Name = strcat(MyType,"MonitorSelfCPUUsage");
+  PrometheusLabels = [ daemon = MyType ];
   Value  = MonitorSelfCPUUsage;
   Verbosity = 2;
   Desc   = "The fraction of one CPU recently used by this daemon";
   TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
-  Name   = strcat(MyType,"MonitorSelfImageSize");
+  Name   = "MonitorSelfImageSize";
+  Ganglia_Name = strcat(MyType,"MonitorSelfImageSize");
+  PrometheusLabels = [ daemon = MyType ];
   Value  = MonitorSelfImageSize;
   Verbosity = 1;
   Desc   = "Memory allocated to this daemon (i.e. virtual image size)";
@@ -53,7 +67,9 @@
   TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
-  Name   = strcat(MyType,"MonitorSelfRegisteredSocketCount");
+  Name   = "MonitorSelfRegisteredSocketCount";
+  Ganglia_Name = strcat(MyType,"MonitorSelfRegisteredSocketCount");
+  PrometheusLabels = [ daemon = MyType ];
   Value  = MonitorSelfRegisteredSocketCount;
   Verbosity = 2;
   Desc   = "Number of sockets registered in this daemon's event loop";
@@ -61,7 +77,9 @@
   TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
-  Name   = strcat(MyType,"MonitorSelfResidentSetSize");
+  Name   = "MonitorSelfResidentSetSize";
+  Ganglia_Name = strcat(MyType,"MonitorSelfResidentSetSize");
+  PrometheusLabels = [ daemon = MyType ];
   Value  = MonitorSelfResidentSetSize;
   Verbosity = 2;
   Desc   = "RAM allocated to this daemon";
@@ -71,7 +89,9 @@
   TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
-  Name   = strcat(MyType,"MonitorSelfSecuritySessions");
+  Name   = "MonitorSelfSecuritySessions";
+  Ganglia_Name = strcat(MyType,"MonitorSelfSecuritySessions");
+  PrometheusLabels = [ daemon = MyType ];
   Value  = MonitorSelfSecuritySessions;
   Verbosity = 2;
   Desc   = "Number of security sessions in this daemon's cache";
@@ -317,7 +337,8 @@
 ]
 [
   Aggregate = "SUM";
-  Name   = "Held Jobs in Pool";
+  Name   = "PoolHeldJobs";
+  Ganglia_Name = "Held Jobs in Pool";
   Value  = TotalHeldJobs;
   Desc   = "Number of jobs on hold in schedds reporting to this pool";
   Units  = "jobs";
@@ -331,7 +352,8 @@
 ]
 [
   Aggregate = "SUM";
-  Name   = "Idle Jobs in Pool";
+  Name   = "PoolIdleJobs";
+  Ganglia_Name = "Idle Jobs in Pool";
   Value  = TotalIdleJobs;
   Desc   = "Number of idle jobs in schedds reporting to this pool";
   Units  = "jobs";
@@ -345,7 +367,8 @@
 ]
 [
   Aggregate = "SUM";
-  Name   = "Jobs in Pool";
+  Name   = "PoolJobs";
+  Ganglia_Name = "Jobs in Pool";
   Value  = TotalJobAds;
   Desc   = "Number of jobs currently in schedds reporting to this pool";
   Units  = "jobs";
@@ -380,7 +403,8 @@
 ]
 [
   Aggregate = "SUM";
-  Name   = "Running Jobs in Pool";
+  Name   = "PoolRunningJobs";
+  Ganglia_Name = "Running Jobs in Pool";
   Value  = TotalRunningJobs;
   Desc   = "Number of running jobs in schedds reporting to this pool";
   Units  = "jobs";
@@ -402,130 +426,174 @@
 ]
 
 [
-  Name = strcat(Name,"-TotalRunningJobs");
+  Name = "SubmitterTotalRunningJobs";
+  Ganglia_Name = strcat(Name,"-TotalRunningJobs");
+  PrometheusLabels = [ submitter = Name ];
+  AggregateGroup = Name;
   Title = strcat(Name, " Total Running Jobs");
   Aggregate = "SUM";
   Value = RunningJobs;
   Verbosity = 2;
-  Desc   = strcat("Total number of running jobs from user ", Name);
+  Desc   = "Total number of running jobs from this submitter across all access points in the pool";
+  Ganglia_Desc = strcat("Total number of running jobs from user ", Name);
   Units  = "jobs";
   TargetType = "Submitter";
   Group  = "HTCondor Submitters";
 ]
 [
-  Name = strcat(Name, "RunningJobs");
+  Name = "SubmitterRunningJobs";
+  Ganglia_Name = strcat(Name, "RunningJobs");
+  PrometheusLabels = [ submitter = Name ];
   Title = strcat(Name, " Running Jobs");
   Value = RunningJobs;
   Verbosity = 2;
-  Desc   = strcat("Number of running jobs from user ", Name);
+  Desc   = "Number of running jobs from this submitter on this access point";
+  Ganglia_Desc = strcat("Number of running jobs from user ", Name);
   Units  = "jobs";
   TargetType = "Submitter";
   Group  = "HTCondor Submitters";
 ]
 [
-  Name = strcat(Name,"-TotalIdleJobs");
+  Name = "SubmitterTotalIdleJobs";
+  Ganglia_Name = strcat(Name,"-TotalIdleJobs");
+  PrometheusLabels = [ submitter = Name ];
+  AggregateGroup = Name;
   Title = strcat(Name, " Total Idle Jobs");
   Aggregate = "SUM";
   Value = IdleJobs;
   Verbosity = 2;
-  Desc   = strcat("Total number of idle jobs from user ", Name);
+  Desc   = "Total number of idle jobs from this submitter across all access points in the pool";
+  Ganglia_Desc = strcat("Total number of idle jobs from user ", Name);
   Units  = "jobs";
   TargetType = "Submitter";
   Group  = "HTCondor Submitters";
 ]
 [
-  Name = strcat(Name, "IdleJobs");
+  Name = "SubmitterIdleJobs";
+  Ganglia_Name = strcat(Name, "IdleJobs");
+  PrometheusLabels = [ submitter = Name ];
   Title = strcat(Name, " Idle Jobs");
   Value = IdleJobs;
   Verbosity = 2;
-  Desc   = strcat("Number of idle jobs from user ", Name);
+  Desc   = "Number of idle jobs from this submitter on this access point";
+  Ganglia_Desc = strcat("Number of idle jobs from user ", Name);
   Units  = "jobs";
   TargetType = "Submitter";
   Group  = "HTCondor Submitters";
 ]
 [
-  Name = strcat(Name,"-TotalHeldJobs");
+  Name = "SubmitterTotalHeldJobs";
+  Ganglia_Name = strcat(Name,"-TotalHeldJobs");
+  PrometheusLabels = [ submitter = Name ];
+  AggregateGroup = Name;
   Title = strcat(Name, " Total Held Jobs");
   Aggregate = "SUM";
   Value = HeldJobs;
   Verbosity = 2;
-  Desc   = strcat("Total number of held jobs from user ", Name);
+  Desc   = "Total number of held jobs from this submitter across all access points in the pool";
+  Ganglia_Desc = strcat("Total number of held jobs from user ", Name);
   Units  = "jobs";
   TargetType = "Submitter";
   Group  = "HTCondor Submitters";
 ]
 [
-  Name = strcat(Name, "HeldJobs");
+  Name = "SubmitterHeldJobs";
+  Ganglia_Name = strcat(Name, "HeldJobs");
+  PrometheusLabels = [ submitter = Name ];
   Title = strcat(Name, " Held Jobs");
   Value = HeldJobs;
   Verbosity = 2;
-  Desc   = strcat("Number of held jobs from user ", Name);
+  Desc   = "Number of held jobs from this submitter on this access point";
+  Ganglia_Desc = strcat("Number of held jobs from user ", Name);
   Units  = "jobs";
   TargetType = "Submitter";
   Group  = "HTCondor Submitters";
 ]
 [
-  Name = strcat(Name,"-TotalFlockedJobs");
+  Name = "SubmitterTotalFlockedJobs";
+  Ganglia_Name = strcat(Name,"-TotalFlockedJobs");
+  PrometheusLabels = [ submitter = Name ];
+  AggregateGroup = Name;
   Title = strcat(Name, " Total Flocked Jobs");
   Aggregate = "SUM";
   Value = FlockedJobs;
   Verbosity = 2;
-  Desc   = strcat("Total number of flocked jobs from user ", Name);
+  Desc   = "Total number of flocked jobs from this submitter across all access points in the pool";
+  Ganglia_Desc = strcat("Total number of flocked jobs from user ", Name);
   Units  = "jobs";
   TargetType = "Submitter";
   Group  = "HTCondor Submitters";
 ]
 [
-  Name = strcat(Name, "FlockedJobs");
+  Name = "SubmitterFlockedJobs";
+  Ganglia_Name = strcat(Name, "FlockedJobs");
+  PrometheusLabels = [ submitter = Name ];
   Title = strcat(Name, " Flocked Jobs");
   Value = FlockedJobs;
   Verbosity = 2;
-  Desc   = strcat("Number of flocked jobs from user ", Name);
+  Desc   = "Number of flocked jobs from this submitter on this access point";
+  Ganglia_Desc = strcat("Number of flocked jobs from user ", Name);
   Units  = "jobs";
   TargetType = "Submitter";
   Group  = "HTCondor Submitters";
 ]
 
 [
-  Name = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"),"-TotalRunningJobs");
+  Name = "AccountingGroupTotalRunningJobs";
+  Ganglia_Name = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"),"-TotalRunningJobs");
+  PrometheusLabels = [ accounting_group = ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup") ];
+  AggregateGroup = ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup");
   Title = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"), " Total Running Jobs");
   Aggregate = "SUM";
   Value = RunningJobs;
   Verbosity = 2;
-  Desc   = strcat("Total number of running jobs from ", ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "group \\1"),"no group"));
+  Desc   = "Total number of running jobs from this accounting group across all access points in the pool";
+  Ganglia_Desc = strcat("Total number of running jobs from ", ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "group \\1"),"no group"));
   Units  = "jobs";
   TargetType = "Submitter";
   Group  = "HTCondor Accounting Groups";
 ]
 [
-  Name = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"),"-TotalIdleJobs");
+  Name = "AccountingGroupTotalIdleJobs";
+  Ganglia_Name = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"),"-TotalIdleJobs");
+  PrometheusLabels = [ accounting_group = ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup") ];
+  AggregateGroup = ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup");
   Title = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"), " Total Idle Jobs");
   Aggregate = "SUM";
   Value = IdleJobs;
   Verbosity = 2;
-  Desc   = strcat("Total number of idle jobs from ", ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "group \\1"),"no group"));
+  Desc   = "Total number of idle jobs from this accounting group across all access points in the pool";
+  Ganglia_Desc = strcat("Total number of idle jobs from ", ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "group \\1"),"no group"));
   Units  = "jobs";
   TargetType = "Submitter";
   Group  = "HTCondor Accounting Groups";
 ]
 [
-  Name = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"),"-TotalHeldJobs");
+  Name = "AccountingGroupTotalHeldJobs";
+  Ganglia_Name = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"),"-TotalHeldJobs");
+  PrometheusLabels = [ accounting_group = ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup") ];
+  AggregateGroup = ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup");
   Title = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"), " Total Held Jobs");
   Aggregate = "SUM";
   Value = HeldJobs;
   Verbosity = 2;
-  Desc   = strcat("Total number of held jobs from ", ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "group \\1"),"no group"));
+  Desc   = "Total number of held jobs from this accounting group across all access points in the pool";
+  Ganglia_Desc = strcat("Total number of held jobs from ", ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "group \\1"),"no group"));
   Units  = "jobs";
   TargetType = "Submitter";
   Group  = "HTCondor Accounting Groups";
 ]
 [
-  Name = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"),"-TotalFlockedJobs");
+  Name = "AccountingGroupTotalFlockedJobs";
+  Ganglia_Name = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"),"-TotalFlockedJobs");
+  PrometheusLabels = [ accounting_group = ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup") ];
+  AggregateGroup = ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup");
   Title = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"), " Total Flocked Jobs");
   Aggregate = "SUM";
   Value = FlockedJobs;
   Verbosity = 2;
-  Desc   = strcat("Total number of flocked jobs from ", ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "group \\1"),"no group"));
+  Desc   = "Total number of flocked jobs from this accounting group across all access points in the pool";
+  Ganglia_Desc = strcat("Total number of flocked jobs from ", ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "group \\1"),"no group"));
   Units  = "jobs";
   TargetType = "Submitter";
   Group  = "HTCondor Accounting Groups";
@@ -535,7 +603,7 @@
 [
   Name   = "FileTransferDownloadBytes";
   Verbosity = 1;
-  Derivative = true;
+  Counter = true;
   Title  = "File Transfer Download Bandwidth";
   Desc   = "Output transfers from jobs";
   Units  = "bytes";
@@ -552,9 +620,13 @@
 ]
 [
   Regex  = "Owner_([^_]*)_FileTransferDownloadBytesPerSecond_5m";
+  Name   = "OwnerFileTransferDownloadBytesPerSecond_5m";
+  Ganglia_Name = "\\0";
+  PrometheusLabels = [ owner = "\\1" ];
   Title = "\\1 Download Bytes Per Second";
   Verbosity = 2;
-  Desc   = "Rate of output transfers from jobs by user \\1";
+  Desc   = "Rate of output transfers from jobs by this user";
+  Ganglia_Desc = "Rate of output transfers from jobs by user \\1";
   Units  = "bytes/s";
   TargetType = "Scheduler";
   Group  = "HTCondor File Transfer";
@@ -571,7 +643,7 @@
 [
   Name   = "FileTransferFileReadSeconds";
   Verbosity = 99;
-  Derivative = true;
+  Counter = true;
   Title  = "File Transfer File Read Load";
   Desc   = "Number of file transfer processes reading input data from files";
   Units  = "processes";
@@ -590,7 +662,7 @@
 [
   Name   = "FileTransferFileWriteSeconds";
   Verbosity = 99;
-  Derivative = true;
+  Counter = true;
   Title  = "File Transfer File Write Load";
   Desc   = "Number of file transfer processes writing output data to files";
   Units  = "processes";
@@ -609,7 +681,7 @@
 [
   Name   = "FileTransferNetReadSeconds";
   Verbosity = 99;
-  Derivative = true;
+  Counter = true;
   Desc   = "Number of file transfer processes reading output data from the network";
   Units  = "processes";
   TargetType = "Scheduler";
@@ -627,7 +699,7 @@
 [
   Name   = "FileTransferNetWriteSeconds";
   Verbosity = 99;
-  Derivative = true;
+  Counter = true;
   Title  = "File Transfer Net Write Load";
   Desc   = "Number of file transfer processes writing input data to the network";
   Units  = "processes";
@@ -636,7 +708,7 @@
 ]
 [
   Name   = "FileTransferUploadBytes";
-  Derivative = true;
+  Counter = true;
   Title  = "File Transfer Upload Bandwidth";
   Desc   = "Input transfers to jobs";
   Units  = "bytes";
@@ -653,9 +725,13 @@
 ]
 [
   Regex  = "Owner_([^_]*)_FileTransferUploadBytesPerSecond_5m";
+  Name   = "OwnerFileTransferUploadBytesPerSecond_5m";
+  Ganglia_Name = "\\0";
+  PrometheusLabels = [ owner = "\\1" ];
   Title = "\\1 Upload Bytes Per Second";
   Verbosity = 2;
-  Desc   = "Rate of input transfers from jobs by user \\1";
+  Desc   = "Rate of input transfers from jobs by this user";
+  Ganglia_Desc = "Rate of input transfers from jobs by user \\1";
   Units  = "bytes/s";
   TargetType = "Scheduler";
   Group  = "HTCondor File Transfer";
@@ -669,7 +745,8 @@
 ]
 [
   Aggregate = "MAX";
-  Name   = "Pool Max TransferQueueDownloadWaitTime";
+  Name   = "PoolMaxTransferQueueDownloadWaitTime";
+  Ganglia_Name = "Pool Max TransferQueueDownloadWaitTime";
   Value  = TransferQueueDownloadWaitTime;
   Desc   = "Oldest output file transfer waiting in the transfer queues reporting to this pool";
   Units  = "seconds";
@@ -712,7 +789,8 @@
 ]
 [
   Aggregate = "MAX";
-  Name   = "Pool Max TransferQueueUploadWaitTime";
+  Name   = "PoolMaxTransferQueueUploadWaitTime";
+  Ganglia_Name = "Pool Max TransferQueueUploadWaitTime";
   Value  = TransferQueueUploadWaitTime;
   Desc   = "Oldest input file transfer waiting in the transfer queues reporting to this pool";
   Units  = "seconds";
@@ -908,7 +986,8 @@
 ]
 [
   Aggregate = "SUM";
-  Name   = "Cpus in Pool";
+  Name   = "PoolCpus";
+  Ganglia_Name = "Cpus in Pool";
   Value  = TotalCpus;
   Verbosity = 2;
   Desc   = "Number of cores in the pool";
@@ -948,7 +1027,8 @@
 ]
 [
   Aggregate = "SUM";
-  Name   = "Pool Slot Count";
+  Name   = "PoolSlotCount";
+  Ganglia_Name = "Pool Slot Count";
   Value  = TotalSlots;
   Desc   = "Number of slots in the pool";
   Units  = "slots";
@@ -993,7 +1073,8 @@
 ]
 [
   Aggregate = "SUM";
-  Name   = "Poolwide Preemptions";
+  Name   = "PoolPreemptions";
+  Ganglia_Name = "Poolwide Preemptions";
   Value  = TotalPreemptions;
   Verbosity = 2;
   Desc   = "Poolwide Preemptions";
@@ -1002,7 +1083,8 @@
 ]
 [
   Aggregate = "SUM";
-  Name   = "Poolwide Job Starts";
+  Name   = "PoolJobStarts";
+  Ganglia_Name = "Poolwide Job Starts";
   Value  = TotalJobStarts;
   Verbosity = 2;
   Desc   = "Poolwide Job Starts";
@@ -1017,63 +1099,80 @@
 ]
 [
   Aggregate = "SUM";
-  Name   = "AutoClusters in Pool";
+  Name   = "PoolAutoClusters";
+  Ganglia_Name = "AutoClusters in Pool";
   Value  = AutoClusters;
   Desc   = "Number of active AutoClusters in schedds reporting to this pool";
   Units  = "autoclusters";
   TargetType = "Scheduler";
 ]
 [
-  Name   = strcat(MyType,"WholeMachines");
+  Name   = "WholeMachines";
+  Ganglia_Name = strcat(MyType,"WholeMachines");
+  PrometheusLabels = [ daemon = MyType ];
   Value  = WholeMachines;
   Verbosity = 2;
   Desc   = "Number of machines that were observed to be defragmented in the last polling interval";
   TargetType = "Defrag";
 ]
 [
-  Name   = strcat(MyType,"MachinesDraining");
+  Name   = "MachinesDraining";
+  Ganglia_Name = strcat(MyType,"MachinesDraining");
+  PrometheusLabels = [ daemon = MyType ];
   Value  = MachinesDraining;
   Verbosity = 2;
   Desc   = "Number of machines that were observed to be draining in the last polling interval";
   TargetType = "Defrag";
 ]
 [
-  Name   = strcat(MyType,"RecentDrainSuccesses");
+  Name   = "RecentDrainSuccesses";
+  Ganglia_Name = strcat(MyType,"RecentDrainSuccesses");
+  PrometheusLabels = [ daemon = MyType ];
   Value  = RecentDrainSuccesses;
   Verbosity = 2;
   Desc   = "Count of successful attempts to initiate draining during the past RecentStatsLifetime seconds";
   TargetType = "Defrag";
 ]
 [
-  Name   = strcat(MyType,"RecentDrainFailures");
+  Name   = "RecentDrainFailures";
+  Ganglia_Name = strcat(MyType,"RecentDrainFailures");
+  PrometheusLabels = [ daemon = MyType ];
   Value  = RecentDrainFailures;
   Verbosity = 2;
   Desc   = "Count of failed attempts to initiate draining during the past RecentStatsLifetime seconds";
   TargetType = "Defrag";
 ]
 [
-  Name   = strcat(MyType,"AvgDrainingUnclaimed");
+  Name   = "AvgDrainingUnclaimed";
+  Ganglia_Name = strcat(MyType,"AvgDrainingUnclaimed");
+  PrometheusLabels = [ daemon = MyType ];
   Value  = AvgDrainingUnclaimed;
   Verbosity = 2;
   Desc   = "Fraction of time CPUs in the pool have spent unclaimed by a user during draining of the machine";
   TargetType = "Defrag";
 ]
 [
-  Name   = strcat(MyType,"WholeMachinesPeak");
+  Name   = "WholeMachinesPeak";
+  Ganglia_Name = strcat(MyType,"WholeMachinesPeak");
+  PrometheusLabels = [ daemon = MyType ];
   Value  = WholeMachinesPeak;
   Verbosity = 2;
   Desc   = "Largest number of machines that were ever observed to be simultaneously defragmented";
   TargetType = "Defrag";
 ]
 [
-  Name   = strcat(MyType,"AvgDrainingBadput");
+  Name   = "AvgDrainingBadput";
+  Ganglia_Name = strcat(MyType,"AvgDrainingBadput");
+  PrometheusLabels = [ daemon = MyType ];
   Value  = AvgDrainingBadput;
   Verbosity = 2;
   Desc   = "Fraction of time CPUs in the pool have spent on jobs that were killed during draining of the machine";
   TargetType = "Defrag";
 ]
 [
-  Name   = strcat(MyType,"MachinesDrainingPeak");
+  Name   = "MachinesDrainingPeak";
+  Ganglia_Name = strcat(MyType,"MachinesDrainingPeak");
+  PrometheusLabels = [ daemon = MyType ];
   Value  = MachinesDrainingPeak;
   Verbosity = 2;
   Desc   = "Largest number of machines that were ever observed to be draining";

@@ -1,0 +1,101 @@
+/***************************************************************
+ *
+ * Copyright (C) 1990-2025, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
+
+#pragma once
+
+#include <cstdint>
+#include <ctime>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+// A single indexed record: the byte offset within the file and the file path.
+// file_id is the librarian's Files.FileId. It identifies the file but is NOT a
+// chronological key (a restart after multiple rotations can assign ids out of
+// order). Use rotation_time for archive order instead: the rotation time parsed
+// from a rotated file's name (same as findHistoryFiles()), or 0 for the active
+// file, which is always newest.
+struct LibrarianRecord {
+	int64_t     offset;
+	std::string file_path;
+	int64_t     file_id{0};
+	time_t      rotation_time{0};
+};
+
+// Read-only client for the Librarian SQLite3 index database.
+//
+// Callers never need compile-time sqlite3 checks — create an instance and
+// call IsValid() before using any query methods.  All query methods are
+// no-ops (returning 0 or empty) when IsValid() returns false.
+class LibrarianClient {
+public:
+	enum class FileFilter { All, OnlyExisting };
+
+	LibrarianClient();
+	~LibrarianClient();
+
+	LibrarianClient(const LibrarianClient&)            = delete;
+	LibrarianClient& operator=(const LibrarianClient&) = delete;
+	LibrarianClient(LibrarianClient&&)                 = default;
+	LibrarianClient& operator=(LibrarianClient&&)      = default;
+
+	// Returns true iff sqlite3 was compiled in, USING_LIBRARIAN=True,
+	// and the database file was opened successfully.
+	bool IsValid() const;
+
+	// The database's schema version (PRAGMA user_version), or 0 if not valid.
+	// The DAG/batch lookups below require schema version 3 or newer.
+	int SchemaVersion() const;
+
+	// Count JobRecords associated with a cluster ID.
+	// With OnlyExisting (default), excludes records in files that have
+	// been marked deleted (DateOfDeletion IS NOT NULL).
+	int CountByCluster(int cluster_id, FileFilter filter = FileFilter::OnlyExisting) const;
+
+	// Count JobRecords associated with a username.
+	// Same file-existence filtering as CountByCluster.
+	int CountByUser(const std::string& username, FileFilter filter = FileFilter::OnlyExisting) const;
+
+	// Return the file offset and file path for each (cluster, proc) pair.
+	// With OnlyExisting (default), excludes records in files that have been
+	// marked deleted (DateOfDeletion IS NOT NULL).
+	std::vector<LibrarianRecord> GetRecords(const std::vector<std::pair<int,int>>& job_ids,
+	                                        FileFilter filter = FileFilter::OnlyExisting) const;
+
+	// Return the file offset and file path for every JobRecord associated with a
+	// cluster ID. Same file-existence filtering as CountByCluster.
+	std::vector<LibrarianRecord> GetRecordsByCluster(int cluster_id, FileFilter filter = FileFilter::OnlyExisting) const;
+
+	// Return the file offset and file path for every JobRecord associated with a
+	// username. Same file-existence filtering as CountByUser.
+	std::vector<LibrarianRecord> GetRecordsByUser(const std::string& username, FileFilter filter = FileFilter::OnlyExisting) const;
+
+	// Return the file offset and file path for every JobRecord whose DAGManJobId,
+	// JobBatchId, or JobBatchName (case-sensitive) matches.
+	// Same file-existence filtering as CountByCluster. Records ingested before
+	// the schema v3 migration have NULL for these columns and are never returned.
+	std::vector<LibrarianRecord> GetRecordsByDagId(int dag_id, FileFilter filter = FileFilter::OnlyExisting) const;
+	std::vector<LibrarianRecord> GetRecordsByBatchId(const std::string& batch_id, FileFilter filter = FileFilter::OnlyExisting) const;
+	std::vector<LibrarianRecord> GetRecordsByBatchName(const std::string& batch_name, FileFilter filter = FileFilter::OnlyExisting) const;
+
+private:
+	struct Impl;
+	std::unique_ptr<Impl> m_impl;
+};

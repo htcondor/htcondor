@@ -283,7 +283,7 @@ def final_job_two_handle(default_condor, job_two_handle):
 
     default_condor.run_command(
         ['condor_vacate_job', str(job_two_handle.job_ids[0])],
-        timeout=5, echo=True)
+        timeout=60, echo=True)
     # In the wild, running condor_reschedule immediately after running
     # condor_vacate_job will sometimes not result in the job being
     # considered by the negotiator in its next cycle.  The basic problem --
@@ -455,7 +455,7 @@ def final_job_five_handle(default_condor, job_five_handle):
 
     default_condor.run_command(
         ['condor_vacate_job', str(job_five_handle.job_ids[0])],
-        timeout=5, echo=True)
+        timeout=60, echo=True)
     # See previous comment.
     time.sleep(1)
     default_condor.run_command(

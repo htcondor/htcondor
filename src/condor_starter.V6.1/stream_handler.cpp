@@ -182,9 +182,16 @@ int StreamHandler::Handler( int  /* fd */)
 				return KEEP_STREAM;
 			}
 
-			if(actual!=result) {
+			if(actual < 0) {
+				// The remote write itself failed; errno is meaningful.
 				std::string err_msg;
-				formatstr(err_msg, "StreamHandler: %s: couldn't write to %s: %s (%d!=%d)",streamname.c_str(),filename.c_str(),strerror(errno),actual,result);
+				formatstr(err_msg, "StreamHandler: %s: write of %d bytes to %s failed: %s",streamname.c_str(),result,filename.c_str(),strerror(errno));
+				starter->SetVacateReason(err_msg.c_str(), CONDOR_HOLD_CODE::UnableToOpenOutputStream, errno);
+				EXCEPT("%s", err_msg.c_str());
+			} else if(actual!=result) {
+				// Short write: fewer bytes stored than requested.
+				std::string err_msg;
+				formatstr(err_msg, "StreamHandler: %s: short write to %s: only %d of %d bytes written",streamname.c_str(),filename.c_str(),actual,result);
 				starter->SetVacateReason(err_msg.c_str(), CONDOR_HOLD_CODE::UnableToOpenOutputStream, errno);
 				EXCEPT("%s", err_msg.c_str());
 			}
@@ -320,31 +327,39 @@ StreamHandler::Reconnect() {
 
 		VerifyOutputFile();
 
-		// We don't always need to do this write, but it is cheap to do
-		// and always doing it makes it easier to test
-
-		errno = 0;
-		dprintf(D_ALWAYS, "Retrying streaming write to %s of %d bytes at %ld after reconnect\n", filename.c_str(), pending, (long)offset);
-		REMOTE_CONDOR_lseek(remote_fd,offset,SEEK_SET);
-		if (errno == ETIMEDOUT) {
-			Disconnect();
-			return false;
+		// Re-issue the last buffered write, if any.  A zero-length remote
+		// write is rejected by the shadow as an invalid argument, so only
+		// write when we actually have pending data.
+		if(pending > 0) {
+			errno = 0;
+			dprintf(D_ALWAYS, "Retrying streaming write to %s of %d bytes at %ld after reconnect\n", filename.c_str(), pending, (long)offset);
+			REMOTE_CONDOR_lseek(remote_fd,offset,SEEK_SET);
+			if (errno == ETIMEDOUT) {
+				Disconnect();
+				return false;
+			}
+			errno = 0;
+			int actual = REMOTE_CONDOR_write(remote_fd,buffer,pending);
+			if (errno == ETIMEDOUT) {
+				Disconnect();
+				return false;
+			}
+			if(actual < 0) {
+				// The remote write itself failed; errno is meaningful.
+				std::string err_msg;
+				formatstr(err_msg, "StreamHandler: %s: write of %d bytes to %s failed: %s",streamname.c_str(),pending,filename.c_str(),strerror(errno));
+				starter->SetVacateReason(err_msg.c_str(), hold_code, errno);
+				EXCEPT("%s", err_msg.c_str());
+			} else if(actual!=pending) {
+				// Short write: fewer bytes stored than requested.
+				std::string err_msg;
+				formatstr(err_msg, "StreamHandler: %s: short write to %s: only %d of %d bytes written",streamname.c_str(),filename.c_str(),actual,pending);
+				starter->SetVacateReason(err_msg.c_str(), hold_code, errno);
+				EXCEPT("%s", err_msg.c_str());
+			}
+			dprintf(D_SYSCALLS,"StreamHandler: %s: %d bytes written to %s\n",streamname.c_str(),pending,filename.c_str());
+			offset+=actual;
 		}
-		errno = 0;
-		int actual = REMOTE_CONDOR_write(remote_fd,buffer,pending);
-		if (errno == ETIMEDOUT) {
-			Disconnect();
-			return 0;
-			return false;
-		}
-		if(actual!=pending) {
-			std::string err_msg;
-			formatstr(err_msg, "StreamHandler: %s: couldn't write to %s: %s (%d!=%d)",streamname.c_str(),filename.c_str(),strerror(errno),actual,pending);
-			starter->SetVacateReason(err_msg.c_str(), hold_code, errno);
-			EXCEPT("%s", err_msg.c_str());
-		}
-		dprintf(D_SYSCALLS,"StreamHandler: %s: %d bytes written to %s\n",streamname.c_str(),pending,filename.c_str());
-		offset+=actual;
 	} else {
 
 			// In the input case, we never wrote to the job pipe,

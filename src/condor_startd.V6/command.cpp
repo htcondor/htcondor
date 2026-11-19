@@ -26,6 +26,7 @@
 #include "consumption_policy.h"
 #include "credmon_interface.h"
 #include "condor_holdcodes.h"
+#include "condor_config.h"
 
 #include <map>
 
@@ -385,14 +386,14 @@ command_give_totals_classad( int, Stream* stream )
 
 
 int
-command_request_claim(int cmd, Stream* stream ) 
+command_request_claim(int cmd, Stream* stream )
 {
 	Resource* rip;
 	int rval;
 
 	std::string secret;
 	if( ! stream->get_secret(secret) ) {
-		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
+		dprintf( D_ALWAYS, "command_request_claim(): Can't read ClaimId\n" );
 		reply(stream, NOT_OK);
 		return FALSE;
 	}
@@ -435,15 +436,24 @@ command_request_claim(int cmd, Stream* stream )
 		else {
 			claim = rip->r_pre;
 		}
-		// d-slots can have a split-claim id stored in the r_claims collection
-		auto j(rip->r_claims.begin());
-		if (j != rip->r_claims.end() && (*j)->idMatches(id)) {
-			claim = *j;
+		// d-slots can have a split-claim id stored in the r_claims collection.
+		// Scan the whole collection, matching how get_by_any_id() found this
+		// resource; the matching claim is not necessarily at the front.
+		if (Claim * split = rip->is_split_claim_id(id)) {
+			claim = split;
 		}
 	} else {
 		claim = rip->r_cur;
 	}
-	ASSERT( claim );
+	if( !claim ) {
+			// get_by_any_id() found this resource by a claim id we can no
+			// longer resolve to a live claim here (e.g. a claimed d-slot whose
+			// preempting claim is gone, or a stale/racing request during
+			// preemption).  Reject gracefully rather than aborting the startd.
+		rip->log_ignore( REQUEST_CLAIM, s );
+		reply(stream, NOT_OK);
+		return FALSE;
+	}
 	if( !claim->idMatches(id) ) {
 			// This request doesn't match the right claim ID.  It must
 			// match one of the other claim IDs associated with this
@@ -708,6 +718,24 @@ command_match_info(int cmd, Stream* stream )
 		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
 		return FALSE;
 	}
+	// Newer negotiators send a trailing ClassAd of match metadata (currently
+	// slot-bundle info) after the claim id.  Read it only when the peer is new
+	// enough to have sent it; an older negotiator's MATCH_INFO ends right after
+	// the claim id.  The send side is gated on our version the same way.
+	// The ad stays empty for an older negotiator, and match_info() then leaves
+	// the claim's bundle info alone.
+	//
+	ClassAd match_ad;
+	const CondorVersionInfo *vi = stream->get_peer_version();
+	if( vi && vi->built_since_version(26, 1, 0) ) {
+		if( !getClassAd(stream, match_ad) ) {
+			// The peer said it would send this ad, so a failure here means the
+			// stream is at an unknown offset; carrying on would read the rest
+			// of the message out of a stream we can no longer place.
+			dprintf( D_ALWAYS, "Error: can't read MATCH_INFO metadata ad.\n" );
+			return FALSE;
+		}
+	}
 	if( !stream->end_of_message() ) {
 		dprintf( D_ALWAYS, "Error: can't read end of message for MATCH_INFO.\n" );
 		return FALSE;
@@ -718,7 +746,7 @@ command_match_info(int cmd, Stream* stream )
 	Resource* rip = resmgr->get_by_any_id( id );
 	if( !rip ) {
 		ClaimIdParser idp( id );
-		dprintf( D_ALWAYS, 
+		dprintf( D_ALWAYS,
 				 "Error: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
 		return FALSE;
 	}
@@ -735,7 +763,7 @@ command_match_info(int cmd, Stream* stream )
 		rip->log_ignore( MATCH_INFO, s );
 		rval = FALSE;
 	} else {
-		rval = match_info( rip, id );
+		rval = match_info( rip, id, match_ad );
 	}
 	return rval;
 }
@@ -934,8 +962,7 @@ abort_claim( Resource* rip )
 	case claimed_state:
 		if (rip->r_pre_pre) {
 			rip->removeClaim( rip->r_pre_pre );
-		}
-		else {
+		} else if (rip->r_pre) {
 			rip->removeClaim( rip->r_pre );
 		}
 		break;
@@ -1071,6 +1098,12 @@ request_claim( Resource* rip, Claim *claim, const char* id, Stream* stream )
 				}
 				if ( !dslots[i]->retirementExpired() ) {
 					dprintf( D_ALWAYS, "Error: slot %s still has retirement time, can't preempt immediately\n", dslots[i]->r_name );
+					goto abort;
+				}
+					// An OCU claim is a guarantee to its owner; it is
+					// only given up by draining or by its holder.
+				if ( dslots[i]->r_cur && dslots[i]->r_cur->isOCU() ) {
+					dprintf( D_ALWAYS, "Error: slot %s holds an OCU claim, which can't be preempted\n", dslots[i]->r_name );
 					goto abort;
 				}
 			}
@@ -1283,6 +1316,16 @@ request_claim( Resource* rip, Claim *claim, const char* id, Stream* stream )
 	} else if (rip->state() == claimed_state) {
 			// We're currently claimed.  We might want to preempt the
 			// current claim to make way for this new one...
+			// ...unless it is an OCU claim.  That is a guarantee to the
+			// OCU's owner, so neither user priority nor machine rank can
+			// take it away; only draining or the claim's holder can.
+		if( rip->r_cur && rip->r_cur->isOCU() ) {
+			rip->dprintf( D_ALWAYS,
+				"Refusing to preempt OCU claim %s.\n",
+				rip->r_cur->publicClaimId() );
+			reply(stream, NOT_OK);
+			goto abort;
+		}
 		if( !rip->r_pre ) {
 			rip->dprintf( D_ALWAYS, 
 			   "In CLAIMED state without preempting claim object, aborting.\n" );
@@ -1584,6 +1627,16 @@ accept_request_claim(
 		claim->setOCU(ocu_holder);
 		claim->ad()->LookupString(ATTR_OCU_NAME, ocu_name);
 		claim->setOCUName(ocu_name);
+
+		// The schedd stamps a slot-bundle request ad with IsBundleRequest and
+		// BundleId; remember them so the slot advertises that it is held for a
+		// bundle.
+		bool is_bundle = false;
+		std::string bundle_id;
+		claim->ad()->LookupBool(ATTR_IS_BUNDLE_REQUEST, is_bundle);
+		claim->setBundle(is_bundle);
+		claim->ad()->LookupString(ATTR_BUNDLE_ID, bundle_id);
+		claim->setBundleId(bundle_id);
 	}
 
 	// if an array of d-slots were passed, we want to change them to claimed state also.
@@ -1950,8 +2003,31 @@ abort:
 	return FALSE;
 }
 
+// If the negotiator told us this match is for a slot bundle, remember it on
+// the claim that the match is for, so that the slot advertises IsBundle and
+// BundleId while it is Matched, before the claim is ever activated.  An older
+// negotiator sends no metadata ad at all; leave whatever the claim already has
+// alone in that case, since REQUEST_CLAIM will stamp it from the request ad.
+static void
+set_bundle_info( Claim* claim, const ClassAd & match_ad )
+{
+	bool is_bundle = false;
+	if( ! match_ad.LookupBool(ATTR_IS_BUNDLE, is_bundle) ) {
+		return;
+	}
+	std::string bundle_id;
+	match_ad.LookupString(ATTR_BUNDLE_ID, bundle_id);
+	claim->setBundle(is_bundle);
+	claim->setBundleId(bundle_id);
+	if( is_bundle ) {
+		claim->rip()->dprintf( D_ALWAYS,
+							   "MATCH_INFO: match is for slot bundle %s\n",
+							   bundle_id.c_str() );
+	}
+}
+
 int
-match_info( Resource* rip, const char* id )
+match_info( Resource* rip, const char* id, const ClassAd & match_ad )
 {
 	int rval = FALSE;
 	ClaimIdParser idp(id);
@@ -1963,13 +2039,25 @@ match_info( Resource* rip, const char* id )
 		if( rip->r_cur->idMatches(id) ) {
 				// The ClaimId we got matches the one for the
 				// current claim, and we're already claimed.  There's
-				// nothing to do here.
+				// nothing to do here.  The negotiator notifies us and
+				// the schedd at the same time, so the schedd's
+				// REQUEST_CLAIM can beat this message here; it has
+				// already stamped the bundle info from the request ad.
+			bool is_bundle = false;
+			if( match_ad.LookupBool(ATTR_IS_BUNDLE, is_bundle) && is_bundle ) {
+				std::string bundle_id;
+				match_ad.LookupString(ATTR_BUNDLE_ID, bundle_id);
+				rip->dprintf( D_ALWAYS,
+							  "MATCH_INFO: arrived after claim, match is for slot bundle %s\n",
+							  bundle_id.c_str() );
+			}
 			rval = TRUE;
 		} else if( rip->r_pre && rip->r_pre->idMatches(id) ) {
 				// The ClaimId we got matches the preempting
 				// ClaimId we've been advertising.  Advertise
 				// ourself as unavailable for future claims, update
 				// the CM, and set the timer for this match.
+			set_bundle_info( rip->r_pre, match_ad );
 			rip->reqexp_unavail();
 			rip->update_needed(Resource::WhyFor::wf_preemptingClaim);
 			rip->r_pre->start_match_timer();
@@ -1979,6 +2067,7 @@ match_info( Resource* rip, const char* id )
 				// ClaimId we've been advertising.  Advertise
 				// ourself as unavailable for future claims, update
 				// the CM, and set the timer for this match.
+			set_bundle_info( rip->r_pre_pre, match_ad );
 			rip->reqexp_unavail();
 			rip->update_needed(Resource::WhyFor::wf_preemptingClaim);
 			rip->r_pre_pre->start_match_timer();
@@ -1998,6 +2087,8 @@ match_info( Resource* rip, const char* id )
 	case owner_state:
         if (rip->r_cur->idMatches(id)) {
 			rip->dprintf( D_ALWAYS, "Received match %s\n", idp.publicClaimId() );
+
+			set_bundle_info( rip->r_cur, match_ad );
 
 			if( rip->destination_state() != no_state ) {
 					// we've already got a destination state.
@@ -2548,6 +2639,160 @@ command_cancel_drain_jobs(int /*dc_cmd*/, Stream* s )
 }
 
 int
+command_rehome(int /*dc_cmd*/, Stream* s)
+{
+	ClassAd ad;
+
+	s->decode();
+	if( !getClassAd(s, ad) ) {
+		dprintf(D_ALWAYS, "command_rehome: failed to read classad from %s\n", s->peer_description());
+		return FALSE;
+	}
+	if( !s->end_of_message() ) {
+		dprintf(D_ALWAYS, "command_rehome: failed to read end of message from %s\n", s->peer_description());
+		return FALSE;
+	}
+
+	dprintf(D_ALWAYS, "Processing rehome request from %s\n", s->peer_description());
+	dPrintAd(D_ALWAYS, ad);
+
+	// Extract parameters from the request ad
+	[[maybe_unused]] int timeout = 0;
+	ad.LookupInteger("RehomeTimeout", timeout);
+	// TODO: use timeout to set a deadline for the rehome operation
+
+	bool cancel = false;
+	ad.LookupBool("Cancel", cancel);
+
+	bool reboot = false;
+	ad.LookupBool("Reboot", reboot);
+
+	std::string schedd_name;
+	std::string schedd_pool;
+	if( !ad.LookupString("ScheddName", schedd_name) || schedd_name.empty() ) {
+		dprintf(D_ALWAYS, "command_rehome: ScheddName not specified in request from %s\n", s->peer_description());
+		ClassAd response_ad;
+		response_ad.Assign(ATTR_RESULT, false);
+		response_ad.Assign(ATTR_ERROR_STRING, "ScheddName not specified");
+		s->encode();
+		putClassAd(s, response_ad);
+		s->end_of_message();
+		return FALSE;
+	}
+	
+	// ScheddPool is optional - if not specified, COLLECTOR_HOST will be used
+	ad.LookupString("ScheddPool", schedd_pool);
+
+	if( cancel ) {
+		// Cancel rehome: unset STARTD_DIRECT_ATTACH_SCHEDD_NAME without evicting jobs
+		int rc = set_persistent_config(strdup("rehome"), strdup(""));
+		if( rc < 0 ) {
+			dprintf(D_ALWAYS, "command_rehome: failed to unset persistent config STARTD_DIRECT_ATTACH_SCHEDD_NAME\n");
+			ClassAd response_ad;
+			response_ad.Assign(ATTR_RESULT, false);
+			response_ad.Assign(ATTR_ERROR_STRING, "Failed to unset persistent config");
+			s->encode();
+			putClassAd(s, response_ad);
+			s->end_of_message();
+			return FALSE;
+		}
+
+		dprintf(D_ALWAYS, "command_rehome: cancelled rehome, unset STARTD_DIRECT_ATTACH_SCHEDD_NAME\n");
+
+		ClassAd response_ad;
+		response_ad.Assign(ATTR_RESULT, true);
+
+		s->encode();
+		if( !putClassAd(s, response_ad) || !s->end_of_message() ) {
+			dprintf(D_ALWAYS, "command_rehome: failed to send response to %s\n", s->peer_description());
+			return FALSE;
+		}
+
+		return TRUE;
+	}
+
+	// Check if already attached to the requested schedd
+	auto_free_ptr current_schedd(param("STARTD_DIRECT_ATTACH_SCHEDD_NAME"));
+	if( current_schedd && schedd_name == current_schedd.ptr() ) {
+		dprintf(D_ALWAYS, "command_rehome: already attached to schedd %s\n", schedd_name.c_str());
+		ClassAd response_ad;
+		response_ad.Assign(ATTR_RESULT, false);
+		response_ad.Assign(ATTR_ERROR_STRING, "Already attached to this schedd");
+		s->encode();
+		putClassAd(s, response_ad);
+		s->end_of_message();
+		return FALSE;
+	}
+
+	// If the caller asked us to reboot the host after rehoming, the
+	// STARTD_REHOME_ALLOW_REBOOT guard expression must permit it.  Check
+	// before evicting anything so a denied reboot doesn't disrupt jobs.
+	if( reboot && !resmgr->rehomeRebootAllowed() ) {
+		dprintf(D_ALWAYS, "command_rehome: reboot requested but STARTD_REHOME_ALLOW_REBOOT does not permit it\n");
+		ClassAd response_ad;
+		response_ad.Assign(ATTR_RESULT, false);
+		response_ad.Assign(ATTR_ERROR_STRING, "Reboot on rehome not permitted by STARTD_REHOME_ALLOW_REBOOT");
+		s->encode();
+		putClassAd(s, response_ad);
+		s->end_of_message();
+		return FALSE;
+	}
+
+	// Persist STARTD_DIRECT_ATTACH_SCHEDD_NAME and STARTD_DIRECT_ATTACH_SCHEDD_POOL so they survive restarts
+	std::string config_value;
+	formatstr(config_value, "STARTD_DIRECT_ATTACH_SCHEDD_NAME = %s\n", schedd_name.c_str());
+	if( !schedd_pool.empty() ) {
+		formatstr_cat(config_value, "STARTD_DIRECT_ATTACH_SCHEDD_POOL = %s\n", schedd_pool.c_str());
+	}
+	int rc = set_persistent_config(strdup("rehome"), strdup(config_value.c_str()));
+	if( rc < 0 ) {
+		dprintf(D_ALWAYS, "command_rehome: failed to set persistent config STARTD_DIRECT_ATTACH_SCHEDD_NAME = %s\n", schedd_name.c_str());
+		ClassAd response_ad;
+		response_ad.Assign(ATTR_RESULT, false);
+		response_ad.Assign(ATTR_ERROR_STRING, "Failed to set persistent config");
+		s->encode();
+		putClassAd(s, response_ad);
+		s->end_of_message();
+		return FALSE;
+	}
+
+	dprintf(D_ALWAYS, "command_rehome: set STARTD_DIRECT_ATTACH_SCHEDD_NAME = %s", schedd_name.c_str());
+	if( !schedd_pool.empty() ) {
+		dprintf(D_ALWAYS | D_NOHEADER, ", STARTD_DIRECT_ATTACH_SCHEDD_POOL = %s", schedd_pool.c_str());
+	}
+	dprintf(D_ALWAYS | D_NOHEADER, "\n");
+
+	// Fast-kill all running starters
+	resmgr->killAllClaims("rehome", CONDOR_HOLD_CODE::StartdRehoming, 0);
+
+	// If requested (and permitted above), reboot the host once all claims
+	// have been evicted.  The persistent config written above is already on
+	// disk, so the startd will direct-attach to the schedd after the reboot.
+	if( reboot ) {
+		std::string reboot_command;
+		if( !param(reboot_command, "STARTD_REBOOT_COMMAND") || reboot_command.empty() ) {
+			reboot_command = "/sbin/reboot";
+		}
+		resmgr->rebootAfterRehome(reboot_command);
+	}
+
+	// TODO: use timeout parameter
+	// TODO: report back to schedd when all starters have exited
+	// TODO: determine end state after rehome completes
+
+	ClassAd response_ad;
+	response_ad.Assign(ATTR_RESULT, true);
+
+	s->encode();
+	if( !putClassAd(s, response_ad) || !s->end_of_message() ) {
+		dprintf(D_ALWAYS, "command_rehome: failed to send response to %s\n", s->peer_description());
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+int
 command_coalesce_slots(int, Stream * stream ) {
 	Sock * sock = (Sock *)stream;
 	ClassAd commandAd;
@@ -2712,7 +2957,7 @@ command_coalesce_slots(int, Stream * stream ) {
 		if (r) {
 			dprintf( D_ALWAYS, "command_coalesce_slots(): coalescing %s...\n", r->r_id_str );
 
-		// Despite appearances, this also transfers the nonfungible resources.
+			// Despite appearances, this also transfers the nonfungible resources.
 			(r->r_attr)->unbind_DevIds(resmgr->m_attr, r->r_id, r->r_sub_id, 0);
 			*(parent->r_attr) += *(r->r_attr);
 			*(r->r_attr) -= *(r->r_attr);
@@ -2797,5 +3042,167 @@ command_coalesce_slots(int, Stream * stream ) {
 		return FALSE;
 	}
 
+	return TRUE;
+}
+
+
+int
+command_data_slot(int, Stream * stream ) {
+	Sock * sock = (Sock *)stream;
+	// dprintf( D_ALWAYS, "command_data_slot(): begin\n" );
+	const char * auth_method = sock->getAuthenticationMethodUsed();
+	dprintf( D_TEST,
+		"command_data_slot(): authenticated via %s.\n",
+		auth_method ? auth_method : "(none)"
+	);
+
+
+	ClassAd commandAd;
+	if(! getClassAd( sock, commandAd )) {
+		dprintf( D_ALWAYS, "command_data_slot(): failed to get command ad\n" );
+		return FALSE;
+	}
+
+
+	// This becomes owned by the new slot's claim.
+	ClassAd * requestAd = new ClassAd();
+	if(! getClassAd( sock, * requestAd ) || ! sock->end_of_message()) {
+		dprintf( D_ALWAYS, "command_data_slot(): failed to get resource request\n" );
+		delete requestAd;
+		return FALSE;
+	}
+
+
+	std::string claimID;
+	if(! commandAd.LookupString( ATTR_CLAIM_ID, claimID )) {
+		dprintf( D_ALWAYS, "command_data_slot(): command ad missing claim ID\n" );
+		delete requestAd;
+		return FALSE;
+	}
+
+	//
+	// Confirm that we can use this resource to build a data slot.
+	//
+	std::string errorString;
+	CAResult result = CA_SUCCESS;
+	Resource * r = resmgr->get_by_cur_id( claimID.c_str() );
+
+	if(! r) {
+		formatstr( errorString, "can't find slot with given claim ID" );
+		result = CA_INVALID_REQUEST;
+	} else if( r->state() != claimed_state ) {
+		formatstr( errorString, "given slot is not claimed" );
+		result = CA_INVALID_REQUEST;
+	} else if( r->is_broken_slot() || (r->r_attr && r->r_attr->is_broken()) ) {
+		formatstr( errorString, "given slot is broken" );
+		result = CA_INVALID_REQUEST;
+	} else if( r->get_parent() == NULL ) {
+		formatstr( errorString, "given slot is not dynamic" );
+		result = CA_INVALID_REQUEST;
+	} else if( r->isDeactivating() ) {
+		formatstr( errorString, "given slot is deactivating, try again later" );
+		// In case we ever decide to implement a delayed retry, make sure
+		// that this result code isn't used anywhere else in this function.
+		result = CA_INVALID_STATE;
+	} else if( r->activity() != idle_act ) {
+		formatstr( errorString, "given slot is not idle" );
+		result = CA_INVALID_REQUEST;
+	}
+
+	sock->encode();
+
+	if( result != CA_SUCCESS ) {
+		dprintf( D_ALWAYS, "command_data_slot(): %s\n", errorString.c_str() );
+		delete requestAd;
+
+		ClassAd replyAd;
+		replyAd.InsertAttr( ATTR_RESULT, getCAResultString( result ) );
+		replyAd.InsertAttr( ATTR_ERROR_STRING, errorString.c_str() );
+		putClassAd( sock, replyAd );
+
+		ClassAd slotAd;
+		putClassAd( sock, slotAd );
+
+		sock->end_of_message();
+
+		return FALSE;
+	}
+
+	//
+	// Because we only have one slot, it's easy to make a new slot out of the
+	// resources of the old one without invalidating the original claim ID.
+	//
+	std::string nsp;
+	const char * new_slot_prefix = nullptr;
+	if( commandAd.LookupString( "DesiredSlotPrefix", nsp ) ) {
+		new_slot_prefix = nsp.c_str();
+	}
+	Resource * data_slot = create_dslot( r, requestAd, true, new_slot_prefix, true );
+	// It's not clear what's logically consistent here, especially if turns
+	// out (below) that the data slot was created but doesn't have a claim.
+	//
+	// For now, we'll just try to avoid the immediate segfault.
+	r->change_state( unclaimed_state );
+
+	if( data_slot == nullptr ) {
+		dprintf( D_ALWAYS, "command_data_slot(): create_dslot() failed\n" );
+		delete requestAd;
+
+		ClassAd replyAd;
+		replyAd.InsertAttr( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
+		replyAd.InsertAttr( ATTR_ERROR_STRING, "command_data_slot(): create_dslot() failed" );
+		putClassAd( sock, replyAd );
+
+		ClassAd slotAd;
+		putClassAd( sock, slotAd );
+
+		sock->end_of_message();
+
+		return FALSE;
+	}
+	data_slot->is_data_slot = true;
+
+
+	if( data_slot->r_cur == nullptr ) {
+		dprintf( D_ALWAYS, "command_data_slot(): create_dslot() failed to set a claim\n" );
+		delete requestAd;
+
+		ClassAd replyAd;
+		replyAd.InsertAttr( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
+		replyAd.InsertAttr( ATTR_ERROR_STRING, "command_data_slot(): create_dslot() failed to set a claim" );
+		putClassAd( sock, replyAd );
+
+		ClassAd slotAd;
+		putClassAd( sock, slotAd );
+
+		sock->end_of_message();
+
+		return FALSE;
+	}
+
+	// Hand the request ad to the new slot's claim, which now owns it and
+	// will delete it when the claim is destroyed.
+	data_slot->r_cur->setjobad( requestAd );
+
+
+	//
+	// Reply with success.
+	//
+	ClassAd replyAd;
+	replyAd.InsertAttr( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
+	replyAd.InsertAttr( ATTR_CLAIM_ID, data_slot->r_cur->id() );
+
+	if(! putClassAd( sock, replyAd )) {
+		dprintf( D_ALWAYS, "command_data_slot(): failed to send reply ad\n" );
+		return FALSE;
+	}
+
+	ClassAd slotAd( * data_slot->r_classad );
+	if(! putClassAd( sock, slotAd ) || !sock->end_of_message()) {
+		dprintf( D_ALWAYS, "command_data_slot(): failed to send slot ad\n" );
+		return FALSE;
+	}
+
+	// dprintf( D_ALWAYS, "command_data_slot(): end\n" );
 	return TRUE;
 }

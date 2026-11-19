@@ -738,7 +738,7 @@ int chirp_getdir(int argc, char **argv) {
 			}
 		}
 	} else {
-		if((status = chirp_client_getdir(client, argv[2], &buffer) >= 0)) {
+		if((status = chirp_client_getdir(client, argv[2], &buffer)) >= 0) {
 			printf("%s", buffer);
 		}
 	}

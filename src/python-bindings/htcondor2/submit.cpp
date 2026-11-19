@@ -16,6 +16,7 @@ struct SubmitBlob {
 
         virtual ~SubmitBlob() { }
 
+        SubmitHash & hash() { return m_hash; }
         void keys( std::string & buffer );
         bool from_lines( const char * lines, std::string & errorMessage );
 
@@ -86,7 +87,7 @@ struct SubmitBlob {
 
         void insert_macro( const char * name, const std::string & value );
 
-        int process_job_credentials( Daemon* schedd, std::string & URL, std::string & error_string ) {
+        bool process_job_credentials( Daemon* schedd, std::string & URL, std::string & error_string ) {
             return ::process_job_credentials( m_hash, 0, schedd, URL, error_string );
         }
 
@@ -662,9 +663,9 @@ _submit_issue_credentials( PyObject *, PyObject * args ) {
 
     std::string URL;
     std::string error_string;
-    int rv = sb->process_job_credentials( nullptr,  URL, error_string ); // TODO: how to get the schedd daemon object here??
+    bool rv = sb->process_job_credentials( nullptr,  URL, error_string ); // TODO: how to get the schedd daemon object here??
 
-    if(rv != 0) {
+    if(rv == false) {
         PyErr_SetString( PyExc_HTCondorException, error_string.c_str() );
         return NULL;
     }

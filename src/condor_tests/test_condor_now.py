@@ -69,6 +69,18 @@ def failure_injection_config(max_victim_jobs, failure_config_value):
         "STARTD_DEBUG": "D_CATEGORY D_SUB_SECOND D_TEST",
         "SCHEDD_DEBUG": "D_CATEGORY D_SUB_SECOND D_TEST",
         "COALESCE_FAILURE_MODE": failure_config_value,
+        # For failure modes 1-4, the victim jobs must vacate before the schedd
+        # reaches the coalesce reply (where those failures are injected).  On a
+        # loaded test machine, starter shutdown can exceed the 20s default
+        # vacate deadline, which fires the "did not vacate quickly enough" path
+        # and masks the injected failure.  Raise the deadline for those modes so
+        # the intended failure is what we observe.
+        #
+        # Mode 5 (too_slow) is the exception: the startd deliberately refuses to
+        # deactivate the claim, so the vacate deadline is exactly what we want to
+        # fire.  Keep it at the default there so the message arrives well within
+        # the fixture's wait() timeout.
+        "SCHEDD_NOW_JOB_VACATE_TIMEOUT": 20 if failure_config_value == "5" else 120,
     }
     raw_config = "use feature: PartitionableSlot"
     return {"config": config, "raw_config": raw_config}

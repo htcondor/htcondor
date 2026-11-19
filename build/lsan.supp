@@ -6,14 +6,27 @@ leak:CollectorList::create
 leak:SharedPortState::HandleUnbound
 leak:SharedPortClient::PassSocket
 
+# OpenSSL's internal global PRNG/DRBG state, seeded once via RAND_seed.
+# Our own seed buffer is freed; the leak is inside OpenSSL and one-time.
+leak:add_seed_prng
+
+# The collector's self-signed CA, generated once at main_init and held for
+# the life of the process (see collector_main.cpp).
+leak:generate_x509_ca
+leak:generate_key
+
 # A test we don't care that leaks
 leak:test_log_writer
 
 # Can't fix perl
 leak:/usr/bin/perl
+leak:Perl_call_list
 
-#  Python leaks
+#  Or apptainer/mqsuashfs
+leak:mksquashfs
+
 leak:AllocNoTrack
+leak:pymain_init
 
 # Java
 leak:os::malloc

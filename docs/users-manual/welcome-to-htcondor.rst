@@ -17,7 +17,7 @@ HTCondor is a specialized batch system :index:`batch system` for managing
 compute-intensive jobs. HTCondor provides a queuing mechanism, scheduling
 policy, priority scheme, and resource classifications. Users submit their
 compute jobs to HTCondor, HTCondor puts the jobs in a queue, runs them, and
-then informs the user as to the result.
+then informs the user of the result.
 
 Batch systems normally operate only with dedicated machines. Often termed
 execution points, or worker nodes, these dedicated machines are typically owned

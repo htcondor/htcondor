@@ -4,6 +4,9 @@ if [[ $VERBOSE ]]; then
   set -x
 fi
 
+# Pin umask so file modes baked into the package are reproducible
+umask 022
+
 # makerpm.sh - generates source and binary rpms with a source tarball
 # along with condor.spec and the source files in this directory
 
@@ -50,8 +53,9 @@ check_version_string () {
 }
 
 # get the version and build id
-condor_build_id=$(<BUILD-ID)
 condor_version=$(echo condor-*.tgz | sed -e s/^condor-// -e s/.tgz$//)
+condor_build_id=$(<BUILD-ID)
+condor_build_epoch=$(<BUILD-EPOCH)
 condor_git_sha=-1
 if [ -f GIT-SHA ]; then
     condor_git_sha=$(<GIT-SHA)
@@ -78,23 +82,24 @@ PRE_RELEASE=${PRE_RELEASE%\)*} # Trim off the closing parenthesis
 rm -rf "condor-${condor_version}"
 
 # inject the version and build id into the spec file
-update_spec_define () {
-  sed -i "s|^ *%define * $1 .*|%define $1 $2|" SOURCES/condor.spec
+update_spec_global () {
+  sed -i "s|^ *%global * $1 .*|%global $1 $2|" SOURCES/condor.spec
 }
 
-update_spec_define uw_build "1"
-update_spec_define condor_version "$condor_version"
-update_spec_define condor_build_id "$condor_build_id"
-if [ $condor_git_sha != -1 ]; then
-    update_spec_define condor_git_sha "$condor_git_sha"
+update_spec_global uw_build "1"
+update_spec_global condor_version "$condor_version"
+update_spec_global condor_build_id "$condor_build_id"
+if [ "$condor_git_sha" != -1 ]; then
+    update_spec_global condor_git_sha "$condor_git_sha"
 fi
 
 if [ "$PRE_RELEASE" = 'OFF' ]; then
     # Set HTCondor base release to 1 for final release.
-    update_spec_define condor_release "1"
+    update_spec_global condor_release "1"
 else
     # Set HTCondor base release for pre-release build
-    update_spec_define condor_release "0.$condor_build_id"
+    update_spec_global condor_release "0.$condor_build_id"
+    sed -i "/%changelog/a * $(date --date=@$condor_build_epoch '+%a %b %d %Y') Test build <htcondor-admin@cs.wisc.edu> - ${condor_version}-0.${condor_build_id}\n- Test build\n" SOURCES/condor.spec
 fi
 
 # Use as many CPUs as are in the condor slot we are in, 1 if undefined

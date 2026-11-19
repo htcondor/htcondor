@@ -292,8 +292,6 @@ main_init( int argc, char ** const argv )
 										args,
 										cpArgs.priv(PRIV_UNKNOWN)
 											.reaperID(reaper_id)
-											.wantCommandPort(FALSE)		// no command port
-											.wantUDPCommandPort(FALSE)	// no command port
 											.std(std_fds));
 
 

@@ -19,6 +19,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <unordered_set>
 
 #include <charconv>
 
@@ -92,7 +93,8 @@ int DockerAPI::createContainer(
 	const Env & env,
 	const std::string & /*outside_sandboxPath*/,
 	const std::string & inside_directory,
-	const std::list<std::string> extraVolumes,
+	const std::vector<std::string> extraVolumes,
+	const std::vector<std::string> extraMounts,
 	const std::string credentials_dir,
 	int & pid,
 	int * childFDs,
@@ -191,11 +193,32 @@ int DockerAPI::createContainer(
 #ifdef WIN32
 	// TODO: extra volumes is used for /home/ when not doing file transfer, we can't support this on Windows
 #else
-	// Now any extra volumes
-	for (std::list<std::string>::const_iterator it = extraVolumes.begin(); it != extraVolumes.end(); it++) {
+	// Now any extra volumes.  The list can contain duplicates because mounts
+	// are accumulated from multiple sources (slot dir, iwd, MOUNT_UNDER_SCRATCH,
+	// DOCKER_MOUNT_VOLUMES, etc.).  Drop duplicates while preserving order,
+	// keeping the first occurrence — docker rejects duplicate bind targets.
+	std::unordered_set<std::string> seenVolumes;
+	for (const auto &volume : extraVolumes) {
+		if (!seenVolumes.insert(volume).second) {
+			dprintf(D_FULLDEBUG, "Skipping duplicate docker volume mount %s\n", volume.c_str());
+			continue;
+		}
 		runArgs.AppendArg("--volume");
-		std::string volume = *it;
 		runArgs.AppendArg(volume);
+	}
+
+	// Administrator-configured volumes (DOCKER_VOLUME_DIR_*) are passed using
+	// the newer, more flexible --mount syntax.  Each entry is already a fully
+	// formed --mount spec (type=bind,source=...,target=...[,readonly]).  As
+	// with --volume above, drop duplicates while preserving order.
+	std::unordered_set<std::string> seenMounts;
+	for (const auto &mount : extraMounts) {
+		if (!seenMounts.insert(mount).second) {
+			dprintf(D_FULLDEBUG, "Skipping duplicate docker mount %s\n", mount.c_str());
+			continue;
+		}
+		runArgs.AppendArg("--mount");
+		runArgs.AppendArg(mount);
 	}
 #endif
 
@@ -212,52 +235,75 @@ int DockerAPI::createContainer(
 	// look like GPU-XXXXX.
 	std::string assignedGpus;
 	machineAd.LookupString("AssignedGPUs", assignedGpus);
+
+	std::string gpus_vendor;
+	machineAd.LookupString("GPUs_Vendor", gpus_vendor);
+	lower_case(gpus_vendor);
+
 	if  (assignedGpus.length() > 0) {
-
-		// Always need to map these two devices
-		runArgs.AppendArg("--device");
-		runArgs.AppendArg("/dev/nvidiactl");
-
-		runArgs.AppendArg("--device");
-		runArgs.AppendArg("/dev/nvidia-uvm");
-
-		// If the startd is configured for the "CUDA" style
-		// GPU names...
-		if (assignedGpus.starts_with("CUDA")) {
-			size_t offset = 0;
-
-			// For each CUDA substring in assignedGpus...
-			while ((offset = assignedGpus.find("CUDA", offset)) != std::string::npos) {
-				offset += 4; // strlen("CUDA")
-				size_t comma = assignedGpus.find(",", offset);
-
-				// ...append to command line args -device /dev/nvidiaXX
-				std::string deviceName("/dev/nvidia");
-				deviceName += assignedGpus.substr(offset, comma - offset);
-				runArgs.AppendArg("--device");
-				runArgs.AppendArg(deviceName);
+		// GPUs_Vendor is only published by newer gpu discovery run with
+		// -properties, and is absent for static or custom GPU configs, or
+		// when a slot has GPUs from more than one vendor.  So treat
+		// anything that isn't explicitly AMD as NVidia, as we always have.
+		if (gpus_vendor != "amd") {
+			if (gpus_vendor != "nvidia") {
+				dprintf(D_FULLDEBUG, "GPUs_Vendor is '%s', assuming nvidia devices\n",
+					gpus_vendor.c_str());
 			}
-		} else {
-			// Get a map of long-form uuid device minor.  Assume that device minor
-			// matches the last digit of /dev/nvidiaX
-			bool map_all_gpus = param_boolean("DOCKER_MAP_ALL_GPUS", false);
-			auto uuid_dev_map = make_nvidia_uuid_to_dev_map();
-			
-			// For each of our short-named assigned GPU, find the device number
-			// n-squared, but should be small.
-			for (const auto &gpu: StringTokenIterator(assignedGpus)) {
-				for (const auto &[uuid, dev]: uuid_dev_map) {
-					if (map_all_gpus || uuid.starts_with(gpu)) {
-						std::string deviceName;
 
-						// and finally append it to our command line args
-						formatstr(deviceName, "/dev/nvidia%u", minor(dev));
-						runArgs.AppendArg("--device");
-						runArgs.AppendArg(deviceName);
-						break; // assume only one matches
+			// Always need to map these two devices
+			runArgs.AppendArg("--device");
+			runArgs.AppendArg("/dev/nvidiactl");
+
+			runArgs.AppendArg("--device");
+			runArgs.AppendArg("/dev/nvidia-uvm");
+
+			// If the startd is configured for the "CUDA" style
+			// GPU names...
+			if (assignedGpus.starts_with("CUDA")) {
+				size_t offset = 0;
+
+				// For each CUDA substring in assignedGpus...
+				while ((offset = assignedGpus.find("CUDA", offset)) != std::string::npos) {
+					offset += 4; // strlen("CUDA")
+					size_t comma = assignedGpus.find(",", offset);
+
+					// ...append to command line args -device /dev/nvidiaXX
+					std::string deviceName("/dev/nvidia");
+					deviceName += assignedGpus.substr(offset, comma - offset);
+					runArgs.AppendArg("--device");
+					runArgs.AppendArg(deviceName);
+				}
+			} else {
+				// Get a map of long-form uuid device minor.  Assume that device minor
+				// matches the last digit of /dev/nvidiaX
+				bool map_all_gpus = param_boolean("DOCKER_MAP_ALL_GPUS", false);
+				auto uuid_dev_map = make_nvidia_uuid_to_dev_map();
+
+				// For each of our short-named assigned GPU, find the device number
+				// n-squared, but should be small.
+				for (const auto &gpu: StringTokenIterator(assignedGpus)) {
+					for (const auto &[uuid, dev]: uuid_dev_map) {
+						if (map_all_gpus || uuid.starts_with(gpu)) {
+							std::string deviceName;
+
+							// and finally append it to our command line args
+							formatstr(deviceName, "/dev/nvidia%u", minor(dev));
+							runArgs.AppendArg("--device");
+							runArgs.AppendArg(deviceName);
+							break; // assume only one matches
+						}
 					}
 				}
 			}
+		} else {
+			// For AMD style gpus
+			// Always need to map these two devices for AMD
+			runArgs.AppendArg("--device");
+			runArgs.AppendArg("/dev/kfd");
+
+			runArgs.AppendArg("--device");
+			runArgs.AppendArg("/dev/dri");
 		}
 	}
 #endif
@@ -483,7 +529,6 @@ int DockerAPI::createContainer(
 
 	int childPID = daemonCore->CreateProcessNew( runArgs.GetArg(0), runArgs,
 		OptionalCreateProcessArgs().priv(PRIV_CONDOR_FINAL)
-			.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 			.env(&cliEnvironment).cwd("/").familyInfo(& fi)
 			.std(childFDs).jobOptMask(DCJOBOPT_NO_ENV_INHERIT) );
 
@@ -520,8 +565,6 @@ int DockerAPI::startContainer(
 	OptionalCreateProcessArgs cpArgs;
 	int childPID = daemonCore->CreateProcessNew( startArgs.GetArg(0), startArgs,
 		cpArgs.priv(PRIV_CONDOR_FINAL)
-			.wantCommandPort(FALSE)
-			.wantUDPCommandPort(FALSE)
 			.env(&cliEnvironment)
 			.cwd("/")
 			.familyInfo(&fi)
@@ -587,8 +630,6 @@ DockerAPI::pullImage(const std::string &image_name,
 	int childPID = daemonCore->CreateProcessNew( pullArgs.GetArg(0), pullArgs,
 		cpArgs.priv(PRIV_CONDOR_FINAL)
 			.reaperID(reaperId)
-			.wantCommandPort(FALSE)
-			.wantUDPCommandPort(FALSE)
 			.env(&cliEnvironment)
 			.cwd("/")
 			.std(childFDs)
@@ -609,13 +650,14 @@ DockerAPI::execInContainer( const std::string &containerName,
 			    const Env &environment,
 			    int *childFDs,
 			    int reaperid,
-			    int &pid) {
+			    int &pid,
+			    bool interactive) {
 
 	ArgList execArgs;
 	if ( ! add_docker_arg(execArgs))
 		return -1;
 	execArgs.AppendArg("exec");
-	execArgs.AppendArg("-ti");
+	execArgs.AppendArg(interactive ? "-ti" : "-i");
 
 	if ( ! add_env_to_args_for_docker(execArgs, environment)) {
 		dprintf( D_ALWAYS, "Failed to pass environment to docker.\n" );
@@ -640,8 +682,6 @@ DockerAPI::execInContainer( const std::string &containerName,
 	int childPID = daemonCore->CreateProcessNew( execArgs.GetArg(0), execArgs,
 		cpArgs.priv(PRIV_CONDOR_FINAL)
 			.reaperID(reaperid)
-			.wantCommandPort(FALSE)
-			.wantUDPCommandPort(FALSE)
 			.env(&cliEnvironment)
 			.cwd("/")
 			.familyInfo(&fi)
@@ -654,51 +694,6 @@ DockerAPI::execInContainer( const std::string &containerName,
 	pid = childPID;
 
 	return 0;
-}
-
-/*static*/ /* docker cp SRC_PATH CONTAINER : CONTAINER_PATH */
-int DockerAPI::copyToContainer(const std::string & srcPath, // path on local file system to copy file/folder from
-	const std::string & container,       // container to copy into
-	const std::string & containerPath,     // destination path in container
-	const std::vector<std::string>& options)
-{
-	ArgList args;
-	if (! add_docker_arg(args))
-		return -1;
-	args.AppendArg("cp");
-
-	for (auto& opt: options) {
-		args.AppendArg(opt);
-	}
-
-	args.AppendArg(srcPath);
-
-	std::string dest(container);
-	dest += ":";
-	dest += containerPath;
-	args.AppendArg(dest);
-
-	std::string displayString;
-	args.GetArgsStringForLogging(displayString);
-	dprintf(D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str());
-
-	MyPopenTimer pgm;
-	if (pgm.start_program(args, true, NULL, false) < 0) {
-		dprintf(D_ALWAYS, "Failed to run '%s'.\n", displayString.c_str());
-		return -2;
-	}
-
-	int exitCode;
-	if (! pgm.wait_for_exit(default_timeout, &exitCode) || exitCode != 0) {
-		pgm.close_program(1);
-		std::string line;
-		readLine(line, pgm.output(), false); chomp(line);
-		dprintf(D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n",
-			displayString.c_str(), exitCode, line.c_str());
-		return -3;
-	}
-
-	return pgm.output_size() > 0;
 }
 
 /*static*/ /* docker cp CONTAINER:CONTAINER_PATH DEST_PATH */
@@ -954,6 +949,7 @@ sendDockerAPIRequest( const std::string & request, std::string & response ) {
 			docker_socket_path = docker_host.substr(sizeof("unix://") - 1);
 		} else {
 			dprintf(D_ALWAYS, "Cannot retrieve docker universe statistics, DOCKER_HOST environment variable (%s) is not set to a unix socket path\n", docker_host.c_str());
+			close(uds);
 			return -1;
 		}
 	}
@@ -1582,7 +1578,7 @@ gc_image(const std::string & image) {
 	}
 
 	{ // Need to remove duplicate sha entries, they only consume one image
-		std::ranges::sort(imageInfos, std::equal_to{}, &DockerAPI::ImageInfo::sha256);
+		std::ranges::sort(imageInfos, std::less{}, &DockerAPI::ImageInfo::sha256);
 		const auto [first, last] = std::ranges::unique(imageInfos, std::equal_to{}, &DockerAPI::ImageInfo::sha256);
 		imageInfos.erase(first, last);
 	}
@@ -1681,7 +1677,7 @@ DockerAPI::imageCacheUsed() {
 	}
 
 	{ // Need to remove duplicate sha entries, they only consume one image
-		std::ranges::sort(imageInfos, std::equal_to{}, &ImageInfo::sha256);
+		std::ranges::sort(imageInfos, std::less{}, &ImageInfo::sha256);
 		const auto [first, last] = std::ranges::unique(imageInfos, std::equal_to{}, &ImageInfo::sha256);
 		imageInfos.erase(first, last);
 	}
@@ -1717,14 +1713,16 @@ DockerAPI::imageArchIsCompatible(const std::string &imageArch) {
 }
 
 int
-DockerAPI::getImageArch(const std::string &image_name, std::string &arch) {
+DockerAPI::getImageArchAndId(const std::string &image_name, std::string &arch, std::string &image_id) {
 	ArgList archArgs;
 	if ( ! add_docker_arg(archArgs)) {
 		return -1;
 	}
 	archArgs.AppendArg("inspect");
 	archArgs.AppendArg("--format");
-	archArgs.AppendArg("{{.Architecture}}");
+	// Neither the architecture nor the image id can contain whitespace, so
+	// we can ask for both in one inspect and split the result on the space.
+	archArgs.AppendArg("{{.Architecture}} {{.Id}}");
 	archArgs.AppendArg(image_name);
 
 	std::string displayString;
@@ -1756,7 +1754,16 @@ DockerAPI::getImageArch(const std::string &image_name, std::string &arch) {
 	}
 
 	chomp(line); trim(line);
-	arch = line;
+
+	size_t space = line.find(' ');
+	if (space == std::string::npos) {
+		arch = line;
+		image_id.clear();
+	} else {
+		arch = line.substr(0, space);
+		image_id = line.substr(space + 1);
+		trim(image_id);
+	}
 	return 0;
 }
 

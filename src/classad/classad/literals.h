@@ -24,6 +24,7 @@
 #include <vector>
 #include <limits>
 #include "exprTree.h"
+#include "classad/lexer.h"
 
 namespace classad {
 
@@ -59,6 +60,8 @@ class Literal: public ExprTree {
 		static StringLiteral    *MakeString(const char *);
 		static StringLiteral    *MakeString(const char *, size_t size);
 		static Literal          *MakeLiteral( const Value& v);
+		static bool              IsLiteralToken(Lexer::TokenType tt);
+		static Literal          *MakeLiteral(const Lexer::TokenValue &tv);
 
 		static int findOffset(time_t epochsecs);
 

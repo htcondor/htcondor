@@ -63,6 +63,7 @@
 #include <vector>
 #include <memory>
 #include <deque>
+#include <optional>
 
 #include "../condor_procd/proc_family_io.h"
 class ProcFamilyInterface;
@@ -167,7 +168,8 @@ typedef int	(*DataThreadWorkerFunc)(int data_n1, int data_n2, void * data_vp);
 typedef int	(*DataThreadReaperFunc)(int data_n1, int data_n2, void * data_vp, int exit_status);
 //@}
 
-typedef enum { 
+typedef enum {
+	HANDLE_NONE=0,	// registered but not polled for read or write
 	HANDLE_READ=1,
 	HANDLE_WRITE,
 	HANDLE_READ_WRITE
@@ -204,23 +206,26 @@ const int DC_STATUS_OOM_KILLED = (1 << 24);
 struct FamilyInfo {
 
 	int max_snapshot_interval{-1};
-	const char* login{nullptr};
+    int cgroup_cpu_shares{0};
+    bool want_pid_namespace{false};
+    bool want_net_namespace{false};
+    bool cgroup_active {false}; // are we actually using a cgroup?
+
+    const char* login{nullptr};
 #if defined(LINUX)
 	gid_t* group_ptr{nullptr};
 #endif
-	bool want_pid_namespace{false};
-	bool want_net_namespace{false};
 	const char* cgroup{nullptr};
 	uint64_t cgroup_memory_limit{0};
 	uint64_t cgroup_memory_limit_low{0};      // limit after which kernel aggressively evicts memory
 	uint64_t cgroup_memory_and_swap_limit{0}; // limit of swap INclusive of memory. i.e.  
 											 // if same as cgroup_memory_limit, then
 											 // use memory but no swap
-	int cgroup_cpu_shares{0};
+	std::optional<uint64_t> cgroup_zswap_max; // limit on compressed swap (memory.zswap.max).
+											 // If unset, nothing is written to the control file.
 #if defined(LINUX)
 	std::vector<dev_t> cgroup_hide_devices;
 #endif
-	bool cgroup_active {false}; // are we actually using a cgroup?
 
 	FamilyInfo() = default;
 };
@@ -332,20 +337,22 @@ class OptionalCreateProcessArgs {
 
   public:
     OptionalCreateProcessArgs(/*very not-const*/ std::string &_err_return_msg) :
-        _priv(PRIV_UNKNOWN), reaper_id(1), want_command_port(TRUE),
-        want_udp_command_port(TRUE), _env(NULL), _cwd(NULL), family_info(NULL),
+        _priv(PRIV_UNKNOWN), reaper_id(1), want_command_port(FALSE),
+        want_udp_command_port(FALSE), _env(NULL), _cwd(NULL), family_info(NULL),
         socket_inherit_list(NULL), _std(NULL), fd_inherit_list(NULL),
         nice_inc(0), sig_mask(NULL), job_opt_mask(0), core_hard_limit(NULL),
         affinity_mask(NULL), daemon_sock(NULL),
-        err_return_msg(_err_return_msg), _remap(NULL), as_hard_limit(0l)
+        err_return_msg(_err_return_msg), _remap(NULL), as_hard_limit(0l),
+        initial_hung_timeout(0)
 	{}
     OptionalCreateProcessArgs() :
-        _priv(PRIV_UNKNOWN), reaper_id(1), want_command_port(TRUE),
-        want_udp_command_port(TRUE), _env(NULL), _cwd(NULL), family_info(NULL),
+        _priv(PRIV_UNKNOWN), reaper_id(1), want_command_port(FALSE),
+        want_udp_command_port(FALSE), _env(NULL), _cwd(NULL), family_info(NULL),
         socket_inherit_list(NULL), _std(NULL), fd_inherit_list(NULL),
         nice_inc(0), sig_mask(NULL), job_opt_mask(0), core_hard_limit(NULL),
         affinity_mask(NULL), daemon_sock(NULL),
-        err_return_msg(default_return_msg), _remap(NULL), as_hard_limit(0l)
+        err_return_msg(default_return_msg), _remap(NULL), as_hard_limit(0l),
+        initial_hung_timeout(0)
     {}
 
     OptionalCreateProcessArgs(
@@ -376,7 +383,8 @@ class OptionalCreateProcessArgs {
         sig_mask(sig_mask), job_opt_mask(job_opt_mask),
         core_hard_limit(core_hard_limit), affinity_mask(affinity_mask),
         daemon_sock(daemon_sock), err_return_msg(err_return_msg),
-        _remap(remap), as_hard_limit(as_hard_limit)
+        _remap(remap), as_hard_limit(as_hard_limit),
+        initial_hung_timeout(0)
     {}
 
     OptionalCreateProcessArgs & priv(priv_state p) { this->_priv = p; return *this; }
@@ -397,6 +405,12 @@ class OptionalCreateProcessArgs {
     OptionalCreateProcessArgs & remap(FilesystemRemap * fsr) { this->_remap = fsr; return *this; }
     OptionalCreateProcessArgs & asHardLimit(long ahl) { this->as_hard_limit = ahl; return *this; }
     OptionalCreateProcessArgs & reaperID(int ri) { this->reaper_id = ri; return *this; }
+    // Arm the daemon-core hung-child backstop for this child at creation time,
+    // rather than waiting for its first DC_CHILDALIVE message.  seconds is how
+    // long from now the child is considered hung if it sends no alive.  0 (the
+    // default) preserves the historical behavior of not arming until the first
+    // alive arrives.
+    OptionalCreateProcessArgs & initialHungTimeout(int seconds) { this->initial_hung_timeout = seconds; return *this; }
 
 
     // Special case for usability; may be a bad idea, but allows you to
@@ -425,6 +439,7 @@ class OptionalCreateProcessArgs {
     std::string &     err_return_msg;
     FilesystemRemap * _remap;
     long              as_hard_limit;
+    int               initial_hung_timeout;
 
     // We'd like to use std::optional for the std::string reference, but
     // we can't do that until C++17 is a thing for us.  Instead, initialize
@@ -1057,6 +1072,18 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Lookup_Socket ( Stream * iosock );
+
+    /** Change the I/O interest of an already-registered socket without
+        re-registering it. This lets a byte relay (e.g. CCB streaming) implement
+        backpressure: pause reads on the source while the destination is
+        congested (HANDLE_WRITE or HANDLE_NONE), and watch the destination for
+        writability while bytes are buffered. The socket keeps its existing
+        handler and registration.
+        @param iosock        the registered socket to adjust
+        @param handler_type  the new interest (HANDLE_NONE/READ/WRITE/READ_WRITE)
+        @return true if the socket was found and updated, false otherwise
+    */
+    bool Set_Socket_Handler_Type( Stream *iosock, HandlerType handler_type );
 	//@}
 
 	/** @name Pipe events.
@@ -1127,8 +1154,73 @@ class DaemonCore : public Service
 	int Read_Pipe(int pipe_end, void* buffer, int len);
 
 	int Write_Pipe(int pipe_end, const void* buffer, int len);
-					 
-	/** Close an anonymous pipe.  This function will also call 
+
+	/** Read exactly len bytes from a pipe, retrying as needed.
+	 *
+	 *  Unlike Read_Pipe(), a single underlying read is allowed to
+	 *  transfer fewer bytes than requested -- e.g. once len exceeds the
+	 *  pipe's buffer capacity, or when a signal interrupts a blocking
+	 *  read after some bytes are already in hand -- and a caller that
+	 *  needs the full amount must not treat a short Read_Pipe() result
+	 *  as a hard failure.  This loops over Read_Pipe() until len bytes
+	 *  have been read, an error occurs, or the writer closes its end
+	 *  (EOF) before len bytes arrive.
+	 *
+	 *  @param pipe_end  A read end previously returned by Create_Pipe(),
+	 *                   Create_Named_Pipe(), or Inherit_Pipe().
+	 *  @param buffer    Caller-owned buffer of exactly `len` bytes (not
+	 *                   `len` minus what some other call already
+	 *                   consumed): this function fills it exactly as one
+	 *                   `read(buffer, len)` would, just possibly spread
+	 *                   over several underlying reads.  On success, all
+	 *                   `len` bytes are filled.  On failure, only the
+	 *                   bytes actually read are meaningful; whatever is
+	 *                   left in the rest of the buffer is untouched
+	 *                   leftover content and must not be used.
+	 *  @param len       Number of bytes to read; a negative len is a
+	 *                   caller bug, logged and reported back as false
+	 *                   rather than passed through to Read_Pipe().
+	 *  @param num_calls If non-null, set to the number of underlying
+	 *                   Read_Pipe() calls this took.  Diagnostic only.
+	 *  @return true if all `len` bytes were read; false on error, or on
+	 *          premature EOF (the pipe closed with fewer than `len`
+	 *          bytes delivered).
+	*/
+	bool Read_Pipe_Full(int pipe_end, void* buffer, int len, int* num_calls = nullptr);
+
+	/** Write exactly len bytes to a pipe, retrying as needed.
+	 *
+	 *  Unlike Write_Pipe(), a single underlying write is allowed to
+	 *  transfer fewer bytes than requested -- the same pipe-capacity and
+	 *  signal-interruption caveats as Read_Pipe_Full(), above -- and a
+	 *  caller that needs the whole buffer sent (e.g. because it already
+	 *  wrote this payload's length to the pipe as a separate, preceding
+	 *  message) must not give up after one short Write_Pipe().  This
+	 *  loops over Write_Pipe() until len bytes have been written or an
+	 *  error occurs.
+	 *
+	 *  @param pipe_end  A write end previously returned by Create_Pipe(),
+	 *                   Create_Named_Pipe(), or Inherit_Pipe().
+	 *  @param buffer    Caller-owned buffer holding exactly `len` valid
+	 *                   bytes to send: this function only ever reads
+	 *                   from it, exactly as one `write(buffer, len)`
+	 *                   would, just possibly spread over several
+	 *                   underlying writes.
+	 *  @param len       Number of bytes to write; a negative len is a
+	 *                   caller bug, logged and reported back as false
+	 *                   rather than passed through to Write_Pipe().
+	 *  @param num_calls If non-null, set to the number of underlying
+	 *                   Write_Pipe() calls this took.  Diagnostic only.
+	 *  @return true if all `len` bytes were written; false on error.  On
+	 *          false, how many of the `len` bytes actually made it onto
+	 *          the pipe before the failure is not reported -- if this
+	 *          payload's length was already sent as a separate message,
+	 *          the whole framed exchange must now be treated as corrupt;
+	 *          there is no way to send just the missing remainder.
+	*/
+	bool Write_Pipe_Full(int pipe_end, const void* buffer, int len, int* num_calls = nullptr);
+
+	/** Close an anonymous pipe.  This function will also call
 	 * Cancel_Pipe() on behalf of the caller if the pipe_end had
 	 * been registed via Register_Pipe().
 	*/
@@ -1413,13 +1505,14 @@ class DaemonCore : public Service
                Ignored if NULL (default).  Ignored on non-Linux.
         @return On success, returns the child pid.  On failure, returns FALSE.
     */
+	private:
     int Create_Process (
         const char      *name,
         ArgList const   &arglist,
         priv_state      priv                 = PRIV_UNKNOWN,
         int             reaper_id            = 1,
-        int             want_commanand_port  = TRUE,
-        int             want_udp_comm_port   = TRUE,
+        int             want_commanand_port  = FALSE,
+        int             want_udp_comm_port   = FALSE,
         Env const       *env                 = NULL,
         const char      *cwd                 = NULL,
         FamilyInfo      *family_info         = NULL,
@@ -1436,6 +1529,7 @@ class DaemonCore : public Service
         FilesystemRemap *remap               = NULL,
         long            as_hard_limit        = 0l
         );
+	public:	
 
     int CreateProcessNew(
         const std::string & name,
@@ -1455,6 +1549,7 @@ class DaemonCore : public Service
 	static const int ERRNO_PID_COLLISION;
 	static const int ERRNO_REGISTRATION_FAILED;
 	static const int ERRNO_EXIT;
+	static const int ERRNO_OOM_KILLED_AT_STARTUP;
 
 	const static char* DEFAULT_INDENT;
 
@@ -1465,7 +1560,6 @@ class DaemonCore : public Service
     int Suspend_Family(pid_t);
     int Continue_Family(pid_t);
     int Kill_Family(pid_t);
-    int Extend_Family_Lifetime(pid_t);
     int Signal_Process(pid_t,int);
     
 	// This method should go away in the long term.
@@ -1632,6 +1726,7 @@ class DaemonCore : public Service
 	bool CheckConfigSecurity( const char* config, Sock* sock );
 	bool CheckConfigAttrSecurity( const char* attr, Sock* sock );
 
+	std::string GetCommandsInAuthLevel(DCpermission perm, bool is_authenticated);
 
     /** Invalidate all session related cache since the configuration
      */
@@ -1640,7 +1735,7 @@ class DaemonCore : public Service
 	/* manage the secret cookie data */
 	bool set_cookie( int len, const unsigned char* data );
 	bool get_cookie( int &len, unsigned char* &data );
-	bool cookie_is_valid( const unsigned char* data );
+	bool cookie_is_valid( const unsigned char* data, int len );
 
 	/** The peaceful shutdown toggle controls whether graceful shutdown
 	   avoids any hard killing.
@@ -1714,6 +1809,7 @@ class DaemonCore : public Service
 	DCCollectorAdSequences & getUpdateAdSeq() { return m_collector_list->getAdSeq(); }
 
 	time_t getStartTime() const {return m_startup_time;}
+	time_t getReconfigTime() const {return m_reconfig_time;}
 
 		/**
 		   Indicates if this daemon wants to be restarted by its
@@ -1873,7 +1969,6 @@ class DaemonCore : public Service
 	bool m_never_use_kill_for_dc_signals;
 		// do we ourself want/have a udp comment socket?
 	bool m_wants_dc_udp_self;
-	bool m_invalidate_sessions_via_tcp;
 
 	// This pairing should representing the "same" socket, just on UDP and TCP.
 	// It's okay for parts to be NULL.  Safe to copy, although all of the
@@ -2016,8 +2111,6 @@ class DaemonCore : public Service
 #endif
 
 	void Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocking);
-
-	std::string GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated);
 
 	// Returns first command socket in our list. In general, you
 	// probably want to spin over sockTable looking for it->command_sock==true,
@@ -2365,14 +2458,6 @@ class DaemonCore : public Service
 		*/
 	void initCollectorList(void);
 
-	// Inform a client that they attempted to resume a session that
-	// we don't have.
-	// If the client is version 8.8.0 or later, extended information
-	// can be provided in the info_ad. Older clients will assume the
-	// ad is part of the session id to invalidate.
-	void send_invalidate_session ( const char* sinful, const char* sessid,
-	                               const ClassAd* info_ad = NULL ) const;
-
 	bool m_wants_restart{true};
 	bool m_in_shutdown_peaceful{false};
 	bool m_in_shutdown_graceful{false};
@@ -2417,6 +2502,7 @@ class DaemonCore : public Service
 
 	static unsigned m_remote_admin_seq;
 	static time_t m_startup_time;
+	static time_t m_reconfig_time;
 	bool m_enable_remote_admin{false};
 	time_t m_remote_admin_last_time{0};
 	std::string m_remote_admin_last;

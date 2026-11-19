@@ -10,11 +10,14 @@ from sphinx.errors import SphinxError
 from sphinx.util.nodes import split_explicit_title, process_index_entry, set_role_source_info
 from htc_helpers import *
 
+from generation import generate_javascript
+
 SPECIAL_CASE_KNOBS = ["<SUBSYS>"]
 TEMPLATE_FILE = "introduction-to-configuration"
 
 CONFIG_REGEX = {}
 CONFIG_KNOBS = {}
+CONFIG_KNOBS_CI = {}
 TEMPLATES = {}
 
 def find_conf_knobs(dir: str):
@@ -25,7 +28,7 @@ def find_conf_knobs(dir: str):
     config_dir = base / "admin-manual" / "configuration"
 
     for path in config_dir.iterdir():
-        if path.suffix != ".rst":
+        if path.suffix != ".rst" or path.name in ["index.rst", "all.rst"]:
             continue
 
         url = path.relative_to(base).with_suffix(".html")
@@ -87,13 +90,8 @@ def find_templates(dir: str):
 
 def generate_old_redirect_page(dir: str):
     """Write javascript to redirect old monolithic configuration macro URLs to new locations"""
-    gen_dir = Path(dir) / "_static" / "generated" / "js"
-    try:
-        gen_dir.mkdir(parents=True, exist_ok=True)
-    except Exception as e:
-        warn(f"Failed to ensure/create '{gen_dir}': {e}")
 
-    javascript = gen_dir / "config-macro-redirect.js"
+    javascript = generate_javascript(dir, "config-macro-redirect.js")
     with open(javascript, "w") as f:
         f.write("""
 // Map of tag -> URL end
@@ -170,10 +168,16 @@ def macro_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
         ref_link = f"href=\"{root_dir}/admin-manual/{TEMPLATE_FILE}.html#" + str(ref) + "\""
     # Handle reference to normal configuration knob
     else:
-        url_path = CONFIG_KNOBS.get(macro_name, "admin-manual/configuration-macros.html")
         specifier, macro = macro_name.split(".", 1) if "." in macro_name else (None, macro_name)
-        ref = macro
-        if macro not in CONFIG_KNOBS.keys():
+        # Case-insensitive lookup: exact match first, then fall back to the
+        # canonical (as-defined) case so the anchor we link to actually exists.
+        canonical = macro if macro in CONFIG_KNOBS else CONFIG_KNOBS_CI.get(macro.lower())
+        if canonical is not None:
+            ref = canonical
+            url_path = CONFIG_KNOBS[canonical]
+        else:
+            ref = macro
+            url_path = "admin-manual/configuration-macros.html"
             regex_match = False
             for r in CONFIG_REGEX.keys():
                 if re.match(r, macro, flags=re.IGNORECASE):
@@ -190,10 +194,12 @@ def macro_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
 
 def setup(app):
     global CONFIG_KNOBS
+    global CONFIG_KNOBS_CI
     global CONFIG_REGEX
     global TEMPLATES
 
     CONFIG_KNOBS, CONFIG_REGEX = find_conf_knobs(app.srcdir)
+    CONFIG_KNOBS_CI = build_ci_index(CONFIG_KNOBS.keys(), "config knob")
     TEMPLATES = find_templates(app.srcdir)
 
     generate_old_redirect_page(app.srcdir)

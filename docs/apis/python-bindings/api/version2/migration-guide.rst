@@ -15,7 +15,7 @@ of some kind.
 
 .. warning::
 
-    There is an incompability between ``classad`` and ``classad2`` that
+    There is an incompatibility between ``classad`` and ``classad2`` that
     won't manifest itself as an exception.  You should check your code
     for calls to ``eval()`` and ``simplify()`` that don't specify a
     positional parameter (the scope): :class:`classad2.ExprTree` no

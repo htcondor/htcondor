@@ -749,8 +749,6 @@ GahpServer::Startup(bool force)
 	// For amazon ec2 ca authentication
 	tmp_char = param("GAHP_SSL_CAFILE");
 	if( tmp_char ) {
-		// CRUFT: the SOAP value was used before 8.7.9
-		newenv.SetEnv( "SOAP_SSL_CA_FILE", tmp_char );
 		newenv.SetEnv( "GAHP_SSL_CAFILE", tmp_char );
 		free( tmp_char );
 	}
@@ -758,8 +756,6 @@ GahpServer::Startup(bool force)
 	// For amazon ec2 ca authentication
 	tmp_char = param("GAHP_SSL_CADIR");
 	if( tmp_char ) {
-		// CRUFT: the SOAP value was used before 8.7.9
-		newenv.SetEnv( "SOAP_SSL_CA_DIR", tmp_char );
 		newenv.SetEnv( "GAHP_SSL_CADIR", tmp_char );
 		free( tmp_char );
 	}
@@ -813,8 +809,6 @@ GahpServer::Startup(bool force)
 			gahp_args,		// Args
 			cpArgs.priv(PRIV_USER_FINAL)	// Priv State ---- drop root if we have it
 				.reaperID(m_reaperid)		// id for our registered reaper
-				.wantCommandPort(FALSE)		// do not want a command port
-				.wantUDPCommandPort(FALSE)	// do not want a command port
 				.env(&newenv)				// env
 				.std(io_redirect)			// redirect stdin/out/err
 				.jobOptMask(job_opt_mask)	// job option flags

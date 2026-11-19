@@ -34,41 +34,54 @@
 extern Scheduler scheduler;
 
 int
-SetAttributeInt(int cl, int pr, const char *name, int64_t val, SetAttributeFlags_t flags )
+SetAttributeInt(const JOB_ID_KEY & jid, const char *name, int64_t val, SetAttributeFlags_t flags )
 {
 	char buf[24] = { 0 };
 	int rval = 0;
 
 	std::to_chars(buf, buf+sizeof(buf)-1, val);
-	rval = SetAttribute(cl,pr,name,buf,flags);
+	rval = SetAttribute(jid,name,buf,flags);
 	return(rval);
 }
 
 int
-SetAttributeFloat(int cl, int pr, const char *name, double val, SetAttributeFlags_t flags )
+SetAttributeFloat(const JOB_ID_KEY & jid, const char *name, double val, SetAttributeFlags_t flags )
 {
 	char buf[100];
 	int rval = 0;
 
 	snprintf(buf,100,"%f",val);
-	rval = SetAttribute(cl,pr,name,buf,flags);
+	rval = SetAttribute(jid,name,buf,flags);
 	return(rval);
 }
 
 int
-SetAttributeString(int cl, int pr, const char *name, const char *val, SetAttributeFlags_t flags )
+SetAttributeString(const JOB_ID_KEY & jid, const char *name, std::string_view val, SetAttributeFlags_t flags )
 {
 	std::string buf;
 	int rval = 0;
 
-	QuoteAdStringValue(val,buf);
+	if (val.empty()) {
+		rval = SetAttribute(jid,name,"\"\"",flags);
+	} else {
+		// we arrange to quote the string by storing it and then unparsing the result
+		classad::Value tmpValue;
+		classad::ClassAdUnParser unparse;
+		unparse.SetOldClassAd( true, true );
+		if (val.back() == 0) { // if null terminated, treat it as a const char *
+			tmpValue.SetStringValue(val.data());
+		} else {
+			tmpValue.SetStringValue(val.data(), val.size());
+		}
+		unparse.Unparse(buf, tmpValue);
+		rval = SetAttribute(jid,name,buf.c_str(),flags);
+	}
 
-	rval = SetAttribute(cl,pr,name,buf.c_str(),flags);
 	return(rval);
 }
 
 int
-SetAttributeExpr(int cl, int pr, const char *name, const ExprTree *val, SetAttributeFlags_t flags )
+SetAttributeExpr(const JOB_ID_KEY & jid, const char *name, const ExprTree *val, SetAttributeFlags_t flags )
 {
 	std::string buf;
 	int rval = 0;
@@ -77,7 +90,7 @@ SetAttributeExpr(int cl, int pr, const char *name, const ExprTree *val, SetAttri
 	unp.SetOldClassAd( true, true );
 	unp.Unparse( buf, val );
 
-	rval = SetAttribute(cl,pr,name,buf.c_str(),flags);
+	rval = SetAttribute(jid,name,buf.c_str(),flags);
 	return(rval);
 }
 
@@ -147,16 +160,24 @@ typedef struct attr_force_pair {
 
 // table defineing attributes that must be in either cluster ad or proc ad
 // force value of 1 is proc ad, -1 is cluster ad, 2 is proc ad, and sent first, -2 is cluster ad and sent first
+// -3 is forced into the cluster ad, but we want to *attempt* to send them to the proc ad so that the schedd
+// can choose to quietly ignore, change the ad, or abort the transaction.
 // NOTE: this table MUST be sorted by case-insensitive attribute name
 #define FILL(attr,force) { attr, force }
 static const ATTR_FORCE_PAIR aForcedSetAttrs[] = {
 	FILL(ATTR_CLUSTER_ID,         -2), // forced into cluster ad
+	FILL(ATTR_COMMON_INPUT_CATALOGS, -3), // forced into cluster ad
+	FILL(ATTR_COMMON_INPUT_FILES, -3), // forced into cluster ad
 	FILL(ATTR_JOB_SET_ID,         -1), // forced into cluster ad
 	FILL(ATTR_JOB_SET_NAME,       -1), // forced into cluster ad
 	FILL(ATTR_JOB_STATUS,         2),  // forced into proc ad (because job counters don't work unless this is set to IDLE/HELD on startup)
 	FILL(ATTR_JOB_UNIVERSE,       -1), // forced into cluster ad
+	FILL(ATTR_NT_DOMAIN,          -1), // forced into cluster ad
 	FILL(ATTR_OWNER,              -1), // forced into cluster ad
 	FILL(ATTR_PROC_ID,            2),  // forced into proc ad
+	FILL(ATTR_PROJECT_NAME,       -3), // forced into the cluster ad
+	FILL(ATTR_USER,               -1), // forced into cluster ad
+	FILL(ATTR_WANT_PARALLEL_SCHEDULING, -1), // forced into cluster ad
 };
 #undef FILL
 
@@ -236,8 +257,10 @@ int SendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAt
 		const char * attr = it.first.c_str();
 
 		// skip attributes that are forced into the other sort of ad, or have already been sent.
+		// attributes that are forced into the cluster ad but marked -3 should be attempted
+		// so that the Schedd can decide to ignore or report an error.
 		int forced = IsForcedClusterProcAttribute(attr);
-		if (forced) {
+		if (forced && forced != -3) {
 			// skip attributes not forced into the cluster ad and not already sent
 			if (is_cluster && (forced != -1)) continue;
 			// skip attributes not forced into the proc ad and not already sent

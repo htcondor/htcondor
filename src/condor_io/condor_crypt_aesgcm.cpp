@@ -306,6 +306,18 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     // we ould only need to receive the IV on the first transmission (this gets looked at a lot)
     bool receiving_IV = (stream_state->m_ctr_dec == 0);
 
+    // The input length is attacker-controlled (it comes from the packet
+    // header), so verify it is large enough to contain everything we are
+    // about to read BEFORE we read any of it.  The first packet must hold the
+    // IV plus the GCM tag; every packet must hold at least the tag.  This
+    // check must precede the IV memcpy below: otherwise a short first packet
+    // causes that memcpy to read IV_SIZE bytes past the end of the input
+    // buffer.
+    if ((input_len - (receiving_IV ? IV_SIZE : 0) - AES_MAC_SIZE) < 0) {
+        dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: input was too small.\n");
+        return false;
+    }
+
     if (receiving_IV) {
 		if (IsDebugVerbose(D_NETWORK)) {
 			dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decyrpt DUMP : First decrypt - initializing IV\n");
@@ -370,11 +382,7 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
 				input_len - (receiving_IV ? IV_SIZE : 0) - AES_MAC_SIZE);
 	}
 
-    if( (input_len - (receiving_IV ? IV_SIZE : 0) - AES_MAC_SIZE) < 0) {
-        dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: input was too small.\n");
-        return false;
-    }
-
+    // (input_len large enough was verified above, before the IV was read.)
     if (!EVP_DecryptUpdate(ctx.get(), output, &len, input + (receiving_IV ? IV_SIZE : 0), input_len - (receiving_IV ? IV_SIZE : 0) - AES_MAC_SIZE)) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: failed due to failed cipher text update.\n");
         return false;

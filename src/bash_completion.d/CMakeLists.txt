@@ -22,5 +22,5 @@ if (NOT WINDOWS)
                          DESTINATION     "etc/bash_completion.d/"
          )
 
-endif(NOT WINDOWS)
+endif()
 

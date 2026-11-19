@@ -252,8 +252,10 @@ std::string AbstractScheddQ::send_JobAttributes(const JOB_ID_KEY & key, const cl
 		const char * attr = it->first.c_str();
 
 		// skip attributes that are forced into the other sort of ad, or have already been sent.
+		// attributes that are forced into the cluster ad but marked -3 should be attempted
+		// so that the Schedd can decide to ignore or report an error.
 		int forced = IsForcedClusterProcAttribute(attr);
-		if (forced) {
+		if (forced && forced != -3) {
 			// skip attributes not forced into the cluster ad and not already sent
 			if (is_cluster && (forced != -1)) continue;
 			// skip attributes not forced into the proc ad and not already sent

@@ -44,6 +44,8 @@ remote_proc.cpp
 script_proc.cpp
 singularity.cpp
 sshd_proc.cpp
+staging_directory.cpp
+staging_directory.h
 StarterHookMgr.cpp
 starter_user_policy.cpp
 starter_util.cpp
@@ -61,13 +63,18 @@ if (LINUX)
 	list(APPEND starterElements
 		../condor_startd.V6/VolumeManager.cpp
 	)
-endif(LINUX)
+endif()
 
 if (UNIX)
 set_source_files_properties(jic_shadow.cpp PROPERTIES COMPILE_FLAGS "-Wno-deprecated-declarations")
-endif(UNIX)
+endif()
 
-condor_daemon( EXE condor_starter SOURCES "${starterElements}" LIBRARIES "${CONDOR_LIBS}" INSTALL "${C_SBIN}")
+set(starter_libraries "${CONDOR_LIBS}")
+if (HAVE_EXT_LIBSELINUX)
+	list(APPEND starter_libraries LIBSELINUX::LIBSELINUX)
+endif()
+
+condor_daemon( EXE condor_starter SOURCES "${starterElements}" LIBRARIES "${starter_libraries}" INSTALL "${C_SBIN}")
 
 # need to add all the other install targets for libexec.
 install ( FILES CondorJavaWrapper.class CondorJavaInfo.class DESTINATION ${C_LIB} )
@@ -75,8 +82,8 @@ install ( FILES CondorJavaWrapper.class CondorJavaInfo.class DESTINATION ${C_LIB
 if (HAVE_SSH_TO_JOB)
 	install ( FILES condor_ssh_to_job_sshd_setup condor_ssh_to_job_shell_setup DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 	configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/condor_ssh_to_job_sshd_config_template.in ${CMAKE_CURRENT_BINARY_DIR}/condor_ssh_to_job_sshd_config_template @ONLY )
-	install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/condor_ssh_to_job_sshd_config_template DESTINATION ${C_LIB} )
-endif(HAVE_SSH_TO_JOB)
+	install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/condor_ssh_to_job_sshd_config_template DESTINATION ${C_LIB} PERMISSIONS ${CONDOR_FILE_PERMS} )
+endif()
 
 if (LINUX)
 	condor_exe(condor_pid_ns_init "condor_pid_ns_init.cpp" ${C_LIBEXEC} "" OFF)
@@ -148,9 +155,9 @@ if (LINUX)
 	if ("${SYS_ARCH}" STREQUAL "AARCH64" OR "${SYS_ARCH}" STREQUAL "PPC64LE" OR "${SYS_ARCH}" STREQUAL "X86_64")
 		install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/exit_37.sif.${SYS_ARCH} RENAME exit_37.sif DESTINATION ${C_LIBEXEC})
 	endif()
-	install ( DIRECTORY DESTINATION ${C_LIBEXEC}/singularity_test_sandbox )
-	install ( DIRECTORY DESTINATION ${C_LIBEXEC}/singularity_test_sandbox/dev )
-	install ( DIRECTORY DESTINATION ${C_LIBEXEC}/singularity_test_sandbox/proc )
+	install ( DIRECTORY DESTINATION ${C_LIBEXEC}/singularity_test_sandbox      DIRECTORY_PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+	install ( DIRECTORY DESTINATION ${C_LIBEXEC}/singularity_test_sandbox/dev  DIRECTORY_PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+	install ( DIRECTORY DESTINATION ${C_LIBEXEC}/singularity_test_sandbox/proc DIRECTORY_PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 	install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/exit_37 DESTINATION ${C_LIBEXEC}/singularity_test_sandbox PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 	install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/get_user_ns DESTINATION ${C_LIBEXEC}/singularity_test_sandbox PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 endif()

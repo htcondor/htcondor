@@ -16,6 +16,11 @@
 #include <sys/statvfs.h>
 #include "directory.h"
 
+#ifdef HAVE_EXT_LIBSELINUX
+#include <sys/stat.h>
+#include <selinux/selinux.h>
+#include <selinux/label.h>
+#endif
 
 #include <sstream>
 
@@ -114,7 +119,12 @@ VolumeManager::VolumeManager()
             goto end_lvm_setup;
         }
 
-        m_volume_group_name = "condor_" + (lname ? (std::string(lname) + "_") : "") + get_mySubSystem()->getName();
+        // Secret config option to name the volume group when auto generated
+        param(m_volume_group_name, "LVM_AUTO_VG_NAME");
+        if (m_volume_group_name.empty()) {
+            m_volume_group_name = "condor_" + (lname ? (std::string(lname) + "_") : "") + get_mySubSystem()->getName();
+        }
+
         if (m_use_thin_provision) { m_pool_lv_name = m_volume_group_name + "_THINPOOL"; }
 
             // Preemptively clean-up condor-owned devices.
@@ -290,6 +300,14 @@ isHideMountCompatible(const ClassAd& jobAd, const ClassAd& machineAd) {
         return false;
     }
 
+    //
+    // We can't hide the mounts of a job provisioning a common file catalog.
+    //
+    bool is_transfer_shadow = false;
+    if ( jobAd.LookupBool( ATTR_IS_TRANSFER_SHADOW, is_transfer_shadow ) && is_transfer_shadow ) {
+        return false;
+    }
+
     // All good
     return true;
 }
@@ -359,7 +377,41 @@ VolumeManager::MountFilesystem(const std::string &device_path, const std::string
 
     dprintf(D_FULLDEBUG, "Mounting device %s to %s\n", device_path.c_str(), mountpoint.c_str());
 
-    if (mount(device_path.c_str(), mountpoint.c_str(), "ext4", MS_NOATIME|MS_NODEV|MS_NOSUID, "barrier=0,discard") != 0) {
+    std::string mount_opts = "barrier=0,discard";
+#ifdef HAVE_EXT_LIBSELINUX
+    // A freshly mke2fs'd device has no security.selinux xattrs at all, so
+    // every file created on it (including HTCondor's own _condor_stdout /
+    // _condor_stderr) starts out unlabeled_t until something relabels it.
+    // Since this filesystem holds exactly one job's scratch space and is
+    // destroyed with the LV when the job exits, there is nothing to gain
+    // from per-inode labeling: force the whole mount to report the context
+    // the site's file_contexts policy already assigns to this path (e.g.
+    // via a `semanage fcontext` rule on the mountpoint's parent directory),
+    // avoiding a relabel pass on every job start.
+    if (is_selinux_enabled() > 0) {
+        struct selabel_handle *hnd = selabel_open(SELABEL_CTX_FILE, nullptr, 0);
+        if (hnd) {
+            char *scontext = nullptr;
+            if (selabel_lookup_raw(hnd, &scontext, mountpoint.c_str(), S_IFDIR) == 0 && scontext) {
+                mount_opts += ",context=\"";
+                mount_opts += scontext;
+                mount_opts += "\"";
+                freecon(scontext);
+            } else {
+                dprintf(D_ERROR, "VolumeManager: selabel_lookup(%s) failed (errno=%d): %s; "
+                        "mounting without an explicit SELinux context, new files will be "
+                        "unlabeled_t\n", mountpoint.c_str(), errno, strerror(errno));
+            }
+            selabel_close(hnd);
+        } else {
+            dprintf(D_ERROR, "VolumeManager: selabel_open failed (errno=%d): %s; "
+                    "mounting without an explicit SELinux context, new files will be "
+                    "unlabeled_t\n", errno, strerror(errno));
+        }
+    }
+#endif
+
+    if (mount(device_path.c_str(), mountpoint.c_str(), "ext4", MS_NOATIME|MS_NODEV|MS_NOSUID, mount_opts.c_str()) != 0) {
         err.pushf("VolumeManager", 13, "Failed to mount new filesystem %s for job (errno=%d): %s\n",
                   mountpoint.c_str(), errno, strerror(errno));
         return false;
@@ -880,10 +932,9 @@ VolumeManager::RemoveVG(const std::string &vg_name, CondorError &err, int timeou
     TemporaryPrivSentry sentry(PRIV_ROOT);
     ArgList args;
     args.AppendArg("vgremove");
-    args.AppendArg("--autobackup");
-    args.AppendArg("n");
     args.AppendArg(vg_name);
     args.AppendArg("--yes");
+    args.AppendArg("--force");
     std::string cmdDisplay;
     args.GetArgsStringForLogging(cmdDisplay);
     dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
@@ -909,6 +960,7 @@ VolumeManager::RemovePV(const std::string &pv_name, CondorError &err, int timeou
     args.AppendArg("pvremove");
     args.AppendArg(pv_name);
     args.AppendArg("--yes");
+    args.AppendArg("--force");
     std::string cmdDisplay;
     args.GetArgsStringForLogging(cmdDisplay);
     dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());

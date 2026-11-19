@@ -23,8 +23,10 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
+#include "condor_attributes.h"
 #include "condor_query.h"
 #include "condor_io.h"
+#include "condor_version.h"
 #include "enum_utils.h"
 #include "condor_claimid_parser.h"
 
@@ -91,7 +93,7 @@ public:
 			// TODO: add resource sharing info here??
 		};
 
-	void asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, requestClaimOptions & opts, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb );
+	void asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, requestClaimOptions & opts, int timeout, int deadline_timeout, std::shared_ptr<DCMsgCallback> cb );
 
 		/** Send the command to this startd to deactivate the claim 
 			@param graceful Should we be graceful or forcful?
@@ -198,6 +200,16 @@ public:
 		// call error() to get a descriptive error message
 	bool cancelDrainJobs(char const *request_id);
 
+		// Send REHOME command to startd
+		// schedd_name: the schedd to rehome to
+		// schedd_pool: the collector pool to use to find the schedd (NULL = use COLLECTOR_HOST)
+		// timeout: timeout for the rehome operation
+		// reboot: if true, reboot the host after evicting jobs (subject to
+		//         the startd's STARTD_REHOME_ALLOW_REBOOT guard expression)
+		// returns: true/false on success/failure
+		// call error() to get a descriptive error message
+	bool rehome(const char *schedd_name, const char *schedd_pool, int timeout, bool cancel = false, bool reboot = false);
+
 	bool updateMachineAd( const ClassAd * update, ClassAd * reply, int timeout = -1 );
 
  private:
@@ -296,15 +308,20 @@ public:
 	int m_timeout;
 	DCStartd m_startd;
 	bool m_nonblocking;
+	bool m_is_bundle;
+	std::string m_bundle_id;
 
-	NotifyStartdOfMatchHandler(char const *startdName,char const *startdAddr,int timeout,char const *claim_id,bool nonblocking):
-		
+	NotifyStartdOfMatchHandler(char const *startdName,char const *startdAddr,int timeout,char const *claim_id,bool nonblocking,
+		bool is_bundle=false, char const *bundle_id=nullptr):
+
 		m_startdName(startdName),
 		m_startdAddr(startdAddr),
 		m_claim_id(claim_id),
 		m_timeout(timeout),
 		m_startd(startdAddr),
-		m_nonblocking(nonblocking) {}
+		m_nonblocking(nonblocking),
+		m_is_bundle(is_bundle),
+		m_bundle_id(bundle_id ? bundle_id : "") {}
 
 	static void startCommandCallback(bool success,Sock *sock,CondorError * /*errstack*/,
 		const std::string & /*trust_domain*/, bool /*should_try_token_request*/, void *misc_data)
@@ -336,9 +353,38 @@ public:
 		dprintf (D_FULLDEBUG, "      (Claim ID is \"%s\" )\n",
 		         idp.publicClaimId() );
 
-		if ( !sock->put_secret (m_claim_id.c_str()) ||
-			 !sock->end_of_message())
-		{
+		if ( !sock->put_secret (m_claim_id.c_str()) ) {
+			dprintf (D_ALWAYS,
+			        "      Could not send MATCH_INFO/claim id to %s\n",
+			        m_startdName.c_str() );
+			dprintf (D_FULLDEBUG,
+			        "      (Claim ID is \"%s\")\n",
+			        idp.publicClaimId() );
+			return false;
+		}
+
+		// Newer startds accept a trailing ClassAd of match metadata (currently
+		// slot-bundle info).  Send it only when the startd is new enough to
+		// read it; older startds expect end_of_message right after the claim
+		// id.  The receive side is gated on our version the same way, so no
+		// peer ever tries to read a payload the other side did not send.
+		//
+		const CondorVersionInfo *vi = sock->get_peer_version();
+		if ( vi && vi->built_since_version(26, 1, 0) ) {
+			ClassAd match_ad;
+			match_ad.Assign(ATTR_IS_BUNDLE, m_is_bundle);
+			if ( m_is_bundle && !m_bundle_id.empty() ) {
+				match_ad.Assign(ATTR_BUNDLE_ID, m_bundle_id);
+			}
+			if ( !putClassAd(sock, match_ad) ) {
+				dprintf (D_ALWAYS,
+				        "      Could not send MATCH_INFO metadata ad to %s\n",
+				        m_startdName.c_str() );
+				return false;
+			}
+		}
+
+		if ( !sock->end_of_message() ) {
 			dprintf (D_ALWAYS,
 			        "      Could not send MATCH_INFO/claim id to %s\n",
 			        m_startdName.c_str() );
@@ -374,13 +420,16 @@ public:
 		}
 
 		Stream::stream_type st = m_startd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
+		NotifyStartdOfMatchHandler *self = this;
 		m_startd.startCommand_nonblocking (
 			MATCH_INFO,
 			st,
 			m_timeout,
 			NULL,
-			NotifyStartdOfMatchHandler::startCommandCallback,
-			this);
+			[self](bool success, Sock *sock, CondorError *errstack,
+				const std::string &trust_domain, bool should_try_token_request) {
+				NotifyStartdOfMatchHandler::startCommandCallback(success, sock, errstack, trust_domain, should_try_token_request, self);
+			});
 
 			// Since this is nonblocking, we cannot give any immediate
 			// feedback on whether the message to the startd succeeds.

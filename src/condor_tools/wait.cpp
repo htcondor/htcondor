@@ -317,6 +317,7 @@ int main( int argc, char *argv[] )
 						event->formatEvent(event_str, format_opts);
 						printf("%s...\n", event_str.c_str());
 					}
+					fflush(stdout); // fflush the event we just wrote in case we are writing to a pipe
 				}
 
 				if(event->eventNumber==ULOG_SUBMIT) {

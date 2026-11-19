@@ -26,7 +26,6 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "condor_string.h"
 #include "my_hostname.h"
 #include "my_username.h"
 #include "condor_uid.h"

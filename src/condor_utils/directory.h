@@ -134,7 +134,7 @@ public:
 		the size of any file, we consider that file to have a size of zero). 
 		we optionally return the number of files+dirs also
 		*/
-	filesize_t GetDirectorySize(size_t * number_of_entries=NULL);
+	filesize_t GetDirectorySize(size_t * number_of_entries=NULL, bool skip_multilink_files=false);
 
 	/** Get full path name to the current file.  If there is no current file,
 		return NULL.

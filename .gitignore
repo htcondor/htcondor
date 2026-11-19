@@ -7,8 +7,5 @@ __pycache__
 # Project exclude paths
 /_build/
 
-# Ignore dynamically produced javascript for documentation
-docs/_static/generated/js/*
-
 # vscode files
 .vscode/

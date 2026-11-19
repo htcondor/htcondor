@@ -1394,6 +1394,7 @@ JobActionResults::JobActionResults( action_result_type_t res_type )
 	ar_bad_status = 0;
 	ar_already_done = 0;
 	ar_error = 0;
+	ar_limit_exceeded = 0;
 	action = JA_ERROR;
 }
 
@@ -1658,6 +1659,9 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 		}else if( action == JA_CONTINUE_JOBS ) {
 			formatstr( buf, "Job %d.%d not running to be continued",
 					 job_id.cluster, job_id.proc );
+		} else if( action == JA_REMOVE_JOBS || action == JA_TRANSFER_AND_REMOVE_JOBS ) {
+			formatstr( buf, "Job %d.%d is already terminating",
+					 job_id.cluster, job_id.proc );
 		} else {
 				// Nothing else should use this.
 			formatstr( buf, "Invalid result for job %d.%d",
@@ -1793,11 +1797,14 @@ bool DCSchedd::getJobConnectInfo(
 int DCSchedd::offerResources(
 	const std::vector<std::pair<std::string, const ClassAd*>> & resources,
 	const std::string & submitter_name,
-	int timeout)
+	int timeout,
+	const char * claimID,
+	long long disk_held_by_claim_in_mb,
+	const ClassAd * extra_cmd_attrs)
 {
 	if (resources.empty()) {
 		dprintf(D_ERROR, "offerResources : no resources offered.\n");
-		return -1; 
+		return -1;
 	}
 
 	if (submitter_name.empty()) {
@@ -1823,6 +1830,18 @@ int DCSchedd::offerResources(
 	cmd_ad.InsertAttr(ATTR_NUM_ADS, (int)resources.size());
 	if ( ! submitter_name.empty()) {
 		cmd_ad.InsertAttr(ATTR_SUBMITTER, submitter_name);
+	}
+	if( disk_held_by_claim_in_mb != -1 ) {
+		cmd_ad.InsertAttr(
+			ATTR_DISK_HELD_BY_CLAIM_IN_MB, disk_held_by_claim_in_mb
+		);
+	}
+	if( claimID != NULL ) {
+		// The CEDAR machinery (in _putClassAd()) encrypts this attribute.
+		cmd_ad.InsertAttr(ATTR_CLAIM_ID, claimID);
+	}
+	if( extra_cmd_attrs != nullptr ) {
+		cmd_ad.Update(*extra_cmd_attrs);
 	}
 	if ( ! putClassAd(sock, cmd_ad) ) {
 		dprintf(D_FULLDEBUG, "Failed to send DIRECT_ATTACH ad to %s\n", this->name());
@@ -1907,7 +1926,10 @@ bool DCSchedd::recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad
 	sock.decode();
 
 	int found_new_job = 0;
-	sock.get( found_new_job );
+	if( !sock.get( found_new_job ) ) {
+		error_msg = "Failed to receive new job indicator";
+		return false;
+	}
 
 	if( found_new_job ) {
 		*new_job_ad = new ClassAd();
@@ -2030,7 +2052,7 @@ DCSchedd::reassignSlot( PROC_ID bid, ClassAd & reply, std::string & errorMessage
 }
 
 
-class ImpersonationTokenContinuation : Service {
+class ImpersonationTokenContinuation : public Service {
 
 public:
 	ImpersonationTokenContinuation(const std::string &identity,
@@ -2046,13 +2068,8 @@ public:
 	  m_misc_data(misc_data)
 	{}
 
-	static void startCommandCallback(bool success, Sock *sock, CondorError *errstack,
-		const std::string & /*trust_domain*/, bool /*should_try_token_request*/,
-		void *misc_data);
-
 	int finish(Stream*);
 
-private:
 	std::string m_identity;
 	std::vector<std::string> m_authz_bounding_set;
 	int m_lifetime{-1};
@@ -2096,69 +2113,6 @@ int ImpersonationTokenContinuation::finish(Stream *stream)
 }
 
 
-void
-ImpersonationTokenContinuation::startCommandCallback(bool success, Sock *sock, CondorError *errstack,
-	const std::string & /*trust_domain*/, bool /*should_try_token_request*/, void *misc_data)
-{
-		// Automatically free our callback data at function exit.
-	std::unique_ptr<class ImpersonationTokenContinuation> callback_ptr(
-		static_cast<class ImpersonationTokenContinuation*>(misc_data));
-	ImpersonationTokenContinuation &callback_data = *callback_ptr;
-
-	if (!success) {
-		callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
-		return;
-	}
-		// Ok, we have successfully established a connection.  Let's build the request ad
-		// and shoot it off.
-	classad::ClassAd request_ad;
-	if (!request_ad.InsertAttr(ATTR_SEC_USER, callback_data.m_identity) ||
-		!request_ad.InsertAttr(ATTR_SEC_TOKEN_LIFETIME, callback_data.m_lifetime))
-	{
-		errstack->push("DCSCHEDD", 2, "Failed to create schedd request ad.");
-		callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
-		return;
-	}
-	if (!callback_data.m_authz_bounding_set.empty()) {
-		std::string authz_bounding_set_str =
-			join(callback_data.m_authz_bounding_set, ",");
-
-		if (!request_ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, authz_bounding_set_str))
-		{
-			errstack->push("DCSCHEDD", 2, "Failed to create schedd request ad.");
-			callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
-			return;
-		}
-	}
-
-	sock->encode();
-	if (!putClassAd(sock, request_ad) ||
-		!sock->end_of_message())
-	{
-		errstack->push("DCSCHEDD", 3, "Failed to send impersonation token request ad"
-			" to remote schedd.");
-		callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
-		return;
-	}
-
-		// Now, we must register a callback to wait for a response.
-	auto rc = daemonCore->Register_Socket(sock, "Impersonation Token Request",
-		(SocketHandlercpp)&ImpersonationTokenContinuation::finish,
-		"Finish impersonation token request",
-		callback_ptr.get(), HANDLE_READ);
-	if (rc < 0) {
-		errstack->push("DCSCHEDD", 4, "Failed to register callback for schedd response");
-		callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
-		return;
-	}
-
-		// At this point, the callback has been registered and DaemonCore owns the
-		// memory; release the unique_ptr to prevent it from deleting the callback
-		// object at exit.
-	callback_ptr.release();
-}
-
-
 bool
 DCSchedd::requestImpersonationTokenAsync(const std::string &identity,
 	const std::vector<std::string> &authz_bounding_set, int lifetime,
@@ -2187,11 +2141,70 @@ DCSchedd::requestImpersonationTokenAsync(const std::string &identity,
 	}
 
 		// Connect to the schedd (if necessary) and start a non-blocking command.
-		// The continuation object holds the state needed to make the request ad later.
-	auto continuation = new ImpersonationTokenContinuation(identity, authz_bounding_set,
+		// The continuation object holds the state needed to make the request ad
+		// later. The lambda captures a raw pointer and re-wraps it in a unique_ptr
+		// on entry: the continuation is either freed when the lambda returns, or
+		// released to DaemonCore when Register_Socket succeeds.
+	auto *continuation = new ImpersonationTokenContinuation(identity, authz_bounding_set,
 		lifetime, callback, misc_data);
 	auto result = startCommand_nonblocking(COLLECTOR_TOKEN_REQUEST, Stream::reli_sock, 20, &err,
-		ImpersonationTokenContinuation::startCommandCallback, continuation,
+		[continuation](bool success, Sock *sock, CondorError *errstack,
+				const std::string & /*trust_domain*/, bool /*should_try_token_request*/) {
+			std::unique_ptr<ImpersonationTokenContinuation> callback_ptr(continuation);
+			ImpersonationTokenContinuation &callback_data = *callback_ptr;
+
+			if (!success) {
+				callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
+				return;
+			}
+				// Ok, we have successfully established a connection.  Let's build the request ad
+				// and shoot it off.
+			classad::ClassAd request_ad;
+			if (!request_ad.InsertAttr(ATTR_SEC_USER, callback_data.m_identity) ||
+				!request_ad.InsertAttr(ATTR_SEC_TOKEN_LIFETIME, callback_data.m_lifetime))
+			{
+				errstack->push("DCSCHEDD", 2, "Failed to create schedd request ad.");
+				callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
+				return;
+			}
+			if (!callback_data.m_authz_bounding_set.empty()) {
+				std::string authz_bounding_set_str =
+					join(callback_data.m_authz_bounding_set, ",");
+
+				if (!request_ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, authz_bounding_set_str))
+				{
+					errstack->push("DCSCHEDD", 2, "Failed to create schedd request ad.");
+					callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
+					return;
+				}
+			}
+
+			sock->encode();
+			if (!putClassAd(sock, request_ad) ||
+				!sock->end_of_message())
+			{
+				errstack->push("DCSCHEDD", 3, "Failed to send impersonation token request ad"
+					" to remote schedd.");
+				callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
+				return;
+			}
+
+				// Now, we must register a callback to wait for a response.
+			auto rc = daemonCore->Register_Socket(sock, "Impersonation Token Request",
+				(SocketHandlercpp)&ImpersonationTokenContinuation::finish,
+				"Finish impersonation token request",
+				callback_ptr.get(), HANDLE_READ);
+			if (rc < 0) {
+				errstack->push("DCSCHEDD", 4, "Failed to register callback for schedd response");
+				callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
+				return;
+			}
+
+				// At this point, the callback has been registered and DaemonCore owns the
+				// memory; release the unique_ptr to prevent it from deleting the callback
+				// object at exit.
+			callback_ptr.release();
+		},
 		"requestImpersonationToken");
 
 	if (result == StartCommandFailed) {
@@ -2241,6 +2254,9 @@ DCSchedd::requestImpersonationTokenAsync(const std::string &identity,
 		}
 		if (fetch_opts & fetch_NoProcAds) {
 			request_ad.InsertAttr(ATTR_QUERY_Q_NO_PROC_ADS, true);
+		}
+		if (fetch_opts & fetch_ClusterBeforeJob) {
+			request_ad.InsertAttr(ATTR_QUERY_Q_CLUSTER_BEFORE_PROC_ADS, true);
 		}
 	}
 

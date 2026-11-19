@@ -14,59 +14,31 @@
 # limitations under the License.
 
 import json
-import random
-import pprint
 import logging
 
-from pathlib import Path
-from operator import itemgetter
-from collections import defaultdict
+import elasticsearch
+from elasticsearch import VERSION as ES_VERSION
 
-try:
-    import elasticsearch
-    from elasticsearch import VERSION as ES_VERSION
-    _ES_MODULE_FOUND = True
-except ModuleNotFoundError as err:
-    _ES_MODULE_FOUND = False
-    _ES_MODULE_NOT_FOUND_ERROR = err
-
-import adstash.convert as convert
-from adstash.utils import get_host_port
-from adstash.interfaces.generic import GenericInterface
+from adstash.interfaces.search_engine import SearchEngineInterface
 
 ES8 = (8,0,0)
-if _ES_MODULE_FOUND and (ES_VERSION < (7,0,0) or ES_VERSION >= (9,0,0)):
+if ES_VERSION < (7,0,0) or ES_VERSION >= (9,0,0):
     logging.warning(f"Unsupported Elasticsearch Python library {ES_VERSION}, proceeding anyway...")
 
 
-class ElasticsearchInterface(GenericInterface):
-
+class ElasticsearchInterface(SearchEngineInterface):
 
     def __init__(
             self,
-            host="localhost",
-            port="9200",
-            url_prefix="",
-            username=None,
-            password=None,
-            use_https=False,
-            ca_certs=None,
-            timeout=60,
             **kwargs
             ):
-        if not _ES_MODULE_FOUND:  # raise module not found error if missing
-            raise _ES_MODULE_NOT_FOUND_ERROR
-        self.host, self.port = get_host_port(host, port)
-        self.url_prefix = url_prefix or ""
-        self.username = username
-        self.password = password
-        self.use_https = use_https
-        self.ca_certs = ca_certs
-        self.timeout = timeout
-        self.handle = None
+        super().__init__(**kwargs)
 
 
-    def get_handle(self):
+    def get_handle(self) -> "elasticsearch.Elasticsearch":
+        """
+        Set up the Elasticsearch client if needed.
+        """
         if self.handle is not None:
             return self.handle
 
@@ -104,241 +76,86 @@ class ElasticsearchInterface(GenericInterface):
         return self.handle
 
 
-    def get_active_index(self, alias):
+    def get_health(self) -> dict:
         client = self.get_handle()
-        indices = client.indices.get_alias(name=alias)
-
-        # find which index is reporting as writable
-        for index, alias_info in indices.items():
-            if alias_info["aliases"][alias].get("is_write_index"):
-                logging.info(f"{alias} is an alias, found active index {index}.")
-                return index
-
-        # fallback to lexigraphically last index
-        indices = list(indices.keys())
-        indices.sort(reverse=True)
-        logging.warning(f"Could not find an activate index for alias {alias}, trying {indices[0]}")
-        return indices[0]
+        health = {}
+        try:
+            health = client.cluster.health()
+        except elasticsearch.exceptions.AuthorizationException:
+            logging.warning(f"Search engine user {self.username} does not have cluster-level access, cannot get health status")
+        except Exception as e:
+            logging.exception(f"Cannot get health status due to error: {e}")
+        return health
 
 
-    def get_mappings(self, index):
+    def get_active_index(self, alias: str) -> str:
         client = self.get_handle()
-        return client.indices.get_mapping(index=index)[index]["mappings"]
+        try:
+            indices = client.indices.get_alias(name=alias)
+        except elasticsearch.exceptions.NotFoundError:
+            logging.info(f"{alias} is not an alias, assuming {alias} is the active index")
+            return alias
+        return self.resolve_alias(indices, alias)
 
 
-    def make_mappings(self, ad_source=None, **kwargs):
-        properties = {}
-
-        properties["metadata"] = {
-            "properties": {
-                "adstash_runtime": {"type": "date", "format": "epoch_second"},
-                "condor_history_runtime": {"type": "date", "format": "epoch_second"},
-            },
-            "type": "nested",
-            "dynamic": True,
-        }
-
-        if ad_source is None:
-
-            for name in convert.TEXT_ATTRS:
-                properties[name] = {"type": "text"}
-            for name in convert.INDEXED_KEYWORD_ATTRS:
-                properties[name] = {"type": "keyword"}
-            for name in convert.NOINDEX_KEYWORD_ATTRS:
-                properties[name] = {"type": "keyword", "index": "false"}
-            for name in convert.FLOAT_ATTRS:
-                properties[name] = {"type": "double"}
-            for name in convert.INT_ATTRS:
-                properties[name] = {"type": "long"}
-            for name in convert.DATE_ATTRS:
-                properties[name] = {"type": "date", "format": "epoch_second"}
-            for name in convert.BOOL_ATTRS:
-                properties[name] = {"type": "boolean"}
-            for name in convert.NESTED_ATTRS:
-                properties[name] = {"type": "nested", "dynamic": True}
-
-            dynamic_templates = [
-                {
-                    "raw_expressions": {  # Attrs ending in "_EXPR" are generated during
-                        "match": "*_EXPR",  # ad conversion for expressions that cannot be evaluated
-                        "mapping": {"type": "keyword", "index": "false", "ignore_above": 256},
-                    }
-                },
-                {
-                    "date_attrs": {  # Attrs ending in "Date" are usually timestamps
-                        "match": "*Date",
-                        "mapping": {"type": "date", "format": "epoch_second"},
-                    }
-                },
-                {
-                    "provisioned_attrs": {  # Attrs ending in "Provisioned" are
-                        "match": "*Provisioned",  # resource numbers
-                        "mapping": {"type": "long"},
-                    }
-                },
-                {
-                    "resource_request_attrs": {  # Attrs starting with "Request" are
-                        "match_pattern": "regex",  # usually resource numbers
-                        "match": "^Request[A-Z].*$",
-                        "mapping": {"type": "long"},
-                    }
-                },
-                {
-                    "target_boolean_attrs": {  # Attrs starting with "Want", "Has", or
-                        "match_pattern": "regex",  # "Is" are usually boolean checks on the
-                        "match": "^(Want|Has|Is)[A-Z_].*$",  # target machine
-                        "mapping": {"type": "boolean"},
-                    }
-                },
-                {
-                    "strings_as_keywords": {  # Store unknown strings as keywords
-                        "match_mapping_type": "string",
-                        "mapping": {"type": "keyword", "norms": "false", "ignore_above": 256},
-                    }
-                },
-            ]
-
-        else:
-            for name in ad_source.text_attrs:
-                properties[name] = {"type": "text"}
-            for name in ad_source.indexed_keyword_attrs:
-                properties[name] = {"type": "keyword"}
-            for name in ad_source.noindex_keyword_attrs:
-                properties[name] = {"type": "keyword", "index": "false"}
-            for name in ad_source.float_attrs:
-                properties[name] = {"type": "double"}
-            for name in ad_source.int_attrs:
-                properties[name] = {"type": "long"}
-            for name in ad_source.date_attrs:
-                properties[name] = {"type": "date", "format": "epoch_second"}
-            for name in ad_source.bool_attrs:
-                properties[name] = {"type": "boolean"}
-            for name in ad_source.nested_attrs:
-                properties[name] = {"type": "nested", "dynamic": True}
-            dynamic_templates = ad_source.dynamic_templates
-
-        mappings = {
-            "dynamic_templates": dynamic_templates,
-            "properties": properties,
-            "date_detection": False,
-            "numeric_detection": False,
-        }
-
+    def get_mappings(self, index: str) -> dict:
+        """
+        Fetch the existing mappings for an index (if it exists)
+        """
+        client = self.get_handle()
+        mappings = {}
+        try:
+            mappings = client.indices.get_mapping(index=index)[index]["mappings"]
+        except elasticsearch.exceptions.NotFoundError:
+            logging.warning(f"Index {index} was not found, assuming no existing mappings")
         return mappings
 
 
-    def make_settings(self, **kwargs):
-        settings = {
-            "analysis": {
-                "analyzer": {
-                    "analyzer_keyword": {"tokenizer": "keyword", "filter": "lowercase"}
-                }
-            },
-            "mapping.total_fields.limit": 5000,
-        }
-        return settings
+    def get_settings(self, index: str) -> dict:
+        """
+        Fetch the existing settings for an index
+        """
+        client = self.get_handle()
+        return client.indices.get_settings(index=index)[index]["settings"]
 
 
-    def setup_index(self, index, log_mappings=True, log_dir=Path.cwd(), **kwargs):
+    def update_mappings(self, index: str, mappings: dict, **kwargs):
+        """
+        Given an index and mappings, push the new mapping to the index
+        """
         client = self.get_handle()
 
-        # check if index is an alias, and get the active index if so
-        if client.indices.exists_alias(name=index):
-            index = self.get_active_index(index)
-
-        mappings = self.make_mappings(**kwargs)
-        settings = self.make_settings(**kwargs)
-
-        if not client.indices.exists(index=index):  # push new index if doesn't exist
-            logging.info(f"Creating new index {index}.")
-            client.indices.create(index=index, mappings=mappings, settings=settings)
-            if log_mappings and log_dir:
-                mappings_file = log_dir / "condor_adstash_elasticsearch_last_mappings.json"
-                logging.debug(f"Writing new mappings to {mappings_file}.")
-                json.dump(mappings, open(mappings_file, "w"), indent=2)
-            return
-
-        # otherwise check existing index for missing mappings properties
-        update_mappings = False
-        updated_mappings = {}
-        existing_mappings = self.get_mappings(index)
-        for outer_key in mappings:
-            if outer_key not in existing_mappings:  # add anything missing
-                updated_mappings[outer_key] = mappings[outer_key]
-                update_mappings = True
-            elif isinstance(mappings[outer_key], dict):  # update missing keys in any existing dicts
-                missing_inner_keys = set(mappings[outer_key]) - set(existing_mappings[outer_key])
-                if len(missing_inner_keys) > 0:
-                    updated_mappings[outer_key] = {}
-                    for inner_key in missing_inner_keys:
-                        updated_mappings[outer_key][inner_key] = mappings[outer_key][inner_key]
-                    update_mappings = True
-        if update_mappings:
-            logging.info(f"Updated mappings for index {index}")
-            logging.debug(f"{pprint.pformat(updated_mappings)}")
-            if ES_VERSION < ES8:
-                client.indices.put_mapping(index=index, body=json.dumps(updated_mappings))
-            elif ES_VERSION >= ES8:
-                client.indices.put_mapping(index=index, **updated_mappings)
-            if log_mappings and log_dir:
-                mappings_file = log_dir / "condor_adstash_elasticsearch_last_mappings.json"
-                logging.debug(f"Writing updated mappings to {mappings_file}.")
-                json.dump(updated_mappings, open(mappings_file, "w"), indent=2)
+        logging.info(f"Updating mappings for index {index}")
+        logging.debug(json.dumps(mappings, indent=2))
+        if ES_VERSION < ES8:
+            client.indices.put_mapping(index=index, body=json.dumps(mappings))
+        elif ES_VERSION >= ES8:
+            client.indices.put_mapping(index=index, **mappings)
 
 
-    def make_bulk_body(self, ads, metadata={}):
-        body = ""
-        for doc_id, ad in ads:
-            if metadata:
-                ad.setdefault("metadata", {}).update(metadata)
-            action = {"index": {"_id": doc_id}}
-            body += f"{json.dumps(action)}\n{json.dumps(ad)}\n"
-        return body
-
-
-    def get_error_info(self, result):
-        if not result["errors"]:
-            return 0
-
-        n_errors = 0
-        error_types = defaultdict(int)
-        error_reasons = []
-        for item in result["items"]:
-            try:
-                error = item["index"]["error"]
-                n_errors += 1
-            except (KeyError, TypeError):
-                continue
-            try:
-                error_reasons.append(error["reason"])
-            except (KeyError, TypeError):
-                pass
-            try:
-                error_type = error["type"]
-            except (KeyError, TypeError):
-                error_type = "unknown"
-            error_types[error_type] += 1
-
-        error_type_list = list(error_types.items())
-        error_type_list.sort(key=itemgetter(1), reverse=True)
-        error_type_strs = []
-        for (error_type, n) in error_type_list[:3]:
-            error_type_strs.append(f"{error_type} ({n} times)")
-        logging.error(f"{n_errors} errors encountered during bulk index.")
-        logging.error(f"""Most common error type(s): {", ".join(error_type_strs)}.""")
-        try:
-            logging.error(f"""Example reason: {random.choice(error_reasons)}.""")
-        except IndexError:
-            pass
-
-        return n_errors
-
-
-    def post_ads(self, ads, index, metadata={}, **kwargs):
+    def update_settings(self, index: str, settings: dict, **kwargs):
+        """
+        Given an index and settings, push the new settings to the index
+        """
         client = self.get_handle()
 
-        self.setup_index(index, **kwargs)
+        logging.info(f"Updating settings for index {index}")
+        logging.debug(json.dumps(settings, indent=2))
+        if ES_VERSION < ES8:
+            client.indices.put_settings(index=index, body=json.dumps(settings))
+        elif ES_VERSION >= ES8:
+            client.indices.put_settings(index=index, settings=settings)
+
+
+    def post_ads(self, ads: list, index: str, metadata=None, **kwargs) -> dict:
+        """
+        Push a list of JSON-ified ads in the format
+        [(doc_id, ad), (doc_id, ad), ...]
+        to the given Elasticsearch index.
+        """
+        client = self.get_handle()
+
         body = self.make_bulk_body(ads, metadata)
-        result = client.bulk(body=body, index=index)
-        n_errors = self.get_error_info(result)
+        result = client.bulk(body=body, index=index, filter_path=["errors", "took", "items.*.index.error.**", "items.*.index.status"])
+        n_errors = self.get_error_count(result, n_ads=len(ads), **kwargs)
         return {"success": len(ads)-n_errors, "error": n_errors}

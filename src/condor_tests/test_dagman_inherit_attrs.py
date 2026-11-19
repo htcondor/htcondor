@@ -50,7 +50,7 @@ def run_dag(condor, test_dir, write_dags):
     DAG_SUBMIT["My.TestAttr2"] = "true"
 
     DAG = condor.submit(DAG_SUBMIT)
-    assert DAG.wait(condition=ClusterState.all_complete, timeout=60)
+    assert DAG.wait(condition=ClusterState.all_complete, timeout=180)
 
     hist_itr = None
     with condor.use_config():

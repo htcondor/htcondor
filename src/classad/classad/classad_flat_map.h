@@ -79,7 +79,11 @@ struct ClassAdFlatMapOrder {
 
 // note this needs to be inline for ODR reasons
 inline bool ClassAdFlatMapEqual(const std::pair<std::string, ExprTree *>&lhs, const std::string &rhs) {
-	return 0 == strcasecmp(lhs.first.c_str(), rhs.c_str());
+	// Length is stored inline in std::string, so check it first: it lets us
+	// reject a mismatch (e.g. when lower_bound overshot to a longer name)
+	// without the strcasecmp reading both character buffers, which for names
+	// longer than the SSO limit means chasing a heap pointer.
+	return lhs.first.size() == rhs.size() && 0 == strcasecmp(lhs.first.c_str(), rhs.c_str());
 }
 
 inline bool ClassAdFlatMapEqual(const std::pair<std::string, ExprTree *>&lhs, const char *rhs) {

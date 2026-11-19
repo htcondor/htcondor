@@ -1,9 +1,6 @@
 JOBSTATE_LOG \
 	job_dagman_jobstate_log.dag.jobstate.log
 
-CONFIG \
-	job_dagman_jobstate_log.config
-
 # This job queues two procs that fail, but the post script succeeds.
 Job NodeA \
 	job_dagman_jobstate_log-nodeA.cmd

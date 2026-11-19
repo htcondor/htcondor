@@ -34,7 +34,6 @@
 #include "internet.h"
 #include "my_hostname.h"
 #include "condor_state.h"
-#include "condor_string.h"
 #include "condor_random_num.h"
 #include "../condor_procapi/procapi.h"
 //#include "misc_utils.h"
@@ -187,5 +186,6 @@ void	startd_exit_if_idle(int tid = -1);
 void	main_config();
 
 #define COLORING_NAMESPACE "#coloring"
+#define CATALOG_NAMESPACE "#catalog"
 
 #endif /* _CONDOR_STARTD_H */

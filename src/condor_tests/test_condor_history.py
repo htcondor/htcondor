@@ -113,6 +113,10 @@ TEST_CASES = {
     "epoch_transfer_type":TestReqs("condor_history -epochs -type transfer", ["2.0","4.0","4.1","6.0","6.1","10.0"], STD_HEADER),
     "epoch_all_type"    : TestReqs("condor_history -epochs -type ALL", ["1.0","2.0","3.0","4.0","4.1","5.0","6.0","6.1","7.0","8.0","9.0","10.0"], STD_HEADER),
     "epoch_unknown_type": TestReqs("condor_history -epochs -type UNKNOWN", header=STD_HEADER),
+    # Regression: -type filtering used to only be enforced when reading backwards
+    # (the default); forward reads silently ignored it. Same expected set as
+    # epoch_input_type above, just read forwards instead.
+    "epoch_input_type_forwards": TestReqs("condor_history -epochs -forwards -type input", ["2.0","6.0","6.1"], STD_HEADER),
     # Test -transfer[-history] flag > Note: This tests the flags autosetup not the actual contents of the Ads since the
     #                                       tests 'transfer' ads are synthesized from a job ad not actual transfer ads
     "transfer_flag_all"     : TestReqs("condor_history -transfer -af:jh Owner", ["2.0","4.0","4.1","6.0","6.1","10.0"], ["ID", "Owner"]),
@@ -154,7 +158,37 @@ TEST_ERROR_CASES = {
         "cmd": "condor_history -daemon:foo",
         "err": "No daemon history to read: FOO_DAEMON_HISTORY undefined",
         "config": {},
-    }
+    },
+    "fail_dagid_not_int" : {
+        "cmd": "condor_history -dagid foo",
+        "err": "Invalid DAGMan job id 'foo' provided to -dagid",
+        "config": {},
+    },
+    "fail_dagid_trailing_junk" : {
+        "cmd": "condor_history -dagid 12abc",
+        "err": "Invalid DAGMan job id '12abc' provided to -dagid",
+        "config": {},
+    },
+    "fail_dagid_not_positive" : {
+        "cmd": "condor_history -dagid 0",
+        "err": "Invalid DAGMan job id '0' provided to -dagid",
+        "config": {},
+    },
+    "fail_dagid_no_arg" : {
+        "cmd": "condor_history -dagid",
+        "err": "Argument -dagid requires another parameter.",
+        "config": {},
+    },
+    "fail_batchid_no_arg" : {
+        "cmd": "condor_history -batchid",
+        "err": "Argument -batchid requires another parameter.",
+        "config": {},
+    },
+    "fail_batchname_no_arg" : {
+        "cmd": "condor_history -batchname",
+        "err": "Argument -batchname requires another parameter.",
+        "config": {},
+    },
 }
 #===============================================================================================
 # Reconfig condor to how we want
@@ -589,6 +623,27 @@ Bar=1
     return p
 
 #===============================================================================================
+# Second record's body is an unparseable expression ("(broken" is never closed), so
+# condor_history must print a "Bad history file" warning and skip it while still
+# printing the well-formed first record. Parametrized over both directions since
+# they now share the same reader/parsing code.
+@action(params={"forwards" : "-forwards", "backwards" : "-backwards"})
+def runMalformedAd(default_condor, request):
+    MALFORMED_AD_HISTORY = "malformed.ad.hist"
+    with open(MALFORMED_AD_HISTORY, "w") as f:
+        f.write(
+"""
+Foo=True
+Bar=2
+***
+Foo = (broken
+***
+"""
+        )
+    p = default_condor.run_command(["condor_history",request.param,"-file",MALFORMED_AD_HISTORY,"-af","Bar","Foo"])
+    return p
+
+#===============================================================================================
 @action
 def getDaemonHistory(default_condor):
     # NOTE: This (by default) gets Schedd records from daemon history
@@ -671,7 +726,165 @@ def pbh_actual(default_condor, writeHistoryFile, pbh_test_case_args):
             ** pbh_test_case_args
         )
 
+#===============================================================================================
+# Regression test for a bug where `condor_history <cluster>.<proc>` (and, in an analogous way,
+# `condor_history <cluster>`) could silently miss a job ad that genuinely exists in the history
+# file. While scanning backwards, condor_history used to assume history files are appended in
+# strictly increasing CompletionDate order, and would stop scanning as soon as it saw *any* ad
+# (even one from an unrelated cluster) whose CompletionDate predated the QDate of the cluster
+# being searched for. That assumption isn't guaranteed - e.g. LeaveJobInQueue can delay a job's
+# append to history well past its actual completion time - so a job appended out of CompletionDate
+# order can fool the tool into stopping the scan before it ever reaches the real, still-unread
+# target ad. The fix bounds cluster-only searches by CurrentTime - the actual time a record was
+# appended - instead of CompletionDate, since only append order is guaranteed monotonic.
+#
+# History file in order Top (oldest/first appended) -> Bottom (newest/last appended):
+# JID   QDate CompletionDate CurrentTime
+# 900.5 (target proc)               1000  1060  1060
+# 950.0 (unrelated cluster)         400   500   1200 <- CompletionDate looks "completed" before 900
+#                                                         was even submitted, but it was actually
+#                                                         archived (CurrentTime) well after 900's
+#                                                         QDate, e.g. due to LeaveJobInQueue.
+# 900.9 (other proc of cluster 900) 1000  1065  1300
+#
+# Scanning backwards for "900.5": we first hit 900.9 (same cluster, wrong proc), which records
+# cluster 900's QDate (1000). We then hit 950.0, whose CompletionDate (500) is less than that
+# QDate. With the bug, this falsely looked like proof nothing more could be found, and the scan
+# stopped right there - before ever reaching 900.5, which sits even further back in the file.
+#
+# Scanning backwards for "900" (cluster-only): the same 950.0 ad is encountered between the two
+# 900 procs. Using CompletionDate (500), 1000 > 500 would falsely stop the scan before 900.5 is
+# ever reached. Using CurrentTime (1200) instead, 1000 is not > 1200 + slop, so the scan correctly
+# continues on to find 900.5.
+COMP_ORDER_CLUSTER = 900
+COMP_ORDER_TARGET_PROC = 5
+COMP_ORDER_OTHER_PROC = 9
+COMP_ORDER_UNRELATED_CLUSTER = 950
 
+@action
+def writeCompletionOrderFile(test_dir, jobAd):
+    filename = os.path.join(str(test_dir), "completion_order.hist")
+    ad = dict(jobAd)
+    ad["HistoryType"] = '"SCHEDD"'
+    ad["Owner"] = "\"cole\""
+
+    def block(cluster, proc, qdate, completion, currentTime, offset):
+        ad["ClusterId"] = cluster
+        ad["ProcId"] = proc
+        ad["QDate"] = qdate
+        ad["CompletionDate"] = completion
+        ad_str = "".join(f"{key}={ad[key]}\n" for key in sorted(ad.keys()))
+        ad_str += (f"*** Offset = {offset} ClusterId = {cluster} ProcId = {proc} Owner = \"cole\" "
+                   f"CompletionDate = {completion} CurrentTime = {currentTime}\n")
+        return ad_str
+
+    text = block(COMP_ORDER_CLUSTER, COMP_ORDER_TARGET_PROC, 1000, 1060, 1060, 0)
+    text += block(COMP_ORDER_UNRELATED_CLUSTER, 0, 400, 500, 1200, sys.getsizeof(text))
+    text += block(COMP_ORDER_CLUSTER, COMP_ORDER_OTHER_PROC, 1000, 1065, 1300, sys.getsizeof(text))
+
+    with open(filename, "w") as f:
+        f.write(text)
+    return filename
+
+#===============================================================================================
+# -dagid / -batchid / -batchname searches against a plain history file (file-scan path).
+# Banners carry DAGManJobId, JobBatchId, and JobBatchName (as written by AppendHistory)
+# so condor_history can rule records out from the banner without parsing the ad.
+# The same records are also written as an epoch file (banners lead with the record
+# type, e.g. "*** EPOCH ...") to check the quick scan with -epochs.
+#
+# History file in order Top (oldest) -> Bottom (newest):
+# JID   Banner (DAG / BatchId / BatchName)  Ad body (DAG / BatchId / BatchName)
+# 600.0 7 / 100  / Alpha                    7 / 100  / Alpha    <- real match
+# 601.0 8 / 200  / Beta                     7 / 100  / Alpha    <- banner rules it out (quick scan)
+# 602.0 7 / 100  / Alpha                    9 / 300  / Gamma    <- banner passes, constraint rejects
+# 603.0 7 / 400  / alpha                    7 / 400  / alpha    <- batch name case differs from 600.0
+# 604.0 - / -    / -                        - / -    / -        <- 2 proc cluster w/o DAG/batch info
+# 604.1 - / -    / -                        - / -    / -
+# 605.0 7 / 500  / team DAGManJobId=8 note  7 / 500  / team DAGManJobId=8 note
+#
+# 601.0 can only be excluded if condor_history trusts the banner: a full ad scan
+# would match it. 602.0 confirms a banner match is still checked against the ad.
+# 605.0 has attribute-like text inside its quoted batch name, which the banner parser
+# must not read as a DAGManJobId=8 that overwrites the real one (ruling out -dagid 7).
+DAG_BATCH_CLUSTER_NO_INFO = 604
+DAG_BATCH_RECORDS = [
+    # (cluster, proc, banner (dag, id, name), body (dag, id, name)); None = no DAG/batch attributes
+    (600, 0, (7, "100", "Alpha"), (7, "100", "Alpha")),
+    (601, 0, (8, "200", "Beta"),  (7, "100", "Alpha")),
+    (602, 0, (7, "100", "Alpha"), (9, "300", "Gamma")),
+    (603, 0, (7, "400", "alpha"), (7, "400", "alpha")),
+    (DAG_BATCH_CLUSTER_NO_INFO, 0, None, None),
+    (DAG_BATCH_CLUSTER_NO_INFO, 1, None, None),
+    (605, 0, (7, "500", "team DAGManJobId=8 note"), (7, "500", "team DAGManJobId=8 note")),
+]
+
+DAG_BATCH_CASES = {
+    "batchname"             : (["-batchname", "Alpha"], ["600.0"]),
+    "batchname_case"        : (["-batchname", "alpha"], ["603.0"]),
+    "batchname_no_match"    : (["-batchname", "ALPHA"], []),
+    "batchid"               : (["-batchid", "100"], ["600.0"]),
+    "batchid_other"         : (["-batchid", "400"], ["603.0"]),
+    "batchid_no_match"      : (["-batchid", "999"], []),
+    "dagid"                 : (["-dagid", "7"], ["600.0", "603.0", "605.0"]),
+    "dagid_no_match"        : (["-dagid", "8"], []),
+    "batchname_attr_text"   : (["-batchname", "team DAGManJobId=8 note"], ["605.0"]),
+    "multi_term"            : (["-batchname", "Alpha", "-batchid", "400"], ["600.0", "603.0"]),
+    # Finding every proc of the requested cluster must not end the scan early
+    # while other (non job id) terms may still match older records.
+    "cluster_and_batchname" : ([str(DAG_BATCH_CLUSTER_NO_INFO), "-batchname", "Alpha"], ["600.0", "604.0", "604.1"]),
+    "cluster_and_dagid"     : ([str(DAG_BATCH_CLUSTER_NO_INFO), "-dagid", "7"], ["600.0", "603.0", "604.0", "604.1", "605.0"]),
+}
+
+def writeDagBatchRecords(filename, jobAd, epoch):
+    """Write DAG_BATCH_RECORDS to filename with history (or epoch) style banners."""
+    t = int(time())
+    text = ""
+    for cluster, proc, banner, body in DAG_BATCH_RECORDS:
+        ad = dict(jobAd)
+        for attr in ("DAGManJobId", "JobBatchId", "JobBatchName"):
+            ad.pop(attr, None)
+        ad["HistoryType"] = '"SCHEDD"'
+        ad["Owner"] = '"cole"'
+        ad["ClusterId"] = cluster
+        ad["ProcId"] = proc
+        ad["QDate"] = t
+        ad["CompletionDate"] = t + 60
+        ad["TotalSubmitProcs"] = sum(1 for rec in DAG_BATCH_RECORDS if rec[0] == cluster)
+        if body is not None:
+            ad["DAGManJobId"] = body[0]
+            ad["JobBatchId"] = f'"{body[1]}"'
+            ad["JobBatchName"] = f'"{body[2]}"'
+        text += "".join(f"{key}={ad[key]}\n" for key in sorted(ad.keys()))
+        if epoch:
+            text += f"*** EPOCH ClusterId={cluster} ProcId={proc} RunInstanceId=0 Owner=\"cole\" CurrentTime={t + 60}"
+        else:
+            text += (f"*** Offset={len(text)} ClusterId={cluster} ProcId={proc} Owner=\"cole\" "
+                     f"CompletionDate={t + 60} CurrentTime={t + 60}")
+        if banner is not None:
+            text += f" DAGManJobId={banner[0]} JobBatchId=\"{banner[1]}\" JobBatchName=\"{banner[2]}\""
+        text += "\n"
+    with open(filename, "w") as f:
+        f.write(text)
+    return filename
+
+@action
+def writeDagBatchFile(test_dir, jobAd):
+    return writeDagBatchRecords(os.path.join(str(test_dir), "dag_batch.hist"), jobAd, False)
+
+@action
+def writeDagBatchEpochFile(test_dir, jobAd):
+    return writeDagBatchRecords(os.path.join(str(test_dir), "dag_batch.epoch"), jobAd, True)
+
+@action(params={name: name for name in DAG_BATCH_CASES})
+def dagBatchCase(request):
+    return DAG_BATCH_CASES[request.param]
+
+@action(params={"forwards" : "-forwards", "backwards" : "-backwards"})
+def dagBatchDirection(request):
+    return request.param
+
+#===============================================================================================
 class TestCondorHistory:
 
     def test_condor_history(self, testName, testInfo, testOutputFile):
@@ -780,6 +993,11 @@ class TestCondorHistory:
         for line in runEmptyBanner.stdout.split("\n"):
             assert line == "2 true" or line == "1 false"
 
+    def test_malformed_ad_warns_and_skips(self, runMalformedAd):
+        assert runMalformedAd.stderr == ""
+        assert "Bad history file" in runMalformedAd.stdout
+        assert "2 true" in runMalformedAd.stdout.split("\n")
+
     def test_daemon_history(self, getDaemonHistory):
         path, cmd = getDaemonHistory
 
@@ -824,6 +1042,54 @@ class TestCondorHistory:
         # Make sure DaemonCore wrote write date attribute to record
         assert "RecordWriteDate" in record
 
-
     def test_python_bindings_harder(self, pbh_expected, pbh_actual):
         assert pbh_expected == pbh_actual
+
+    def test_completion_date_ordering_regression(self, default_condor, writeCompletionOrderFile):
+        target = f"{COMP_ORDER_CLUSTER}.{COMP_ORDER_TARGET_PROC}"
+        p = default_condor.run_command(["condor_history", target, "-file", writeCompletionOrderFile,
+                                         "-af", "ClusterId", "ProcId"])
+        assert p.stdout.strip() == f"{COMP_ORDER_CLUSTER} {COMP_ORDER_TARGET_PROC}"
+
+    def test_completion_date_ordering_regression_cluster_only(self, default_condor, writeCompletionOrderFile):
+        p = default_condor.run_command(["condor_history", str(COMP_ORDER_CLUSTER), "-file", writeCompletionOrderFile,
+                                         "-af", "ClusterId", "ProcId"])
+        lines = [line for line in p.stdout.strip().split("\n") if line]
+        assert set(lines) == {
+            f"{COMP_ORDER_CLUSTER} {COMP_ORDER_TARGET_PROC}",
+            f"{COMP_ORDER_CLUSTER} {COMP_ORDER_OTHER_PROC}",
+        }
+
+    # Same two fixtures, read forwards instead of the default backwards, to confirm
+    # the unified reader gives the same complete result set in either direction.
+    def test_completion_date_ordering_regression_forwards(self, default_condor, writeCompletionOrderFile):
+        target = f"{COMP_ORDER_CLUSTER}.{COMP_ORDER_TARGET_PROC}"
+        p = default_condor.run_command(["condor_history", "-forwards", target, "-file", writeCompletionOrderFile,
+                                         "-af", "ClusterId", "ProcId"])
+        assert p.stdout.strip() == f"{COMP_ORDER_CLUSTER} {COMP_ORDER_TARGET_PROC}"
+
+    def test_completion_date_ordering_regression_cluster_only_forwards(self, default_condor, writeCompletionOrderFile):
+        p = default_condor.run_command(["condor_history", "-forwards", str(COMP_ORDER_CLUSTER), "-file", writeCompletionOrderFile,
+                                         "-af", "ClusterId", "ProcId"])
+        lines = [line for line in p.stdout.strip().split("\n") if line]
+        assert set(lines) == {
+            f"{COMP_ORDER_CLUSTER} {COMP_ORDER_TARGET_PROC}",
+            f"{COMP_ORDER_CLUSTER} {COMP_ORDER_OTHER_PROC}",
+        }
+
+    def test_dag_batch_search(self, default_condor, writeDagBatchFile, dagBatchCase, dagBatchDirection):
+        args, expected = dagBatchCase
+        p = default_condor.run_command(["condor_history", dagBatchDirection] + args +
+                                       ["-file", writeDagBatchFile, "-af", "ClusterId", "ProcId"])
+        assert p.stderr == ""
+        jobids = [".".join(line.split()) for line in p.stdout.strip().split("\n") if line.strip()]
+        assert sorted(jobids) == sorted(expected)
+
+    def test_dag_batch_epoch_search(self, default_condor, writeDagBatchEpochFile, dagBatchCase, dagBatchDirection):
+        """Same searches against epoch records, whose banners lead with the record type."""
+        args, expected = dagBatchCase
+        p = default_condor.run_command(["condor_history", "-epochs", dagBatchDirection] + args +
+                                       ["-file", writeDagBatchEpochFile, "-af", "ClusterId", "ProcId"])
+        assert p.stderr == ""
+        jobids = [".".join(line.split()) for line in p.stdout.strip().split("\n") if line.strip()]
+        assert sorted(jobids) == sorted(expected)

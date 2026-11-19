@@ -41,6 +41,7 @@ extern const MACRO_SOURCE DefaultMacro;
 class YourString ystr; // most recent lookup
 auto_free_ptr gstr;    // holds a pointer from the most recent lookup that should be freed
 std::string gmstr;   // holds a formatted string that results from dumping a macro set
+std::string gexcmsg; // holds most recent config exception message
 
 bool dash_verbose = false;
 int fail_count;
@@ -66,6 +67,17 @@ template <> bool within(YourString ys, const char* lb, const char* hb) {
 	} else if( verbose ) { \
 		fprintf( stdout, "    OK %5d: %s \t# %s\n", __LINE__, #condition, ystr.ptr() ? ystr.ptr() : "NULL" ); \
 	}
+
+#define REQUIRE_EXCEPT( condition, msg ) \
+	if(! ( condition ) || gexcmsg.find( #msg ) == std::string::npos ) { \
+		fprintf( stderr, "Failed %5d: %s\n", __LINE__, #condition ); \
+		fprintf( stderr, "             : actual value: %s :\n", ystr.ptr() ? ystr.ptr() : "NULL"); \
+		fprintf( stderr, "             : find '%s' in : '%s'\n",  #msg , gexcmsg.c_str()); \
+		++fail_count; \
+	} else if( verbose ) { \
+		fprintf( stdout, "    OK %5d: %s \t# %s \texcept:%s\n", __LINE__, #condition, ystr.ptr() ? ystr.ptr() : "NULL", gexcmsg.c_str() ); \
+	}
+
 
 static MACRO_DEFAULTS TestingMacroDefaults = { 0, NULL, NULL };
 static MACRO_SET TestingMacroSet = {
@@ -110,18 +122,35 @@ YourString & lookup_lcl_as(const char * local, const char * prefix, const char *
 	return ystr;
 }
 
+void CatchConfigException(const char * msg, int /*src_line*/, const char * /*src_file*/)
+{
+	gexcmsg = msg;
+}
+
 // The expand helpers return a ystr, and also store the malloc'ed return value
 // in an auto_free_ptr so that the will be automatically freed by the next REQUIRE
 //
 YourString expand(const char * value) {
+	gexcmsg.clear();
 	gstr.set(expand_macro(value, TestingMacroSet, def_ctx));
 	ystr = gstr.ptr();
+	return ystr;
+}
+
+// expand using the std::string overload of expand_macro, which has its own macro function evaluation
+std::string gsstr;
+YourString expand_str(const char * value) {
+	gexcmsg.clear();
+	gsstr = value;
+	expand_macro(gsstr, 0, TestingMacroSet, def_ctx);
+	ystr = gsstr.c_str();
 	return ystr;
 }
 
 YourString expand_as(const char * prefix, const char * value) {
 	MACRO_EVAL_CONTEXT ctx = def_ctx;
 	ctx.subsys = prefix;
+	gexcmsg.clear();
 	gstr.set(expand_macro(value, TestingMacroSet, ctx));
 	ystr = gstr.ptr();
 	return ystr;
@@ -130,6 +159,7 @@ YourString expand_as(const char * prefix, const char * value) {
 YourString expand_lcl(const char * local, const char * value) {
 	MACRO_EVAL_CONTEXT ctx = def_ctx;
 	ctx.localname = local;
+	gexcmsg.clear();
 	gstr.set(expand_macro(value, TestingMacroSet, ctx));
 	ystr = gstr.ptr();
 	return ystr;
@@ -139,6 +169,7 @@ YourString expand_lcl_as(const char * local, const char * prefix, const char * v
 	MACRO_EVAL_CONTEXT ctx = def_ctx;
 	ctx.subsys = prefix;
 	ctx.localname = local;
+	gexcmsg.clear();
 	gstr.set(expand_macro(value, TestingMacroSet, ctx));
 	ystr = gstr.ptr();
 	return ystr;
@@ -244,6 +275,15 @@ static void insert_testing_macros(const char * local, const char * subsys)
 		{"List6c", "aa,bb, cc,dd,ee,ff"},
 		{"MASTER.List6c", "JMK,Vvv,XX,YY,ZKM,ZA"},
 		{"List6cq", "$Fq(list6c)"},
+		{"fileEmptyQuoted", "\"\""},
+		{"fileEmptySQuoted", "''"},
+
+		// for expansion limit tests
+		{"CycleA", "$(CycleB)"},
+		{"CycleB", "$(CycleA)"},
+		{"SelfInt", "$INT(SelfInt)"},
+		{"SelfInt2", "$INT(SelfInt2)$INT(SelfInt2)"},
+		{"SelfString", "$STRING(SelfString)"},
 
 		// for $INT and $REAL tests
 		{"DoubleVanilla", "$(VANILLA)*2"},
@@ -291,6 +331,8 @@ static void dump_macro_set(MACRO_SET & set, std::string & str, const char * pref
 //
 void testparse(int lineno, MACRO_SET & set, MACRO_EVAL_CONTEXT &ctx, MACRO_SOURCE & source, bool verbose, const char * tag, const char * params, const char * expected)
 {
+	set.defaults = &TestingMacroDefaults;
+
 	int ret = Parse_config_string(source, 0, params, set, ctx);
 	const char * hashout = NULL;
 	if (ret < 0) {
@@ -298,6 +340,7 @@ void testparse(int lineno, MACRO_SET & set, MACRO_EVAL_CONTEXT &ctx, MACRO_SOURC
 			lineno, tag, ctx.localname ? ctx.localname : "", ctx.subsys ? ctx.subsys : "", ret);
 		gmstr.clear();
 		hashout = NULL;
+		fail_count++;
 	} else {
 		dump_macro_set(set, gmstr, "\t");
 		hashout = gmstr.c_str();
@@ -305,6 +348,7 @@ void testparse(int lineno, MACRO_SET & set, MACRO_EVAL_CONTEXT &ctx, MACRO_SOURC
 			fprintf(stderr, "Failed %5d: test '%s' local=%s subsys=%s resulting hashtable does not match expected\n",
 				lineno, tag, ctx.localname ? ctx.localname : "", ctx.subsys ? ctx.subsys : "");
 			ret = -1;
+			fail_count++;
 		} else if (verbose) {
 			fprintf(stdout, "    OK %5d: test '%s' local=%s subsys=%s\n",
 				lineno, tag, ctx.localname ? ctx.localname : "", ctx.subsys ? ctx.subsys : "");
@@ -318,6 +362,10 @@ void testparse(int lineno, MACRO_SET & set, MACRO_EVAL_CONTEXT &ctx, MACRO_SOURC
 		fprintf(ret ? stderr : stdout, "\t---- end %d ----\n\n", lineno);
 	}
 
+	if (set.apool.contains((const char *)set.defaults)) {
+		fprintf(stderr, "ERROR: about to clear MACRO_SET defaults when it should not be!\n");
+		++fail_count;
+	}
 	clear_macro_set(set);
 }
 
@@ -341,6 +389,17 @@ void testparse_lcl_as(const char * local, const char *prefix, int lineno, MACRO_
 	ctx.localname = local;
 	ctx.subsys = prefix;
 	testparse(lineno, set, ctx, source, verbose, tag, params, expected);
+}
+
+// parse text in config syntax the way a config file is parsed, using Parse_macros
+// rather than Parse_config_string, so that it goes through getline
+static int parse_mem(MACRO_SET & set, const char * text)
+{
+	MACRO_SOURCE source{};
+	insert_source("parse_mem", set, source);
+	MacroStreamMemoryFile ms(text, -1, source);
+	std::string errmsg;
+	return Parse_macros(ms, 0, set, 0, &def_ctx, errmsg, nullptr, nullptr);
 }
 
 //
@@ -377,6 +436,15 @@ void testing_parser(bool verbose)
 	testparse_as("NEGOTIATOR", __LINE__, set, def_ctx, source, verbose, "subsys.self sub2", n1, n1e1);
 	testparse_lcl("N1", __LINE__, set, def_ctx, source, verbose, "subsys.self sub3", n1, n1e2);
 	testparse_lcl_as("N1", "NEGOTIATOR", __LINE__, set, def_ctx, source, verbose, "subsys.self sub4", n1, n1e2);
+
+	// parse errors must not free getline's static line buffer, which the next parse reuses
+	// and frees again at end of input. #opt:strict makes param assignment with : an error
+	MACRO_SET mset;
+	mset.initialize(CONFIG_OPT_SMART_COM_IN_CONT | CONFIG_OPT_COLON_IS_META_ONLY); // errors go into mset.errors
+	mset.defaults = &TestingMacroDefaults;
+	REQUIRE( parse_mem(mset, "#opt:strict\nfoo : bar\n") < 0 );
+	REQUIRE( parse_mem(mset, "A = 1\nB = 2\n") == 0 );
+	REQUIRE( (ystr = lookup_macro("B", mset, def_ctx)) == "2" );
 }
 
 void testing_lookups(bool verbose)
@@ -551,12 +619,19 @@ void testing_$RAND_expand(bool verbose)
 	REQUIRE( within(expand("$RANDOM_INTEGER(3,9,3)"), 3, 9) );
 	REQUIRE( within(expand("$RANDOM_INTEGER(0,9,3)"), 0, 9) );
 
+	REQUIRE_EXCEPT ( expand("$RANDOM_INTEGER()") == "0", invalid max );
+	REQUIRE_EXCEPT ( expand("$RANDOM_INTEGER(a,b)") == "0", invalid max );
+	REQUIRE_EXCEPT ( expand("$RANDOM_INTEGER(6,5)") == "5", min > max );
+	REQUIRE_EXCEPT ( within(expand("$RANDOM_INTEGER(2,5,-4)"), 2, 5), invalid step );
+
 	REQUIRE( within(expand("$RANDOM_CHOICE(1,2,2,1)"), 1, 2) );
 	REQUIRE( within(expand("$RANDOM_CHOICE(aa,bb,cc)"), "aa", "cc") );
 	REQUIRE( within(expand("$RANDOM_CHOICE(List6c)"), "aa", "ff") );
 	REQUIRE( within(expand_as("MASTER", "$RANDOM_CHOICE(List6c)"), "JMK", "ZKM") );
 	REQUIRE( expand("$RANDOM_CHOICE(1)") == "1" );
 	REQUIRE( expand("$RANDOM_CHOICE(aa bb cc)") == "aa bb cc" );
+
+	REQUIRE_EXCEPT ( expand("$RANDOM_CHOICE()") == "", macro is empty );
 }
 
 void testing_$F_expand(bool verbose)
@@ -871,6 +946,39 @@ void testing_$F_regressions(bool verbose)
 
 	REQUIRE( expand("$F(Items5) ff") == "aa bb cc dd ee ff" );
 	REQUIRE( expand("\"$F(Items5Quoted) ff\"") == "\"aa bb cc dd ee ff\"" );
+
+	// a value that is only a pair of quotes used to underflow the copy length in strcpy_quoted
+	REQUIRE( expand("$F(\"\")") == "" );
+	REQUIRE( expand("$F(fileEmptyQuoted)") == "" );
+	REQUIRE( expand("$Fn(fileEmptyQuoted)") == "" );
+	REQUIRE( expand("$Fq(fileEmptyQuoted)") == "\"\"" );
+	REQUIRE( expand("$Fqn(fileEmptyQuoted)") == "\"\"" );
+	REQUIRE( expand("$Fa(fileEmptySQuoted)") == "" );
+	REQUIRE( expand("$Fqa(fileEmptySQuoted)") == "''" );
+
+	// asking for more dirs than the path has used to pop_back on an empty vector
+	REQUIRE( expand("$Fdddddddd(fileAbsDeep)") == "/six/five/four/three/two/one/" );
+	REQUIRE( expand("$Fdddddd(fileRelDeep)") == "a/b/c/d/e/" );
+	REQUIRE( expand("$Fddddddb(fileRelDeep)") == "a/b/c/d/e" );
+	REQUIRE( expand("$Fddd(fileDirs)") == "/dur/" );
+	REQUIRE( expand("$Fddnx(fileDirs)") == "/dur/der" );
+}
+
+void testing_expand_limits(bool verbose)
+{
+	if (verbose) {
+		fprintf( stdout, "\n----- testing_expand_limits ----\n\n");
+	}
+	// circular references used to hang, self references through a macro function used to overflow the stack
+	REQUIRE_EXCEPT( expand("$(CycleA)") == "", iteration limit exceeded );
+	REQUIRE_EXCEPT( expand("x$(CycleA)y") == "", iteration limit exceeded );
+	REQUIRE_EXCEPT( expand("$INT(SelfInt)") == "", nested too deeply );
+	REQUIRE_EXCEPT( expand("$INT(SelfInt2)") == "", nested too deeply );
+	REQUIRE_EXCEPT( expand("x$STRING(SelfString)y") == "", nested too deeply );
+
+	// a failed expansion should not affect the next one
+	REQUIRE( expand("$INT(VANILLA)") == "5" );
+	REQUIRE( expand("$INT(DoubleVanilla,%d)") == "10" );
 }
 
 void testing_$CHOICE_expand(bool verbose)
@@ -901,6 +1009,13 @@ void testing_$CHOICE_expand(bool verbose)
 	REQUIRE( expand_as("MASTER", "$CHOICE(CHOCOLATE,List6c)") == "YY" );
 	REQUIRE( expand_lcl("LOWER", "$CHOICE(CHOCOLATE,List6c)") == "cc" );
 	REQUIRE( expand_lcl_as("LOWER", "MASTER", "$CHOICE(CHOCOLATE,List6c)") == "XX" );
+
+	// exception cases
+	REQUIRE_EXCEPT( expand("$CHOICE()") == "" , no list );
+	REQUIRE_EXCEPT( expand("$CHOICE(10,list6c)") == "" , out of range );
+	REQUIRE_EXCEPT( expand("$CHOICE(-1,list6c)") == "aa" , invalid index );
+	REQUIRE_EXCEPT( expand("$CHOICE(1,)") == "" , no list);
+
 }
 
 void testing_$SUBSTR_expand(bool verbose)
@@ -922,6 +1037,11 @@ void testing_$SUBSTR_expand(bool verbose)
 	REQUIRE( expand_lcl_as("LOWER", "MASTER", "$SUBSTR(list6c,11,vanilla)") == "YY,Z" );
 	REQUIRE( expand("$SUBSTR(fileCompound,-5)") == "se.ex" );
 	REQUIRE( expand_as("MASTER", "$SUBSTR(fileCompound,standard)") == "ur/der/base.ex" );
+
+	// exception cases
+	REQUIRE_EXCEPT( expand("$SUBSTR(FOO)") == "" , no length );
+	REQUIRE_EXCEPT( expand("$SUBSTR(FOO,,)") == "" , invalid start index );
+
 }
 
 void testing_$STRING_expand(bool verbose)
@@ -951,6 +1071,17 @@ void testing_$STRING_expand(bool verbose)
 	REQUIRE( expand("$STRING(Items6,%20s)") == "   aa bb cc dd ee ff" );
 	REQUIRE( expand("$STRING(Items6,%-20s)") == "aa bb cc dd ee ff   " );
 	REQUIRE( expand("$STRING(Items6,%10.10s)") == "aa bb cc d" );
+
+	// exception cases
+	REQUIRE_EXCEPT( expand("$STRING(FOO,%f)") == "%f" , not a valid format );
+
+	// the std::string expand_macro used to return a pointer into a destroyed classad::Value,
+	// which showed up for strings too long for the small string buffer
+	REQUIRE( expand_str("$STRING(ITEMS5quoted)") == "aa bb cc dd ee" );
+	REQUIRE( expand_str("$STRING(Items6)") == "aa bb cc dd ee ff" );
+	REQUIRE( expand_str("$STRING(FullVerNum)") == "8.5.6.998822" );
+	REQUIRE( expand_str("$STRING(Items6,%-20s)") == "aa bb cc dd ee ff   " );
+	REQUIRE( expand_str("[$STRING(fileRelSpaces)]") == "[ein/zw ei/dr ei.fir]" );
 }
 
 void testing_$INT_expand(bool verbose)
@@ -973,6 +1104,13 @@ void testing_$INT_expand(bool verbose)
 	REQUIRE( expand("$INT(VANILLA,_%04u_)") == "_0005_" );
 	REQUIRE( expand("$INT(DoubleVanilla,%d)") == "10" );
 	REQUIRE( expand_lcl("LOWER","$INT(DoubleVanilla,%02d)") == "08" );
+
+	// exception cases
+	REQUIRE_EXCEPT( expand("$INT()") == "" , does not evaluate );
+	REQUIRE_EXCEPT( expand("$INT(items6)") == "" , does not evaluate );
+	REQUIRE_EXCEPT( expand("$INT(vanilla,%f)") == "%f" , not a valid format );
+	REQUIRE_EXCEPT( expand("$INT(FOO,%f)") == "%f" , not a valid format );
+
 }
 
 void testing_$REAL_expand(bool verbose)
@@ -991,6 +1129,13 @@ void testing_$REAL_expand(bool verbose)
 	REQUIRE( expand("$REAL(BackgroundLoad)") == "0.3" );
 	REQUIRE( expand("$REAL(BackgroundLoad,%g)") == "0.3" );
 	REQUIRE( within(expand("$REAL(BackgroundLoad,%e)"), "3.000000e-0001", "3.000000e-01") );
+
+	// exception cases
+	REQUIRE_EXCEPT( expand("$REAL()") == "" , does not evaluate );
+	REQUIRE_EXCEPT( expand("$REAL(items6)") == "" , does not evaluate );
+	REQUIRE_EXCEPT( expand("$REAL(vanilla,%d)") == "%d" , not a valid format );
+	REQUIRE_EXCEPT( expand("$REAL(FOO,%d)") == "%d" , not a valid format );
+
 }
 
 void testing_$EVAL_expand(bool verbose)
@@ -1081,6 +1226,7 @@ int main( int /*argc*/, const char ** argv) {
 					case 'v': test_flags |= 0x0400; break; // $EVAL
 					case 'r': test_flags |= 0x0800; break; // $RANDOM_INTEGER and $RANDOM_CHOICE
 					case 'p': test_flags |= 0x1000; break; // parse
+					case 'x': test_flags |= 0x2000; break; // expansion limits
 					}
 				}
 			} else {
@@ -1104,6 +1250,7 @@ int main( int /*argc*/, const char ** argv) {
 				"      v $EVAL expansion/evaluation\n"
 				"      r $RANDOM_INTEGER and $RANDOM_CHOICE expansion/evaluation\n"
 				"      p config parsing\n"
+				"      x expansion limits\n"
 				"   default is to run all tests\n"
 				"   If -verbose is specified, all tests show output, otherwise\n"
 				"   only failed tests produce output\n"
@@ -1115,6 +1262,7 @@ int main( int /*argc*/, const char ** argv) {
 
 	ClassAdReconfig();
 
+	_EXCEPT_Reporter = CatchConfigException;
 	TestingMacroSet.defaults->size = param_info_init((const void**)&TestingMacroSet.defaults->table);
 	TestingMacroSet.options |= CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO;
 
@@ -1141,6 +1289,7 @@ int main( int /*argc*/, const char ** argv) {
 	if (test_flags & 0x0800) testing_$RAND_expand(dash_verbose);
 
 	if (test_flags & 0x1000) testing_parser(dash_verbose);
+	if (test_flags & 0x2000) testing_expand_limits(dash_verbose);
 
 	return fail_count > 0;
 }

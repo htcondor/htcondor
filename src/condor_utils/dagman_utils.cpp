@@ -18,6 +18,8 @@
  ***************************************************************/
 
 #include "condor_common.h"
+#include "basename.h"
+#include "condor_string.h" // for getline_trim
 #include "condor_arglist.h"
 #include "condor_attributes.h"
 #include "condor_getcwd.h"
@@ -26,8 +28,6 @@
 #include "dagman_utils.h"
 #include "my_popen.h"
 #include "read_multiple_logs.h"
-#include "../condor_procapi/processid.h"
-#include "../condor_procapi/procapi.h"
 #include "tmp_dir.h"
 #include "tokener.h"
 #include "which.h"
@@ -148,14 +148,14 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 	fprintf(pSubFile, "output      = %s\n", options[shallow::str::LibOut].c_str());
 	fprintf(pSubFile, "error       = %s\n", options[shallow::str::LibErr].c_str());
 	fprintf(pSubFile, "log         = %s\n", options[shallow::str::SchedLog].c_str());
+
 	if ( ! options[deep::str::BatchName].empty()) {
-		fprintf(pSubFile, "My.%s = \"%s\"\n", ATTR_JOB_BATCH_NAME,
-		        options[deep::str::BatchName].c_str());
+		fprintf(pSubFile, "batch_name = \"%s\"\n", options[deep::str::BatchName].c_str());
 	}
 	if ( ! options[deep::str::BatchId].empty()) {
-		fprintf(pSubFile, "My.%s = \"%s\"\n", ATTR_JOB_BATCH_ID,
-		        options[deep::str::BatchId].c_str());
+		fprintf(pSubFile, "batch_id = \"%s\"\n", options[deep::str::BatchId].c_str());
 	}
+
 #if !defined ( WIN32 )
 	fprintf(pSubFile, "remove_kill_sig = SIGUSR1\n" );
 #endif
@@ -249,6 +249,10 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 
 	if (options[shallow::b::DoRecovery]) {
 		args.AppendArg( "-DoRecov" );
+	}
+
+	if (options[shallow::b::SetupOnly]) {
+		args.AppendArg("-SetupOnly");
 	}
 
 	args.AppendArg("-CsdVersion");
@@ -500,7 +504,6 @@ bool
 DagmanUtils::processDagCommands(DagmanOptions &options, str_list &attrLines, std::string &errMsg)
 {
 	bool result = true;
-	bool use_old_parser = param_boolean("DAGMAN_USE_OLD_FILE_PARSER", false);
 	// Note: destructor will change back to original directory.
 	TmpDir dagDir;
 	std::set<std::string> configFiles;
@@ -519,147 +522,61 @@ DagmanUtils::processDagCommands(DagmanOptions &options, str_list &attrLines, std
 			newDagFile = dagFile;
 		}
 
-		if (use_old_parser) {
-			// Note: destructor will close file.
-			MultiLogFiles::FileReader reader;
-			errMsg = reader.Open( newDagFile );
-			if ( ! errMsg.empty()) {
-				return false;
-			}
+		static const std::set<DAG::CMD> filter_commands {
+			DAG::CMD::CONFIG,
+			DAG::CMD::SET_JOB_ATTR,
+			DAG::CMD::ENV,
+		};
 
-			//Read DAG file
-			std::string logicalLine;
-			while (reader.NextLogicalLine(logicalLine)) {
-				if ( ! logicalLine.empty()) {
-					StringTokenIterator tokens(logicalLine, " \t\r");
-					const char* cmd = tokens.first();
-					if ( ! cmd) { continue; }
+		DagParser parser(newDagFile);
+		if (parser.failed()) {
+			errMsg = parser.error();
+			return false;
+		}
 
-					// Parse CONFIG command
-					if (strcasecmp(cmd, "CONFIG") == MATCH) {
-						const char* newFile = tokens.remain();
-						while (newFile && isspace(*newFile) && *newFile != '\0') { newFile++; }
-						if ( ! newFile || *newFile == '\0') {
-							AppendError(errMsg, "Improperly-formatted file: value missing after keyword CONFIG");
-							result = false;
+		parser.SearchFor(filter_commands);
+
+		for (const auto cmd : parser) {
+			if ( ! cmd) { continue; }
+
+			// TODO: Handle reject here so user knows at submit time not once DAGMan notices
+			switch (cmd->GetCommand()) {
+				case DAG::CMD::CONFIG:
+					{
+						std::string conf = DAG::DERIVE_CMD<FileCommand>(cmd)->GetFile();
+						std::string error;
+						if (MakePathAbsolute(conf, error)) {
+							configFiles.insert(conf);
 						} else {
-							std::string conf(newFile), tmpErr;
-							if (MakePathAbsolute(conf, tmpErr)) {
-								configFiles.insert(conf);
-							} else {
-								AppendError(errMsg, tmpErr);
-								result = false;
-							}
-						}
-
-					// Parse SET_JOB_ATTR command
-					} else if (strcasecmp(cmd, "SET_JOB_ATTR") == MATCH) {
-						const char* attr = tokens.remain();
-						while (attr && isspace(*attr) && *attr != '\0') { attr++; }
-						if (!attr || *attr == '\0') {
-							AppendError(errMsg, "Improperly-formatted file: value missing after keyword SET_JOB_ATTR");
-							result = false;
-						} else {
-							attrLines.emplace_back(attr);
-						}
-
-					// Parse ENV command
-					} else if (strcasecmp(cmd, "ENV") == MATCH) {
-						const char* type = tokens.next();
-						// Parse GET option
-						if (strcasecmp(type, "GET") == MATCH) {
-							const char* remain = tokens.remain();
-							while (remain && isspace(*remain) && *remain != '\0') { remain++; }
-							if (!remain || *remain == '\0') {
-								AppendError(errMsg, "Improperly-formatted file: environment variables missing after ENV GET");
-								result = false;
-							} else {
-								StringTokenIterator vars(remain);
-								std::string delimVars;
-								for (const auto& var : vars) {
-									if ( ! delimVars.empty()) { delimVars += ","; }
-									delimVars += var;
-								}
-								options.extend("GetFromEnv", delimVars);
-							}
-						// Parse SET option
-						} else if (strcasecmp(type, "SET") == MATCH) {
-							const char* info = tokens.remain();
-							while (info && isspace(*info) && *info != '\0') { info++; }
-							if (!info || *info == '\0') {
-								AppendError(errMsg, "Improperly-formatted file: environment variables missing after ENV SET");
-								result = false;
-							} else {
-								std::string kv_pairs = options.processOptionArg("AddToEnv", std::string(info));
-								options.extend("AddToEnv", kv_pairs);
-							}
-						// Else error
-						} else {
-							AppendError(errMsg, "Improperly-formatted file: sub-command (SET or GET) missing after keyword ENV");
+							AppendError(errMsg, error);
 							result = false;
 						}
 					}
-				}
-			}
-
-			reader.Close();
-		} else {
-			static const std::set<DAG::CMD> filter_commands {
-				DAG::CMD::CONFIG,
-				DAG::CMD::SET_JOB_ATTR,
-				DAG::CMD::ENV,
-			};
-
-			DagParser parser(newDagFile);
-			if (parser.failed()) {
-				errMsg = parser.error();
-				return false;
-			}
-
-			parser.SearchFor(filter_commands);
-
-			for (const auto cmd : parser) {
-				if ( ! cmd) { continue; }
-
-				// TODO: Handle reject here so user knows at submit time not once DAGMan notices
-				switch (cmd->GetCommand()) {
-					case DAG::CMD::CONFIG:
-						{
-							std::string conf = DAG::DERIVE_CMD<FileCommand>(cmd)->GetFile();
-							std::string error;
-							if (MakePathAbsolute(conf, error)) {
-								configFiles.insert(conf);
-							} else {
-								AppendError(errMsg, error);
-								result = false;
-							}
+					break;
+				case DAG::CMD::SET_JOB_ATTR:
+					attrLines.emplace_back(DAG::DERIVE_CMD<SetAttrCommand>(cmd)->GetAttrLine());
+					break;
+				case DAG::CMD::ENV:
+					{
+						const EnvCommand* env = DAG::DERIVE_CMD<EnvCommand>(cmd);
+						if (env->IsSet()) {
+							std::string kv_pairs = options.processOptionArg("AddToEnv", env->GetEnvVariables());
+							options.extend("AddToEnv", kv_pairs);
+						} else {
+							options.extend("GetFromEnv", env->GetEnvVariables());
 						}
-						break;
-					case DAG::CMD::SET_JOB_ATTR:
-						attrLines.emplace_back(DAG::DERIVE_CMD<SetAttrCommand>(cmd)->GetAttrLine());
-						break;
-					case DAG::CMD::ENV:
-						{
-							const EnvCommand* env = DAG::DERIVE_CMD<EnvCommand>(cmd);
-							if (env->IsSet()) {
-								std::string kv_pairs = options.processOptionArg("AddToEnv", env->GetEnvVariables());
-								options.extend("AddToEnv", kv_pairs);
-							} else {
-								options.extend("GetFromEnv", env->GetEnvVariables());
-							}
-						}
-						break;
-					default:
-						print_msg("WARNING: DAGMan Utils does not know how to process %s command...\n",
-						        DAG::GET_KEYWORD_STRING(cmd->GetCommand()));
-						break;
-				}
+					}
+					break;
+				default:
+					print_msg("WARNING: DAGMan Utils does not know how to process %s command...\n",
+					        DAG::GET_KEYWORD_STRING(cmd->GetCommand()));
+					break;
 			}
+		}
 
-			if (parser.failed()) {
-				AppendError(errMsg, parser.error());
-				result = false;
-			}
+		if (parser.failed()) {
+			AppendError(errMsg, parser.error());
+			result = false;
 		}
 
 		// Switch back to original directory
@@ -1011,122 +928,6 @@ DagmanUtils::popen (ArgList &args) {
 		}
 	}
 	return r;
-}
-
-//-----------------------------------------------------------------------------
-int
-DagmanUtils::create_lock_file(const char *lockFileName, bool abortDuplicates) {
-	int result = 0;
-
-	FILE *fp = safe_fopen_wrapper_follow(lockFileName, "w");
-	if (fp == nullptr) {
-		print_error("ERROR: Failed to open lock file %s for writing.\n", lockFileName);
-		result = -1;
-	}
-
-	// Create the ProcessId object.
-	ProcessId *procId = nullptr;
-	if (result == 0 && abortDuplicates) {
-		int status;
-		int precision_range = 1;
-		if (ProcAPI::createProcessId(daemonCore->getpid(), procId, status, &precision_range) != PROCAPI_SUCCESS) {
-			print_error("ERROR: Failed to create process ID (%d)\n", status);
-			result = -1;
-		}
-	}
-
-	// Write out the ProcessId object.
-	if (result == 0 && abortDuplicates) {
-		if (procId->write(fp) != ProcessId::SUCCESS) {
-			print_error("ERROR: Failed to write process ID information to %s\n", lockFileName);
-			result = -1;
-		}
-	}
-
-	// Confirm the ProcessId object's uniqueness.
-	if (result == 0 && abortDuplicates) {
-		int status;
-		if (ProcAPI::confirmProcessId(*procId, status) != PROCAPI_SUCCESS) {
-			print_error("Warning: Failed to confirm process ID (%d)\n", status);
-		} else if ( ! procId->isConfirmed()) {
-			print_msg("Warning: Ignoring error that ProcessId not confirmed unique\n");
-		} else if (procId->writeConfirmationOnly(fp) != ProcessId::SUCCESS) {
-			print_error("ERROR: Failed to confirm writing of process ID information\n");
-			result = -1;
-		}
-	}
-
-	delete procId;
-
-	if (fp != nullptr) {
-		if (fclose(fp) != 0) {
-			print_error("ERROR: closing lock file failed with (%d): %s\n",
-			        errno, strerror(errno));
-		}
-	}
-
-	return result;
-}
-
-//-----------------------------------------------------------------------------
-int
-DagmanUtils::check_lock_file(const char *lockFileName) {
-	int result = 0;
-
-	FILE *fp = safe_fopen_wrapper_follow(lockFileName, "r");
-	if (fp == nullptr) {
-		print_error("ERROR: Failed to open lock file %s for reading.\n",
-		            lockFileName);
-		result = -1;
-	}
-
-	ProcessId *procId = nullptr;
-	if (result != -1) {
-		int status;
-		procId = new ProcessId(fp, status);
-		if (status != ProcessId::SUCCESS) {
-			print_error("ERROR: Failed to create process Id object from lock file %s\n",
-			            lockFileName);
-			result = -1;
-		}
-	}
-
-	if (result != -1) {
-		int status;
-		if (ProcAPI::isAlive(*procId, status) != PROCAPI_SUCCESS) {
-			print_error("ERROR: Failed to determine whether DAGMan that wrote lock file is alive.\n");
-			result = -1;
-		} else if (status == PROCAPI_ALIVE) {
-			print_error("ERROR: Duplicate DAGMan PID %d is alive; this DAGMan should abort.\n",
-			            procId->getPid());
-			result = 1;
-
-		} else if (status == PROCAPI_DEAD) {
-			print_msg("Duplicate DAGMan PID %d is no longer alive; this DAGMan should continue.\n",
-			          procId->getPid());
-			result = 0;
-
-		} else if (status == PROCAPI_UNCERTAIN) {
-			print_msg("Duplicate DAGMan PID %d *may* be alive; this DAGMan is continuing, "
-			          "but this will cause problems if the duplicate DAGMan is alive.\n",
-			          procId->getPid());
-			result = 0;
-
-		} else {
-			EXCEPT("Illegal ProcAPI::isAlive() status value: %d", status);
-		}
-	}
-
-	delete procId;
-
-	if (fp != nullptr) {
-		if (fclose(fp) != 0) {
-			print_error("ERROR: Failed to close lock file failed (%d): %s\n",
-			            errno, strerror(errno));
-		}
-	}
-
-	return result;
 }
 
 // Add a DAG file to DAGMan options

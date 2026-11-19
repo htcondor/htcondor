@@ -21,6 +21,18 @@ import shutil
 import htcondor2
 
 
+def submit_user():
+    if os.name != 'nt' and os.geteuid() == 0:
+        return 'tlmiller'
+    else:
+        return None
+
+def condor_user():
+    if os.name != 'nt' and os.geteuid() == 0:
+        return 'condor'
+    else:
+        return None
+
 def try_shutil_chown( * p, ** v ):
     try:
         shutil.chown( * p, ** v )
@@ -28,6 +40,8 @@ def try_shutil_chown( * p, ** v ):
         logger.debug(pe)
     except LookupError as le:
         logger.debug(le)
+    except ValueError as ve:
+        logger.debug(ve)
 
 
 # ---- test_one_cif_job -------------------------------------------------------
@@ -36,7 +50,7 @@ def try_shutil_chown( * p, ** v ):
 def user_dir(test_dir):
     the_user_dir = test_dir / "user"
     the_user_dir.mkdir(exist_ok=True)
-    try_shutil_chown( the_user_dir.as_posix(), user='tlmiller', group='tlmiller' )
+    try_shutil_chown( the_user_dir.as_posix(), user=submit_user(), group=submit_user() )
     return the_user_dir
 
 
@@ -53,13 +67,13 @@ def the_condor(test_dir, the_lock_dir):
     cred_dir.mkdir(parents=True, exist_ok=True)
 
     with Condor(
-        submit_user='tlmiller',
-        condor_user='condor',
+        submit_user=submit_user(),
+        condor_user=condor_user(),
         local_dir=local_dir,
         config={
             "FORBID_COMMON_FILE_TRANSFER": "TRUE",
 
-            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":             the_lock_dir.as_posix(),
             "DAEMON_LIST":      "$(DAEMON_LIST) CREDD",
@@ -96,20 +110,20 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
     (user_dir / "input3.txt").write_text("input line 3\n" );
 
     # Make sure that credential propogation works, too.
-    credential_path = user_dir / "the_credential"
+    credential_path = user_dir / "the-credential"
     credential_path.write_text("fake credential information")
     cp = the_condor.run_command(
         ['htcondor', 'credential', 'add', 'oauth2', credential_path.as_posix()],
-        timeout=5,
+        timeout=60,
         echo=True,
-        as_user='tlmiller',
+        as_user=submit_user(),
     )
     assert cp.returncode == 0
 
     job_description = {
         "universe":                 "vanilla",
 
-        "shell":                    "cat ${_CONDOR_CREDS}/the_credential.use 1>&2; cat d/input1.txt d/input4.txt d/e/input2.txt d/f/input5.txt input3.txt; sleep 5",
+        "shell":                    "cat ${_CONDOR_CREDS}/the-credential.use 1>&2; cat d/input1.txt d/input4.txt d/e/input2.txt d/f/input5.txt input3.txt; sleep 5",
         "transfer_executable":      False,
         "should_transfer_files":    True,
 
@@ -120,11 +134,11 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
         "request_cpus":             1,
         "request_memory":           1,
 
-        "MY._x_common_input_catalogs":      '"my_common_files"',
+        "MY.CommonInputCatalogs":      '"my_common_files"',
         "MY._x_catalog_my_common_files":    '"d, null://create-epoch-entry"',
 
         "transfer_input_files":     "input3.txt",
-        "use_oauth_services":       "the_credential",
+        "use_oauth_services":       "the-credential",
 
         "leave_in_queue":           True,
     }
@@ -155,13 +169,13 @@ def the_big_condor(test_dir, the_big_lock_dir):
     local_dir = test_dir / "big-condor"
 
     with Condor(
-        submit_user='tlmiller',
-        condor_user='condor',
+        submit_user=submit_user(),
+        condor_user=condor_user(),
         local_dir=local_dir,
         config={
             "FORBID_COMMON_FILE_TRANSFER": "TRUE",
 
-            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":             the_big_lock_dir.as_posix(),
             "NUM_CPUS":         4,
@@ -225,7 +239,7 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
         # Force a delay; the constant is to ensure that we would print out
         # the waiting message at least twice (if the delay remains at five
         # seconds each time).
-        "MY._x_common_input_catalogs":      '"my_common_files"',
+        "MY.CommonInputCatalogs":      '"my_common_files"',
         "MY._x_catalog_my_common_files":    '"big_input1.txt, big_input2.txt, debug://sleep/15"',
 
         "transfer_input_files":     "big_input3.txt",
@@ -311,13 +325,13 @@ def the_multi_condor(test_dir, the_multi_lock_dir):
     local_dir = test_dir / "multi-condor"
 
     with Condor(
-        submit_user='tlmiller',
-        condor_user='condor',
+        submit_user=submit_user(),
+        condor_user=condor_user(),
         local_dir=local_dir,
         config={
             "FORBID_COMMON_FILE_TRANSFER": "TRUE",
 
-            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":             the_multi_lock_dir.as_posix(),
             "NUM_CPUS":         4,
@@ -381,7 +395,7 @@ def completed_multi_jobs(the_multi_condor, user_dir, multi_job_script):
         "request_cpus":             1,
         "request_memory":           1,
 
-        "MY._x_common_input_catalogs":      '"my_common_files"',
+        "MY.CommonInputCatalogs":      '"my_common_files"',
         "MY._x_catalog_my_common_files":    '"multi_input1.txt, multi_input2.txt"',
 
         "transfer_input_files":     "multi_input3.txt",
@@ -398,7 +412,7 @@ def completed_multi_jobs(the_multi_condor, user_dir, multi_job_script):
     job_description_b = { ** job_description_a,
         "arguments":
             f'{kill_file} multi_input4.txt multi_input5.txt multi_input6.txt',
-        "MY._x_common_input_catalogs":      '"my_common_files"',
+        "MY.CommonInputCatalogs":      '"my_common_files"',
         "MY._x_catalog_my_common_files":    '"multi_input4.txt, multi_input5.txt"',
         "transfer_input_files":     "multi_input6.txt",
     }
@@ -540,7 +554,7 @@ def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits):
     assert job_evictions == 0
 
     common_transfer_begins = count_shadow_log_lines(
-        the_condor, "Starting common files transfer."
+        the_condor, "Starting common files transfer"
     )
     assert common_transfer_begins == cf_xfers
 
@@ -556,10 +570,18 @@ def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits):
         assert common_transfer_waits == cf_waits
 
 
-def lock_dir_is_clean(the_lock_dir):
+def lock_dir_is_clean(the_lock_dir, timeout=30):
+    import time
     syndicate_dir = the_lock_dir / "syndicate"
 
     if syndicate_dir.exists():
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            files = list(syndicate_dir.iterdir())
+            if len(files) == 0:
+                return
+            time.sleep(1)
+
         files = list(syndicate_dir.iterdir())
         assert len(files) == 0
 
@@ -592,7 +614,7 @@ def count_starter_log_lines(the_condor, the_phrase):
 
 def starter_log_is_as_expected(the_condor, cf_xfers, cf_waits):
     common_transfer_begins = count_starter_log_lines(
-        the_condor, "Starting common files transfer."
+        the_condor, "Starting common files transfer"
     )
     assert common_transfer_begins == cf_xfers
 

@@ -21,14 +21,14 @@ a job runs is specified in the submit description file. If a universe is
 not specified, the default is vanilla.
 
 :index:`vanilla<single: vanilla; universe>` The vanilla universe is a good
-default, for it has the fewest restrictions on the job.
+default, because it has the fewest restrictions on the job.
 :index:`grid<single: Grid; universe>` The grid universe allows users to submit
 jobs using HTCondor's interface. These jobs are submitted for execution
 on grid resources. :index:`java<single: java; universe>`
 :index:`Java Virtual Machine` :index:`JVM` The java
 universe allows users to run jobs written for the Java Virtual Machine
 (JVM). The scheduler universe allows users to submit lightweight jobs to
-be spawned by the program known as a daemon on the submit host itself.
+be spawned by the *condor_schedd* daemon on the submit host itself.
 :index:`parallel<single: parallel; universe>` The parallel universe is for programs
 that require multiple machines for one job. See the
 :doc:`/users-manual/env-of-job` section for more
@@ -36,8 +36,8 @@ about the Parallel universe. :index:`vm<single: vm; universe>` The vm universe
 allows users to run jobs where the job is no longer a simple executable,
 but a disk image, facilitating the execution of a virtual machine. Container
 universe allows the user to specify a container image for one of many possible
-container runtimes, just as singularity or docker, and condor will run the job
-in the appropriate container runtimes. The docker universe runs a Docker container 
+container runtimes, such as singularity or docker, and HTCondor will run the job
+in the appropriate container runtime. The docker universe runs a Docker container
 as an HTCondor job.
 
 Vanilla Universe

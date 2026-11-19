@@ -29,8 +29,6 @@ int pseudo_get_user_info(ClassAd *&ad);
 int pseudo_job_exit(int status, int reason, ClassAd* ad);
 int pseudo_job_termination( ClassAd *ad );
 int pseudo_begin_execution( void );
-int pseudo_get_file_info_new( const char *path, char *&url );
-int pseudo_get_buffer_info( int *bytes_out, int *block_size_out, int *prefetch_bytes_out );
 int pseudo_ulog( ClassAd *ad );
 int pseudo_get_job_ad( ClassAd* &ad );
 int pseudo_get_job_attr( const char *name, std::string &expr );
@@ -46,5 +44,18 @@ int pseudo_get_sec_session_info(
 	std::string &filetrans_session_info,
 	std::string &filetrans_session_key);
 int pseudo_event_notification( const ClassAd & ad );
+
+// Result of do_REMOTE_syscall(), interpreted by RemoteResource::handleSysCalls().
+//   SyscallOK       - RPC handled normally; keep the syscall socket open.
+//   ExpectedClose   - The starter has expectedly closed the connection
+//                     (job exit / claim deactivated). Begin shadow shutdown.
+//   UnexpectedClose - Unexpected network failure. Drop into reconnect mode.
+enum class RemoteSyscallResult {
+	SyscallOK,
+	ExpectedClose,
+	UnexpectedClose,
+};
+
+RemoteSyscallResult do_REMOTE_syscall();
 
 #endif

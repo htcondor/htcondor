@@ -33,8 +33,18 @@
 #include "condor_sinful.h"
 #include "shared_port_endpoint.h"
 #include "condor_config.h"
+#include "condor_version.h"
 
 static bool registered_reverse_connect_command = false;
+
+// Minimum broker version assumed to support CCB streaming/proxy mode, used as
+// the pre-send gate when a private client wants to reach another private peer.
+// This is the first HTCondor release whose CCB broker implements streaming;
+// against an older broker a private requester fails fast rather than sending a
+// request the broker would mishandle.
+static const int CCB_STREAMING_VERSION_MAJOR = 25;
+static const int CCB_STREAMING_VERSION_MINOR = 12;
+static const int CCB_STREAMING_VERSION_SUB   = 0;
 
 // hash of CCBClients waiting for a reverse connect command
 // indexed by connection id
@@ -47,8 +57,12 @@ CCBClient::CCBClient( char const *ccb_contact, ReliSock *target_sock ):
 	m_target_sock(target_sock),
 	m_target_peer_description(m_target_sock->peer_description()),
 	m_ccb_sock(NULL),
-	m_ccb_cb(NULL),
-	m_deadline_timer(-1)
+	m_ccb_cb(),
+	m_deadline_timer(-1),
+	m_proxy_state(PROXY_NONE),
+	m_proxy_sock(NULL),
+	m_proxy_registered(false),
+	m_streaming_phase(true)
 {
 	// balance load across the CCB servers by randomizing order
 	std::random_device rd;
@@ -74,11 +88,23 @@ CCBClient::CCBClient( char const *ccb_contact, ReliSock *target_sock ):
 	free( keybuf );
 }
 
+void
+CCBClient::SetOutboundTarget( char const *target, int ttl )
+{
+	m_outbound_mode = true;
+	m_outbound_target = target ? target : "";
+		// ttl < 0 means "originator default": this client is the endpoint starting the
+		// outbound request, so seed the TTL from CCB_OUTBOUND_TTL.  A broker forwarding
+		// a request instead passes the already-decremented value (>= 0) explicitly.
+	m_outbound_ttl = (ttl < 0) ? param_integer("CCB_OUTBOUND_TTL", 8, 1) : ttl;
+}
+
 CCBClient::~CCBClient()
 {
 	if( m_ccb_sock ) {
 		delete m_ccb_sock;
 	}
+	CleanupProxySock();
 	if( m_deadline_timer != -1 ) {
 		daemonCore->Cancel_Timer(m_deadline_timer);
 		m_deadline_timer = -1;
@@ -89,6 +115,32 @@ CCBClient::~CCBClient()
 bool
 CCBClient::ReverseConnect( CondorError *error, bool non_blocking )
 {
+	if( m_outbound_mode ) {
+		if( non_blocking ) {
+			if( !daemonCore ) {
+				dprintf(D_ALWAYS,"Can't do non-blocking outbound CCB connect without DaemonCore!\n");
+				return false;
+			}
+				// Same reverse-connecting-state protection + async lifetime
+				// machinery as the streaming non-blocking path; the exchange is
+				// driven by OutboundConnect_nonblocking and finishes (or fails) via
+				// ReverseConnectCallback, notifying the caller's registered handler.
+			m_target_sock->enter_reverse_connecting_state();
+			m_ccb_contacts_nb = m_ccb_contacts;
+			RegisterReverseConnectCallback();
+			return OutboundConnect_nonblocking();
+		}
+			// Blocking outbound proxy connect adopts the socket into m_target_sock,
+			// which must be in the reverse-connecting state first (as in the
+			// streaming path) so it is not deleted out from under us.
+		m_target_sock->enter_reverse_connecting_state();
+		bool ok = OutboundConnect_blocking( error );
+		if( !ok ) {
+			m_target_sock->exit_reverse_connecting_state( NULL );
+		}
+		return ok;
+	}
+
 	if( non_blocking ) {
 		// Non-blocking mode requires DaemonCore
 		if ( !daemonCore ) {
@@ -105,6 +157,7 @@ CCBClient::ReverseConnect( CondorError *error, bool non_blocking )
 		// DaemonCore::Register_Socket() and wait for a callback.
 
 		m_ccb_contacts_nb = m_ccb_contacts;
+		m_streaming_phase = true;  // try streaming first; fall back to direct later
 		return try_next_ccb();
 	}
 
@@ -125,9 +178,727 @@ CCBClient::myName()
 	return name;
 }
 
+std::string
+CCBClient::streamingReturnAddr()
+{
+	// Streaming/proxy mode only applies when this client is itself behind a
+	// CCB (our own command socket is CCB-routed) and streaming is enabled.
+	if( !param_boolean("CCB_CLIENT_STREAMING", true) ) {
+		return "";
+	}
+	if( !daemonCore || !daemonCore->publicNetworkIpAddr() ) {
+		return "";
+	}
+	Sinful s( daemonCore->publicNetworkIpAddr() );
+	if( s.getCCBContact() ) {
+		return daemonCore->publicNetworkIpAddr();
+	}
+	return "";
+}
+
+ReliSock *
+CCBClient::establishStreamingPipe( const std::string &ccb_contact,
+		char const *my_ccb_return, CondorError *error )
+{
+	// Split the (possibly nested/tunneled) contact "<entry>#id0#...#idN" into the
+	// flat entry broker "<entry>" and the ordered route [id0, ..., idN].  We contact
+	// only the entry broker and hand it the whole route in one CCB_REQUEST; the entry
+	// broker and each inner broker recurse server-side over their registration
+	// channels (each asks the next hop to reverse-connect and splices), so we do
+	// exactly one CEDAR handshake with the entry broker and one end-to-end handshake
+	// with the target -- never a per-hop handshake with an inner broker.
+	std::string entry_addr, id_chain;
+	if( !SplitCCBContact( ccb_contact.c_str(), entry_addr, id_chain, m_target_peer_description, error, false /*outermost*/ ) ) {
+		return nullptr;
+	}
+	// Peel the id chain "id0#id1#...#idN": ccbid = id0 (the entry broker's target),
+	// route = "id1 ... idN" (the remaining hops it forwards inward).
+	std::string ccbid, route;
+	size_t hash = id_chain.find('#');
+	if( hash == std::string::npos ) {
+		ccbid = id_chain;
+	} else {
+		ccbid = id_chain.substr(0, hash);
+		route = id_chain.substr(hash + 1);
+		for( char &c : route ) { if( c == '#' ) c = ' '; }
+	}
+
+	Daemon ccb(DT_COLLECTOR, entry_addr.c_str(), NULL);
+	Sock *sock = ccb.startCommand( CCB_REQUEST, Stream::reli_sock, DEFAULT_CEDAR_TIMEOUT, error );
+	if( !sock ) {
+		return nullptr;
+	}
+
+	// Pre-send version gate: do not send a proxy request to a broker that
+	// cannot honor it (an old broker would forward our CCB-routed address
+	// to the target and the connection would silently fail).
+	CondorVersionInfo const *ver = sock->get_peer_version();
+	if( !ver || !ver->built_since_version(
+			CCB_STREAMING_VERSION_MAJOR,
+			CCB_STREAMING_VERSION_MINOR,
+			CCB_STREAMING_VERSION_SUB) )
+	{
+		dprintf(D_ALWAYS,
+				"CCBClient: broker %s does not support CCB streaming mode, "
+				"which is required to reach %s (private-to-private).\n",
+				entry_addr.c_str(), m_target_peer_description.c_str());
+		delete sock;
+		return nullptr;
+	}
+
+	ClassAd msg;
+	msg.Assign(ATTR_CCBID,ccbid);
+	if( !route.empty() ) {
+		msg.Assign(ATTR_CCB_ROUTE, route);
+	}
+	msg.Assign(ATTR_CLAIM_ID,m_connect_id);
+	msg.Assign(ATTR_NAME, myName());
+	// Send our own CCB-routed return address so the broker engages proxy
+	// mode, and flag the request explicitly.  The flag forces streaming even
+	// when we (the requester) are directly reachable, which is required to
+	// reach a tunneled target: the broker cannot dial us back.
+	msg.Assign(ATTR_MY_ADDRESS, my_ccb_return ? my_ccb_return : "");
+	msg.Assign("CCBStreamingRequired", true);
+
+	dprintf(D_NETWORK|D_FULLDEBUG,
+			"CCBClient: requesting streaming (proxied) connection to %s "
+			"via CCB server %s#%s (route '%s').\n",
+			m_target_peer_description.c_str(),
+			entry_addr.c_str(), ccbid.c_str(), route.c_str());
+
+	sock->encode();
+	if( !putClassAd( sock, msg ) || !sock->end_of_message() ) {
+		delete sock;
+		return nullptr;
+	}
+
+	// Read the broker's reply ({Result, ProxyMode}).
+	sock->decode();
+	ClassAd reply;
+	if( !getClassAd( sock, reply ) || !sock->end_of_message() ) {
+		delete sock;
+		return nullptr;
+	}
+	bool result = false;
+	reply.LookupBool(ATTR_RESULT,result);
+	if( !result ) {
+		std::string remote_errmsg;
+		reply.LookupString(ATTR_ERROR_STRING,remote_errmsg);
+		dprintf(D_ALWAYS,
+				"CCBClient: broker %s refused streaming request to %s: %s\n",
+				entry_addr.c_str(), m_target_peer_description.c_str(),
+				remote_errmsg.c_str());
+		delete sock;
+		return nullptr;
+	}
+
+	// The broker now splices the target's reverse-connect hello onto this
+	// socket. Read and validate it exactly as AcceptReversedConnection does.
+	int cmd = 0;
+	ClassAd hello;
+	if( !sock->get(cmd) || !getClassAd( sock, hello ) || !sock->end_of_message() ) {
+		delete sock;
+		return nullptr;
+	}
+	std::string connect_id;
+	hello.LookupString(ATTR_CLAIM_ID,connect_id);
+	if( cmd != CCB_REVERSE_CONNECT || connect_id != m_connect_id ) {
+		dprintf(D_ALWAYS,
+				"CCBClient: invalid proxied hello from broker %s "
+				"(intended target is %s)\n",
+				entry_addr.c_str(), m_target_peer_description.c_str());
+		delete sock;
+		return nullptr;
+	}
+
+	// The socket is now a transparent pipe to the target (through the whole tunnel).
+	// Reset the header MD so the caller's end-to-end CEDAR session runs over it
+	// cleanly.
+	static_cast<ReliSock*>(sock)->resetHeaderMD();
+
+	dprintf(D_FULLDEBUG|D_NETWORK,
+			"CCBClient: established streaming (proxied) pipe to %s "
+			"via CCB server %s.\n",
+			m_target_peer_description.c_str(), entry_addr.c_str());
+	return static_cast<ReliSock*>(sock);
+}
+
+bool
+CCBClient::ProxyConnect_blocking( CondorError *error, char const *my_ccb_return )
+{
+	// Precondition: m_target_sock is in the reverse-connecting state so that on
+	// success we can adopt the proxied broker socket into it.
+	for( const auto& ccb_contact: m_ccb_contacts ) {
+		ReliSock *sock = establishStreamingPipe( ccb_contact, my_ccb_return, error );
+		if( !sock ) {
+			continue;
+		}
+
+		// Success: adopt the proxied socket as the connection to the target.
+		// From here on the socket is a transparent pipe to the target and the
+		// normal end-to-end CEDAR handshake proceeds over it.
+		//
+		// exit_reverse_connecting_state() clears the socket's m_ccb_client
+		// pointer, which in the blocking path is the only reference keeping this
+		// CCBClient alive -- without the reference below we would be deleted out
+		// from under ourselves and crash dereferencing m_target_sock.
+		classy_counted_ptr<CCBClient> self(this);
+		m_target_sock->exit_reverse_connecting_state(sock);
+		static_cast<ReliSock*>(m_target_sock)->resetHeaderMD();
+		delete sock; // exit_reverse_connecting_state has taken over the fd
+		return true;
+	}
+	return false;
+}
+
+bool
+CCBClient::OutboundConnect_blocking( CondorError *error )
+{
+	// Precondition: m_target_sock is in the reverse-connecting state so that on
+	// success we can adopt the broker socket into it.
+	for( const auto& ccb_address: m_ccb_contacts ) {
+			// Pre-build and connect the broker socket ourselves with the
+			// outbound-CCB bypass set, so this control connection is NOT itself
+			// routed through the outbound CCB (which would recurse infinitely).
+			// startCommand() would otherwise build the socket internally, leaving
+			// us no place to set the flag before it connects.
+		ReliSock *sock = new ReliSock;
+		sock->set_bypass_outbound_ccb( true );
+		sock->timeout( DEFAULT_CEDAR_TIMEOUT );
+		if( !sock->connect( ccb_address.c_str(), 0, false /*blocking*/ ) ) {
+			dprintf(D_ALWAYS,"CCBClient: failed to connect to outbound CCB %s.\n",
+					ccb_address.c_str());
+			delete sock;
+			continue;
+		}
+
+		Daemon ccb(DT_COLLECTOR,ccb_address.c_str(),NULL);
+		if( !ccb.startCommand( CCB_PROXY_CONNECT, sock, DEFAULT_CEDAR_TIMEOUT, error ) ) {
+			delete sock;
+			continue;
+		}
+
+			// Pre-send version gate: an old broker has no outbound-proxy command
+			// handler; fail fast rather than hang.
+		CondorVersionInfo const *ver = sock->get_peer_version();
+		if( !ver || !ver->built_since_version(
+				CCB_STREAMING_VERSION_MAJOR,
+				CCB_STREAMING_VERSION_MINOR,
+				CCB_STREAMING_VERSION_SUB) )
+		{
+			dprintf(D_ALWAYS,
+					"CCBClient: outbound CCB broker %s is too old to proxy the "
+					"connection to %s.\n",
+					ccb_address.c_str(), m_target_peer_description.c_str());
+			delete sock;
+			continue;
+		}
+
+		ClassAd msg;
+		msg.Assign(ATTR_MY_ADDRESS, m_outbound_target);   // the address to dial
+		msg.Assign(ATTR_CLAIM_ID, m_connect_id);
+		msg.Assign(ATTR_CCB_TTL, m_outbound_ttl);
+		msg.Assign(ATTR_NAME, myName());
+
+		dprintf(D_NETWORK|D_FULLDEBUG,
+				"CCBClient: asking outbound CCB %s to dial %s.\n",
+				ccb_address.c_str(), m_outbound_target.c_str());
+
+		sock->encode();
+		if( !putClassAd( sock, msg ) || !sock->end_of_message() ) {
+			delete sock;
+			continue;
+		}
+
+			// Read the broker's reply ({Result[, ErrorString]}).
+		sock->decode();
+		ClassAd reply;
+		if( !getClassAd( sock, reply ) || !sock->end_of_message() ) {
+			delete sock;
+			continue;
+		}
+		bool result = false;
+		reply.LookupBool(ATTR_RESULT,result);
+		if( !result ) {
+			std::string remote_errmsg;
+			reply.LookupString(ATTR_ERROR_STRING,remote_errmsg);
+			dprintf(D_ALWAYS,
+					"CCBClient: outbound CCB %s refused to dial %s: %s\n",
+					ccb_address.c_str(), m_outbound_target.c_str(),
+					remote_errmsg.c_str());
+			delete sock;
+			continue;
+		}
+
+			// Success: the socket is now a transparent pipe to the target.  Unlike
+			// the streaming path there is no reverse-connect hello to read -- we are
+			// the CEDAR connector -- so adopt the socket directly and let the normal
+			// end-to-end handshake proceed over it.
+			//
+			// exit_reverse_connecting_state() clears m_target_sock's m_ccb_client
+			// pointer, the only reference keeping this CCBClient alive in the
+			// blocking path; hold a reference across the call so we are not deleted
+			// out from under ourselves.
+		classy_counted_ptr<CCBClient> self(this);
+		sock->resetHeaderMD();
+		m_target_sock->exit_reverse_connecting_state(sock);
+		static_cast<ReliSock*>(m_target_sock)->resetHeaderMD();
+		delete sock; // exit_reverse_connecting_state has taken over the fd
+
+		dprintf(D_FULLDEBUG|D_NETWORK,
+				"CCBClient: established outbound (proxied) connection to %s via %s.\n",
+				m_outbound_target.c_str(), ccb_address.c_str());
+		return true;
+	}
+	return false;
+}
+
+// CleanupProxySock tears down the broker socket used by the non-blocking proxy
+// exchange, cancelling its DaemonCore registration if it was registered.
+void
+CCBClient::CleanupProxySock()
+{
+	if( m_proxy_sock ) {
+		if( m_proxy_registered ) {
+			daemonCore->Cancel_Socket( m_proxy_sock );
+			m_proxy_registered = false;
+		}
+		delete m_proxy_sock;
+		m_proxy_sock = NULL;
+	}
+	m_proxy_state = PROXY_NONE;
+}
+
+bool
+CCBClient::ProxyConnect_nonblocking( char const *ccbid, char const *my_ccb_return )
+{
+	// Precondition: m_target_sock is in the reverse-connecting state (set by
+	// ReverseConnect()), and m_cur_ccb_address is the broker chain to use.  The
+	// object is kept alive for the duration of the async exchange by
+	// waiting_for_reverse_connect (added in RegisterReverseConnectCallback at the
+	// top of try_next_ccb), so no extra reference is needed here.
+	//
+	// Follow a (possibly nested) contact <entry>#id0#...#idN: connect the flat
+	// entry broker once, then request each id in turn over the pipe each hop
+	// splices.  m_cur_ccb_address is the broker chain (<entry>#id0#...#id(N-1))
+	// and ccbid is the innermost id (idN); peel the chain into the ordered id
+	// list [id0, ..., idN] and the flat entry address.
+	m_proxy_ids.clear();
+	m_proxy_ids.push_back( ccbid );
+	std::string addr = m_cur_ccb_address;
+	while( addr.find('#') != std::string::npos ) {
+		std::string inner_addr, inner_id;
+		if( !SplitCCBContact( addr.c_str(), inner_addr, inner_id, m_target_peer_description, NULL ) ) {
+			return false;
+		}
+		m_proxy_ids.push_back( inner_id );
+		addr = inner_addr;
+	}
+	std::reverse( m_proxy_ids.begin(), m_proxy_ids.end() );
+	m_proxy_entry = addr;
+	m_proxy_return = my_ccb_return;
+
+	Daemon ccb( DT_COLLECTOR, m_proxy_entry.c_str(), NULL );
+	Sock *sock = ccb.makeConnectedSocket( Stream::reli_sock, DEFAULT_CEDAR_TIMEOUT, 0, NULL, true /*nonblocking*/ );
+	if( !sock ) {
+		return false;
+	}
+	m_proxy_sock = sock;
+	m_proxy_registered = false;
+	m_proxy_state = PROXY_NONE;
+
+	dprintf( D_NETWORK|D_FULLDEBUG,
+			 "CCBClient: requesting streaming (proxied) connection to %s via CCB "
+			 "server %s over %zu hop(s) (non-blocking).\n",
+			 m_target_peer_description.c_str(), m_proxy_entry.c_str(),
+			 m_proxy_ids.size() );
+
+	startProxyHop();
+	return true;
+}
+
+void
+CCBClient::startProxyHop()
+{
+		// Send the (single) streaming request to the entry broker.  The entry broker
+		// forwards the remaining route inward and each broker recurses server-side,
+		// so from the client there is only ever this one hop -- no per-hop re-keying.
+	ReliSock *sock = static_cast<ReliSock*>( m_proxy_sock );
+	Daemon ccb( DT_COLLECTOR, m_proxy_entry.c_str(), NULL );
+	ccb.startCommand_nonblocking(
+		CCB_REQUEST, sock, DEFAULT_CEDAR_TIMEOUT, NULL,
+		[this]( bool success, Sock *s, CondorError * /*errstack*/,
+				const std::string & /*trust_domain*/, bool /*try_token*/ ) {
+			ProxyHopCommandCallback( success, s );
+		} );
+}
+
+void
+CCBClient::ProxyHopCommandCallback( bool success, Sock *sock )
+{
+	// If the reverse-connect was cancelled (e.g. deadline expired) while we were
+	// connecting, m_target_sock is gone; just clean up the broker socket.
+	if( !m_target_sock ) {
+		CleanupProxySock();
+		return;
+	}
+
+	if( !success ) {
+		ProxyConnectFailed();
+		return;
+	}
+
+	// Pre-send version gate: do not send a proxy request to a broker that cannot
+	// honor it.
+	CondorVersionInfo const *ver = sock->get_peer_version();
+	if( !ver || !ver->built_since_version(
+			CCB_STREAMING_VERSION_MAJOR,
+			CCB_STREAMING_VERSION_MINOR,
+			CCB_STREAMING_VERSION_SUB) )
+	{
+		dprintf( D_ALWAYS,
+				 "CCBClient: a broker on the path to %s does not support CCB "
+				 "streaming mode, which is required (private-to-private).\n",
+				 m_target_peer_description.c_str() );
+		ProxyConnectFailed();
+		return;
+	}
+
+	// Send one proxy request to the entry broker: its target (the first id) plus the
+	// rest of the route it forwards inward.  The brokers recurse server-side over
+	// their registration channels, so this single request reaches the whole tunnel.
+	std::string ccbid = m_proxy_ids.empty() ? std::string() : m_proxy_ids[0];
+	std::string route;
+	for( size_t k = 1; k < m_proxy_ids.size(); k++ ) {
+		if( !route.empty() ) { route += " "; }
+		route += m_proxy_ids[k];
+	}
+	ClassAd msg;
+	msg.Assign( ATTR_CCBID, ccbid );
+	if( !route.empty() ) {
+		msg.Assign( ATTR_CCB_ROUTE, route );
+	}
+	msg.Assign( ATTR_CLAIM_ID, m_connect_id );
+	msg.Assign( ATTR_NAME, myName() );
+	msg.Assign( ATTR_MY_ADDRESS, m_proxy_return );
+	msg.Assign( "CCBStreamingRequired", true );
+
+	sock->encode();
+	if( !putClassAd( sock, msg ) || !sock->end_of_message() ) {
+		ProxyConnectFailed();
+		return;
+	}
+
+	// Wait for the broker's reply, and then the proxied hello, asynchronously.
+	m_proxy_state = PROXY_WAIT_REPLY;
+	int rc = daemonCore->Register_Socket(
+		sock, sock->peer_description(),
+		[this]( Stream *s ) { return ProxyMsgHandler( s ); },
+		"CCBClient::ProxyMsgHandler" );
+	if( rc < 0 ) {
+		ProxyConnectFailed();
+		return;
+	}
+	m_proxy_registered = true;
+}
+
+int
+CCBClient::ProxyMsgHandler( Stream *stream )
+{
+	Sock *sock = (Sock *)stream;
+	sock->timeout( DEFAULT_CEDAR_TIMEOUT );
+
+	// If the reverse-connect was cancelled while we were waiting, clean up.
+	if( !m_target_sock ) {
+		CleanupProxySock();
+		return KEEP_STREAM;
+	}
+
+	if( m_proxy_state == PROXY_WAIT_REPLY ) {
+		ClassAd reply;
+		sock->decode();
+		if( !getClassAd( sock, reply ) || !sock->end_of_message() ) {
+			ProxyConnectFailed();
+			return KEEP_STREAM;
+		}
+		bool result = false;
+		reply.LookupBool( ATTR_RESULT, result );
+		if( !result ) {
+			std::string remote_errmsg;
+			reply.LookupString( ATTR_ERROR_STRING, remote_errmsg );
+			dprintf( D_ALWAYS,
+					 "CCBClient: broker %s refused streaming request to %s: %s\n",
+					 m_cur_ccb_address.c_str(), m_target_peer_description.c_str(),
+					 remote_errmsg.c_str() );
+			ProxyConnectFailed();
+			return KEEP_STREAM;
+		}
+		// Success so far; the broker will splice in the target's reverse-connect
+		// hello when the target connects.  Keep the socket registered and wait.
+		m_proxy_state = PROXY_WAIT_HELLO;
+		return KEEP_STREAM;
+	}
+
+	if( m_proxy_state == PROXY_WAIT_HELLO ) {
+		int cmd = 0;
+		ClassAd hello;
+		sock->decode();
+		if( !sock->get(cmd) || !getClassAd( sock, hello ) || !sock->end_of_message() ) {
+			ProxyConnectFailed();
+			return KEEP_STREAM;
+		}
+		std::string connect_id;
+		hello.LookupString( ATTR_CLAIM_ID, connect_id );
+		if( cmd != CCB_REVERSE_CONNECT || connect_id != m_connect_id ) {
+			dprintf( D_ALWAYS,
+					 "CCBClient: invalid proxied hello from broker %s "
+					 "(intended target is %s)\n",
+					 m_cur_ccb_address.c_str(), m_target_peer_description.c_str() );
+			ProxyConnectFailed();
+			return KEEP_STREAM;
+		}
+
+		// The target's reverse-connect hello has arrived spliced through the whole
+		// tunnel (the brokers recursed server-side); adopt the socket as the
+		// connection to the target and let the end-to-end CEDAR handshake proceed.
+		dprintf( D_FULLDEBUG|D_NETWORK,
+				 "CCBClient: established streaming (proxied) connection to %s "
+				 "via CCB server %s.\n",
+				 m_target_peer_description.c_str(), m_cur_ccb_address.c_str() );
+		adoptProxiedSocket( sock );
+		return KEEP_STREAM; // socket already cancelled/deleted above
+	}
+
+	return KEEP_STREAM;
+}
+
+void
+CCBClient::ProxyConnectFailed()
+{
+	CleanupProxySock();
+	// Move on to the next broker (or give up if none remain).
+	try_next_ccb();
+}
+
+// ---- non-blocking outbound-proxy connect (CCB_PROXY_CONNECT) ----------------
+// Mirrors ProxyConnect_nonblocking / ProxyConnectCallback / ProxyMsgHandler, but
+// asks the (single) outbound CCB to dial m_outbound_target and, on {Result:true},
+// adopts the socket directly -- there is no reverse-connect hello, because we are
+// the CEDAR connector.  Object lifetime + caller notification reuse the
+// reverse-connecting-state / waiting_for_reverse_connect machinery.
+
+bool
+CCBClient::OutboundConnect_nonblocking()
+{
+	// Precondition: m_target_sock is in the reverse-connecting state and
+	// RegisterReverseConnectCallback() has been called (keeping us alive).
+	if( m_ccb_contacts_nb.empty() ) {
+			// No outbound CCB left to try: fail the connection.
+		ReverseConnectCallback( NULL );
+		return false;
+	}
+	m_cur_ccb_address = m_ccb_contacts_nb.back();
+	m_ccb_contacts_nb.pop_back();
+
+		// Pre-build the broker socket with the outbound-CCB bypass set so this
+		// control connection is not itself routed through the outbound CCB (which
+		// would recurse infinitely); startCommand_nonblocking() would otherwise
+		// build the socket internally with no place to set the flag.
+	ReliSock *sock = new ReliSock;
+	sock->set_bypass_outbound_ccb( true );
+	sock->timeout( DEFAULT_CEDAR_TIMEOUT );
+	int rc = sock->connect( m_cur_ccb_address.c_str(), 0, true /*nonblocking*/ );
+	if( rc == 0 ) {
+			// Immediate failure to even start the connect; try the next contact.
+		dprintf(D_ALWAYS,"CCBClient: failed to start connect to outbound CCB %s.\n",
+				m_cur_ccb_address.c_str());
+		delete sock;
+		return OutboundConnect_nonblocking();
+	}
+
+	m_proxy_sock = sock;
+	m_proxy_registered = false;
+	m_proxy_state = PROXY_WAIT_REPLY;
+
+	dprintf( D_NETWORK|D_FULLDEBUG,
+			 "CCBClient: asking outbound CCB %s to dial %s (non-blocking).\n",
+			 m_cur_ccb_address.c_str(), m_outbound_target.c_str() );
+
+	Daemon ccb( DT_COLLECTOR, m_cur_ccb_address.c_str(), NULL );
+	ccb.startCommand_nonblocking(
+		CCB_PROXY_CONNECT, sock, DEFAULT_CEDAR_TIMEOUT, NULL,
+		[this]( bool success, Sock *s, CondorError *errstack,
+				const std::string & /*trust_domain*/, bool /*try_token*/ ) {
+			OutboundConnectCallback( success, s, errstack );
+		} );
+	return true;
+}
+
+void
+CCBClient::OutboundConnectCallback( bool success, Sock *sock, CondorError * /*errstack*/ )
+{
+		// If the reverse-connect was cancelled (e.g. deadline) while connecting,
+		// m_target_sock is gone; just clean up the broker socket.
+	if( !m_target_sock ) {
+		CleanupProxySock();
+		return;
+	}
+	if( !success ) {
+		OutboundConnectFailed();
+		return;
+	}
+
+		// Pre-send version gate: an old broker has no outbound-proxy handler.
+	CondorVersionInfo const *ver = sock->get_peer_version();
+	if( !ver || !ver->built_since_version(
+			CCB_STREAMING_VERSION_MAJOR,
+			CCB_STREAMING_VERSION_MINOR,
+			CCB_STREAMING_VERSION_SUB) )
+	{
+		dprintf( D_ALWAYS,
+				 "CCBClient: outbound CCB broker %s is too old to proxy the "
+				 "connection to %s.\n",
+				 m_cur_ccb_address.c_str(), m_target_peer_description.c_str() );
+		OutboundConnectFailed();
+		return;
+	}
+
+		// Send the proxy-connect request (the target to dial + our connect id).
+	ClassAd msg;
+	msg.Assign( ATTR_MY_ADDRESS, m_outbound_target );
+	msg.Assign( ATTR_CLAIM_ID, m_connect_id );
+	msg.Assign( ATTR_CCB_TTL, m_outbound_ttl );
+	msg.Assign( ATTR_NAME, myName() );
+
+	sock->encode();
+	if( !putClassAd( sock, msg ) || !sock->end_of_message() ) {
+		OutboundConnectFailed();
+		return;
+	}
+
+		// Wait for the broker's reply asynchronously.
+	m_proxy_state = PROXY_WAIT_REPLY;
+	int rc = daemonCore->Register_Socket(
+		sock, sock->peer_description(),
+		[this]( Stream *s ) { return OutboundMsgHandler( s ); },
+		"CCBClient::OutboundMsgHandler" );
+	if( rc < 0 ) {
+		OutboundConnectFailed();
+		return;
+	}
+	m_proxy_registered = true;
+}
+
+int
+CCBClient::OutboundMsgHandler( Stream *stream )
+{
+	Sock *sock = (Sock *)stream;
+	sock->timeout( DEFAULT_CEDAR_TIMEOUT );
+
+	if( !m_target_sock ) {
+		CleanupProxySock();
+		return KEEP_STREAM;
+	}
+
+	ClassAd reply;
+	sock->decode();
+	if( !getClassAd( sock, reply ) || !sock->end_of_message() ) {
+		OutboundConnectFailed();
+		return KEEP_STREAM;
+	}
+	bool result = false;
+	reply.LookupBool( ATTR_RESULT, result );
+	if( !result ) {
+		std::string remote_errmsg;
+		reply.LookupString( ATTR_ERROR_STRING, remote_errmsg );
+		dprintf( D_ALWAYS,
+				 "CCBClient: outbound CCB %s refused to dial %s: %s\n",
+				 m_cur_ccb_address.c_str(), m_outbound_target.c_str(),
+				 remote_errmsg.c_str() );
+		OutboundConnectFailed();
+		return KEEP_STREAM;
+	}
+
+		// Success: the socket is a transparent pipe to the target.  There is no
+		// reverse-connect hello -- adopt the socket and notify the waiting caller,
+		// mirroring ProxyMsgHandler's success path.
+	dprintf( D_FULLDEBUG|D_NETWORK,
+			 "CCBClient: established outbound (proxied) connection to %s via %s "
+			 "(non-blocking).\n",
+			 m_outbound_target.c_str(), m_cur_ccb_address.c_str() );
+	adoptProxiedSocket( sock );
+	return KEEP_STREAM; // socket already cancelled/deleted above
+}
+
+void
+CCBClient::adoptProxiedSocket( Sock *sock )
+{
+		// Detach the proxied socket from its broker handler, make both it and the
+		// target socket raw, and hand the fd to the target socket via
+		// exit_reverse_connecting_state(); then fire the caller's registered handler
+		// so the connection continues as a finished non-blocking connect.  Mirrors
+		// ReverseConnectCallback()'s adoption tail.  Shared by ProxyMsgHandler (final
+		// streaming hop) and OutboundMsgHandler (outbound proxy).
+	daemonCore->Cancel_Socket( sock );
+	m_proxy_registered = false;
+	m_proxy_sock = NULL;
+	m_proxy_state = PROXY_NONE;
+
+	static_cast<ReliSock*>(sock)->resetHeaderMD();
+	m_target_sock->exit_reverse_connecting_state( static_cast<ReliSock*>(sock) );
+	static_cast<ReliSock*>(m_target_sock)->resetHeaderMD();
+	delete sock; // exit_reverse_connecting_state took over the fd
+
+	if( m_ccb_cb ) {
+		m_ccb_cb->cancelCallback();
+		m_ccb_cb->cancelMessage( true );
+		m_ccb_cb = NULL;
+		decRefCount();
+	}
+	daemonCore->CallSocketHandler( m_target_sock, false );
+	m_target_sock = NULL;
+		// May drop the last reference to this CCBClient (deleting it); do not touch
+		// *this afterward.
+	UnregisterReverseConnectCallback();
+}
+
+void
+CCBClient::OutboundConnectFailed()
+{
+	CleanupProxySock();
+	// Try the next outbound CCB, or fail the connection if none remain.
+	OutboundConnect_nonblocking();
+}
+
 bool
 CCBClient::ReverseConnect_blocking( CondorError *error )
 {
+	// Hold a reference to ourselves for the duration of this call.  Below,
+	// exit_reverse_connecting_state() clears the socket's reference to this
+	// CCBClient, which would otherwise delete us mid-function -- fatal once we
+	// fall through to the plain reverse-connect loop and touch our members.
+	classy_counted_ptr<CCBClient> self(this);
+
+	// If we are ourselves behind a CCB, the target cannot reverse-connect to us
+	// directly; ask the broker to proxy instead (streaming mode).
+	std::string my_ccb_return = streamingReturnAddr();
+	if( !my_ccb_return.empty() ) {
+		m_target_sock->enter_reverse_connecting_state();
+		if( ProxyConnect_blocking( error, my_ccb_return.c_str() ) ) {
+			return true;
+		}
+		m_target_sock->exit_reverse_connecting_state(NULL);
+		// Streaming failed (e.g. the broker is too old or has streaming
+		// disabled).  As a last resort, fall through to the plain reverse
+		// connection below: we open a direct listen socket and offer it (our CCB
+		// contact stripped), which succeeds if the two endpoints turn out to be
+		// mutually reachable.  This mirrors the non-blocking try_next_ccb path.
+		dprintf(D_ALWAYS,
+				"CCBClient: streaming (proxy) connection to %s failed; falling "
+				"back to a direct reverse connection.\n",
+				m_target_peer_description.c_str());
+	}
+
 	std::shared_ptr<ReliSock> listen_sock;
 	std::shared_ptr<SharedPortEndpoint> shared_listener;
 	char const *listener_addr = NULL;
@@ -179,7 +950,36 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 				dprintf(D_ALWAYS,"CCBClient: %s\n",errmsg.c_str());
 				return false;
 			}
-		} else if( starts_with(reason, "cannot write") && toolsAssumeFirewalls ) {
+		} else if( toolsAssumeFirewalls ) {
+			// We are not using the shared port (reason: <reason> -- either it is
+			// disabled or its socket directory is not writable) and
+			// TOOLS_ASSUME_FIREWALLS says a random listen port would likely be
+			// firewalled.  So we must not open a plain listen socket and offer its
+			// (unreachable) address: we cannot accept a direct reverse connection.
+			// An unprivileged client behind a firewall or NAT generally cannot, so
+			// rather than hang waiting for a reverse connection that never arrives,
+			// fall back to streaming if it is enabled: ask the broker to proxy the
+			// connection on our existing request socket, so the target never has
+			// to reach us.  Our advertised address need not be reachable -- in
+			// proxy mode the broker splices the target onto the request socket and
+			// never dials it.  ProxyConnect_blocking version-gates each broker, so
+			// against an older broker that cannot stream we fall through and give
+			// up as before.
+			if( param_boolean("CCB_CLIENT_STREAMING", true) ) {
+				char const *my_addr =
+					daemonCore ? daemonCore->publicNetworkIpAddr() : NULL;
+				dprintf( D_NETWORK|D_FULLDEBUG,
+						 "CCBClient: cannot accept a direct reverse connection "
+						 "(assuming firewall); requesting a streaming (proxied) "
+						 "connection to %s instead.\n",
+						 m_target_peer_description.c_str() );
+				m_target_sock->enter_reverse_connecting_state();
+				if( ProxyConnect_blocking( error, my_addr ? my_addr : "" ) ) {
+					return true;
+				}
+				m_target_sock->exit_reverse_connecting_state(NULL);
+			}
+
 			std::string errmsg = reason;
 
 			if( error ) {
@@ -368,10 +1168,16 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 	return false;
 }
 
-bool CCBClient::SplitCCBContact( char const *ccb_contact, std::string &ccb_address, std::string &ccbid, const std::string & peer, CondorError *error )
+bool CCBClient::SplitCCBContact( char const *ccb_contact, std::string &ccb_address, std::string &ccbid, const std::string & peer, CondorError *error, bool peel_innermost )
 {
-	// expected format: "<address>#ccbid"
-	char const *ptr = strchr(ccb_contact,'#');
+	// Format is "<address>#ccbid", where for a tunneled (nested) contact the
+	// address is itself a contact: "<entry-broker>#id1#...#idN".  The recursive
+	// connect path peels one hop at a time, so it splits on the LAST '#' (the
+	// outermost id) and re-resolves the remaining contact.  The v1 (addrs=) Sinful
+	// serialization instead wants the flat entry address with the whole nested id
+	// as a single CCBID, so it splits on the FIRST '#'.  A flat single-hop contact
+	// has exactly one '#', so the two are identical for the common case.
+	char const *ptr = peel_innermost ? strrchr(ccb_contact,'#') : strchr(ccb_contact,'#');
 	if( !ptr ) {
 		std::string errmsg;
 		formatstr(errmsg, "Bad CCB contact '%s' when connecting to %s.",
@@ -543,12 +1349,28 @@ CCBClient::try_next_ccb()
 	RegisterReverseConnectCallback();
 
 	if(m_ccb_contacts_nb.empty()) {
-		dprintf(D_ALWAYS,
-				"CCBClient: no more CCB servers to try for requesting "
-				"reversed connection to %s; giving up.\n",
-				m_target_peer_description.c_str());
-		ReverseConnectCallback(NULL);
-		return false;
+		// If we exhausted every broker while attempting streaming (proxy) mode,
+		// fall back to a plain reverse connection as a last resort: retry the
+		// brokers with our CCB contact stripped.
+		char const *ra = daemonCore->publicNetworkIpAddr();
+		if( m_streaming_phase && ra && Sinful(ra).getCCBContact()
+			&& param_boolean("CCB_CLIENT_STREAMING", true) )
+		{
+			m_streaming_phase = false;
+			m_ccb_contacts_nb = m_ccb_contacts;
+			dprintf(D_ALWAYS,
+					"CCBClient: streaming (proxy) connection to %s failed on all "
+					"brokers; falling back to a direct reverse connection.\n",
+					m_target_peer_description.c_str());
+		}
+		if(m_ccb_contacts_nb.empty()) {
+			dprintf(D_ALWAYS,
+					"CCBClient: no more CCB servers to try for requesting "
+					"reversed connection to %s; giving up.\n",
+					m_target_peer_description.c_str());
+			ReverseConnectCallback(NULL);
+			return false;
+		}
 	}
 
 	std::string ccb_contact = m_ccb_contacts_nb.back();
@@ -567,15 +1389,45 @@ CCBClient::try_next_ccb()
 
 	Sinful sinful_return(return_address);
 	if( sinful_return.getCCBContact() ) {
-		// uh oh!  Our return address is via CCB.
-		dprintf(D_ALWAYS,
-				"CCBClient: WARNING: trying to connect to %s via CCB, but "
-				"this appears to be a connection from one private network "
-				"to another, which is not supported by CCB.  Either that, "
-				"or you have not configured the private network name "
-				"to be the same in these two networks when it really should "
-				"be.  Assuming the latter.\n",
-				m_target_peer_description.c_str());
+		bool streaming_enabled = param_boolean("CCB_CLIENT_STREAMING", true);
+		if( m_streaming_phase && streaming_enabled ) {
+			// We are behind a CCB too (private-to-private): use streaming/proxy
+			// mode.  m_target_sock is already in the reverse-connecting state
+			// (set by ReverseConnect).  Drive the broker exchange asynchronously
+			// so we do not block the DaemonCore main loop; the rest of the work
+			// happens in ProxyConnectCallback / ProxyMsgHandler.
+			if( ProxyConnect_nonblocking( ccbid.c_str(), return_address ) ) {
+				return true;
+			}
+			// Failed to even initiate; try the next broker (or give up).
+			return try_next_ccb();
+		}
+
+		if( streaming_enabled ) {
+			// We have exhausted streaming on every broker and are now retrying
+			// with a plain reverse connection: strip our CCB contact and offer a
+			// direct return address, which succeeds if the endpoints are actually
+			// mutually reachable.
+			dprintf(D_NETWORK|D_FULLDEBUG,
+					"CCBClient: streaming exhausted; attempting a direct reverse "
+					"connection to %s with our CCB contact stripped.\n",
+					m_target_peer_description.c_str());
+		} else {
+			// Streaming is disabled.  Our return address is via CCB, so this
+			// looks like a private-to-private connection that plain CCB cannot
+			// make; assume instead that the private network names are mislabeled
+			// and try a direct reverse connection.
+			dprintf(D_ALWAYS,
+					"CCBClient: WARNING: trying to connect to %s via CCB, but "
+					"this appears to be a connection from one private network "
+					"to another, which is not supported without CCB streaming.  "
+					"Either that, or you have not configured the private network "
+					"name to be the same in these two networks when it really "
+					"should be.  Assuming the latter.  (CCB_CLIENT_STREAMING "
+					"enables private-to-private connections via a streaming-"
+					"capable broker.)\n",
+					m_target_peer_description.c_str());
+		}
 
 		// strip off CCB contact info in the return address
 		sinful_return.setCCBContact(NULL);
@@ -605,10 +1457,11 @@ CCBClient::try_next_ccb()
 	classy_counted_ptr<CCBRequestMsg> msg = new CCBRequestMsg(ad);
 
 	incRefCount(); // do not delete self before CCBResultsCallback
-	m_ccb_cb = new DCMsgCallback(
+	auto ccb_cb = std::make_shared<DCMsgCallback>(
 	    (DCMsgCallback::CppFunction)&CCBClient::CCBResultsCallback,
 	    this );
-	msg->setCallback( m_ccb_cb );
+	m_ccb_cb = ccb_cb;
+	msg->setCallback( ccb_cb );
 
 	msg->setDeadlineTime( m_target_sock->get_deadline() );
 
@@ -628,7 +1481,7 @@ CCBClient::try_next_ccb()
 
 		if( !client_sock->connect_socketpair(*server_sock) ) {
 			dprintf(D_ALWAYS,"CCBClient: connect_socket_pair() failed.\n");
-			CCBResultsCallback(m_ccb_cb);
+			CCBResultsCallback(m_ccb_cb.get());
 			return false;
 		}
 
@@ -666,7 +1519,7 @@ CCBClient::CCBResultsCallback(DCMsgCallback *cb)
 	// waiting for the connection to show up.
 
 	ASSERT( cb );
-	m_ccb_cb = NULL;
+	m_ccb_cb.reset();
 	if( cb->getMessage()->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED ) {
 		// We failed to communicate with the CCB server, so we should
 		// not expect to receive ReverseConnectCallback().
@@ -726,7 +1579,13 @@ CCBClient::RegisterReverseConnectCallback()
 	// side of the connection is really the one we requested to talk
 	// to.
 
-	if( !registered_reverse_connect_command ) {
+	// Outbound-proxy mode never receives a CCB_REVERSE_CONNECT: the broker dials
+	// the target and splices, and we adopt the spliced socket directly (no
+	// reverse-connect hello).  So do not register the reverse-connect command
+	// handler here -- besides being unnecessary, it collides with the handler a
+	// CCB *server* registers for the same command, which matters when a CCB server
+	// itself forwards an outbound-proxy request through a next hop.
+	if( !m_outbound_mode && !registered_reverse_connect_command ) {
 		registered_reverse_connect_command = true;
 
 		// Register this command as ALLOW, because the real security
@@ -841,6 +1700,11 @@ CCBClient::ReverseConnectCallback(Sock *sock)
 	// and letting it continue on its way as though this were
 	// a normal non-blocking connection attempt that just
 	// finished.
+
+	// If a non-blocking proxy exchange is still in flight (e.g. this is the
+	// deadline/cancel path), tear down its broker socket first so its
+	// registered handler cannot fire after we are gone.
+	CleanupProxySock();
 
 	ASSERT( m_target_sock );
 

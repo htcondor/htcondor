@@ -165,6 +165,11 @@ universe = vanilla
 executable = $bls_opt_the_command
 EOF
 
+if [ "x$bls_opt_stgcmd" == "xno" ]
+then
+  echo "transfer_executable = false"
+fi
+
 if [ "x$bls_opt_proxy_string" != "x" ]
 then
   echo "x509userproxy = $bls_opt_proxy_string" >> $submit_file

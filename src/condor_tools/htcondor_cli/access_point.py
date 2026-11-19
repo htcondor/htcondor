@@ -80,6 +80,63 @@ class Status(Verb):
         logger.info("")
 
 
+class Claims(Verb):
+    """
+    Displays active claims held by the access point
+    """
+
+    options = {
+        "ap_name": {
+            "args": ("--name",),
+            "help": "Name or address of the access point to query",
+        }
+    }
+
+    def __init__(self, logger, **options):
+        ap_name = options.get("name")
+
+        if ap_name:
+            collector = htcondor2.Collector()
+            location = collector.locate(htcondor2.DaemonType.Schedd, ap_name)
+            schedd = htcondor2.Schedd(location)
+        else:
+            schedd = htcondor2.Schedd()
+
+        try:
+            claim_ads = schedd.get_claims()
+        except Exception as e:
+            raise RuntimeError(f"Failed to query claims: {e}")
+
+        if len(claim_ads) == 0:
+            logger.info("No active claims")
+            return
+
+        name_width = len("Name")
+        for ad in claim_ads:
+            name = ad.get("Name", "???")
+            name_width = max(name_width, len(name))
+
+        columns = ["Name", "Activity", "Source", "Activations"]
+        header = f"{columns[0]: <{name_width}}   {columns[1]: <10}   {columns[2]: <12}   {columns[3]}"
+        logger.info(underline(header))
+
+        for ad in claim_ads:
+            name = ad.get("Name", "???")
+            activity = ad.get("Activity", "Unknown")
+            activations = ad.get("NumJobStarts", 0)
+
+            if ad.get("OCU", False):
+                source = "OCU"
+            elif ad.get("IsDirectAttach"):
+                source = "DirectAttach"
+            else:
+                source = "Negotiator"
+
+            logger.info(f"{name: <{name_width}}   {activity: <10}   {source: <12}   {activations}")
+
+        logger.info("")
+
+
 class AccessPoint(Noun):
     """
     Run operations on pool access points
@@ -88,6 +145,9 @@ class AccessPoint(Noun):
     class status(Status):
         pass
 
+    class claims(Claims):
+        pass
+
     @classmethod
     def verbs(cls):
-        return [cls.status]
+        return [cls.status, cls.claims]

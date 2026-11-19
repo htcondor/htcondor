@@ -11,8 +11,11 @@
 ##     - SLEEP     -> sleep for specified time
 ##     - SIGNAL    -> Send specified signal to self  (as defined by python signal module)
 ##     - EXIT      -> Exit immediately with specified code
-##     - EXITNOAD  -> Exit immediately with specified code without producing a result ClassAd (i.e. for simulating a plugin failure that doesn't produce a result ad)
-##     - EXITBADAD -> Exit immediately with specified code producing an unparseable ClassAd (i.e. for simulating EP disk filling failure where the plugin attempts to write an ad but fails to do so correctly)
+##     - EXITNOAD  -> Exit immediately with specified code without producing a result ClassAd
+##                    (i.e. for simulating a plugin failure that doesn't produce a result ad)
+##     - EXITBADAD -> Exit immediately with specified code producing an unparseable ClassAd
+##                    (i.e. for simulating EP disk filling failure where the plugin attempts
+##                    to write an ad but fails to do so correctly)
 ##     - ERROR     -> Mimic a transfer failure using information encoded in
 ##                    URL to create returned ClassAd
 ##     - SUCCESS   -> As ERROR but successful transfer
@@ -46,7 +49,7 @@ import re
 import enum
 import subprocess
 import datetime
-from typing import Union, Tuple
+from typing import Union
 
 # ----------------------------------------------------------------------------
 EXIT_SUCCESS = 0
@@ -94,14 +97,16 @@ class DebugLevel(enum.IntEnum):
     """Required debug verbosity level to print debug message"""
 
     ALWAYS = 0           # Always print this message
-    TEST = 1             # Test output reuired for a test
+    TEST = 1             # Test output required for a test
     DEBUGGING = 2        # Increased output for debugging purposes
     VERBOSE = 3          # Verbose debugging output
     CHATTY = 4           # Very chatty debugging output
 
 # ----------------------------------------------------------------------------
 PROGRAM_NAME = "debug_plugin.py"
-PLUGIN_VERSION = "1.1.0"
+# Note: Changing the plugin version requires manual changes to test cases in
+#       test_debug_plugin and test_fto_failure_propagation
+PLUGIN_VERSION = "1.2.0"
 SUPPORTED_SCHEMAS = "debug,decode,encoded"
 # What Plugin protocol version does this speak
 PROTOCOL_VERSION = 4
@@ -375,15 +380,22 @@ def extract_details(action: ActionType, details: str) -> dict:
             debug(DebugLevel.VERBOSE, f"Updating transfer attempt with output from {details}")
 
             # Attempt to execute the script. Non-zero exit code is failure
-            p = subprocess.run(details.split(" "), stdout=subprocess.PIPE)
+            p = subprocess.run(details.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            LOG_SCRIPT_OUTPUT_PREFIX = '\t> '
+
+            stdout = p.stdout.rstrip().decode()
+            stderr = textwrap.indent(p.stderr.rstrip().decode(), LOG_SCRIPT_OUTPUT_PREFIX)
+            stdout_log = textwrap.indent(stdout, LOG_SCRIPT_OUTPUT_PREFIX)
+
+            debug(DebugLevel.VERBOSE, f"Script output:\n{stdout_log}")
+            debug(DebugLevel.VERBOSE, f"Script error:\n{stderr}")
+
             if p.returncode != EXIT_SUCCESS:
-                raise RuntimeError(f"Failed to excute script")
+                raise RuntimeError(f"Failed to excute script (exit={p.returncode})")
 
             # Attempt to parse one ClassAd from stdout of script
-            output = p.stdout.rstrip().decode()
-            debug(DebugLevel.CHATTY, f"Script output:\n{output}")
-
-            p_ad = classad.parseOne(output)
+            p_ad = classad.parseOne(stdout)
             ad.update(p_ad)
         except Exception as e:
             raise DebugUrlParseError(f"Failed to parse script '{details}' output into ClassAd: {e}")
@@ -488,7 +500,7 @@ class DebugPlugin:
 
         return info
 
-    def transfer_file(self, url: str, local_file: str, upload: bool) -> Tuple[dict, str]:
+    def transfer_file(self, url: str, local_file: str, upload: bool) -> Union[dict, str]:
         """Mock transfer a file to produce return ClassAd from information encoded from URL"""
         self.reset_per()
         now = int(time.time())
@@ -503,13 +515,11 @@ class DebugPlugin:
             "TransferFileBytes": 0,
             "TransferTotalBytes": 0,
             "TransferStartTime": now,
+            # Set end time to now for commands that do the bare minimum and return immediately
             "TransferEndTime": now,
             "ConnectionTimeSeconds": 0,
             "TransferUrl": url,
         }
-
-        # And a result string, only used when simulating an unparseable ad for EXITBADAD command
-        RESULT_STR = ""
 
         try:
             # Parse main command from start of URL: cmd/.../...
@@ -551,8 +561,8 @@ class DebugPlugin:
                 RESULT["TransferSuccess"] = True
                 RESULT.update(self.process_url(info))
 
-            # EXIT (debug://exit/<code>) -> Inform plugin to exit right now with the specific code
-            elif cmd == "EXIT" or cmd == "EXITNOAD" or cmd == "EXITBADAD":
+            # EXIT/EXITNOAD/EXITBADAD (debug://exit/<code>) -> Inform plugin to exit right now with the specific code
+            elif cmd in ["EXIT", "EXITNOAD", "EXITBADAD"]:
                 try:
                     # Limit exit code range 0-123 (negatives are turned into absolute values)
                     code = sorted([0, abs(int(info.split("/")[0])), 123])[1]
@@ -564,6 +574,16 @@ class DebugPlugin:
                 if self.exit_code != EXIT_INVALID_URL:
                     debug(DebugLevel.DEBUGGING, f"Changing exit code from {self.exit_code} to {code}")
                     self.exit_code = code
+
+                # Handle improper plugin exit cases:
+                #    1. Produce an unparseable ClassAd by writing a string instead of a dict (i.e. an ad) to the output file
+                #    2. Produce no output at all by returning an empty dict so that no file is created
+                if cmd == "EXITBADAD":
+                    debug(DebugLevel.CHATTY, "Writing bad classad to output")
+                    return "This is not a ClassAd!!!"
+                elif cmd == "EXITNOAD":
+                    debug(DebugLevel.CHATTY, "Writing no classad to output")
+                    return {}
 
                 RESULT["TransferSuccess"] = (self.exit_code == EXIT_SUCCESS)
 
@@ -602,16 +622,10 @@ class DebugPlugin:
 
         # Add general debugging Developer Data to output
         RESULT["DeveloperData"] = self.get_dev_data()
+        # Update with actual end time (i.e. time to fully process & execute encoded URL)
+        RESULT["TransferEndTime"] = int(time.time())
 
-        # Deal with EXITBADAD command which produces an unparseable ClassAd by writing a string instead of a dict (i.e. an ad) to the output file
-        if cmd == "EXITBADAD":
-            RESULT_STR = "This is not a ClassAd!!!" 
-
-        # Deal with EXITNOAD command which produces no output at all by returning an empty dict so that no file is created
-        if cmd == "EXITNOAD":
-            RESULT = {}
-
-        return RESULT, RESULT_STR
+        return RESULT
 
 
 # ----------------------------------------------------------------------------
@@ -708,12 +722,9 @@ def parse_args() -> None:
         plugin = DebugPlugin()
         for url in recursive(args.testing):
             debug(DebugLevel.DEBUGGING, f"{url} yields:")
-            result, result_string = plugin.transfer_file(url, "TESTING-DUMMY", args.upload)
+            result = plugin.transfer_file(url, "TESTING-DUMMY", args.upload)
             try:
-                if result_string:
-                    print(result_string)
-                else:   
-                    print(classad.ClassAd(result))
+                print(result if isinstance(result, str) else classad.ClassAd(result))
             except Exception as e:
                 error(f"Error: Failed to convert results to ClassAd: {e}")
                 error(result)
@@ -758,8 +769,7 @@ def main() -> None:
         error(f"Error: Failed to parse infile {args.infile} ClassAds: {err}")
         try:
             with open(args.outfile, "w") as outfile:
-                outfile_dict = get_error_dict(err)
-                outfile.write(str(classad.ClassAd(outfile_dict)))
+                outfile.write(str(classad.ClassAd(get_error_dict(err))))
         except Exception as deep_err:
             error(f"Error: Failed to write failure output ClassAd: {deep_err}")
         sys.exit(EXIT_SETUP_FAILURE)
@@ -787,16 +797,15 @@ def main() -> None:
                 # Process transfer ClassAd for action
                 try:
                     url = ad["Url"]
-                    outfile_dict, outfile_string = plugin.transfer_file(url, ad["LocalFileName"], args.upload)
-                    if (len(outfile_string) > 0):
-                        outfile.write(outfile_string)
-                    elif len(outfile_dict) > 0:   # Note: do not create a file if dict empty since some commands (i.e. EXITNOAD) are meant to simulate failures that don't produce a result ad
-                        outfile.write(str(classad.ClassAd(outfile_dict)))
+                    result = plugin.transfer_file(url, ad["LocalFileName"], args.upload)
+                    if isinstance(result, str):
+                        outfile.write(result)
+                    elif len(result) > 0: # Don't write anything if empty to mimic failed to write ad
+                        outfile.write(str(classad.ClassAd(result)))
                 except Exception as err:
                     error(f"Error: Failure to process {url}: {err}")
                     try:
-                        outfile_dict = get_error_dict(err, url=url)
-                        outfile.write(str(classad.ClassAd(outfile_dict)))
+                        outfile.write(str(classad.ClassAd(get_error_dict(err, url=url))))
                     except Exception as deep_err:
                         error(f"Error: Failed to write failure output ClassAd: {deep_err}")
                     sys.exit(EXIT_SETUP_FAILURE)
@@ -819,7 +828,7 @@ def process_env() -> None:
     try:
         PROTOCOL_VERSION = int(env.get('DEBUG_PLUGIN_PROTOCOL_VERSION', PROTOCOL_VERSION))
     except Exception as e:
-        error(f"WARNING: Failed to process environment variable DEBUG_PLUGIN_PROTOCOL_VERSION : {e}")
+        error(f"WARNING: Failed to process environment variable DEBUG_PLUGIN_PROTOCOL_VERSION: {e}")
 
     try:
         tmp = env.get("DEBUG_PLUGIN_TIMESTAMP_FORMAT", DATETIME_TIMESTAMP_FORMAT)

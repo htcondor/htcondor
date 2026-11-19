@@ -29,6 +29,7 @@ typedef nvmlReturn_t (*nvml_get_pci)( nvmlDevice_t, nvmlPciInfo_t * );
 typedef nvmlReturn_t (*nvml_get_uint)( nvmlDevice_t, unsigned int * );
 typedef nvmlReturn_t (*nvml_get_char)( nvmlDevice_t, char *, unsigned int );
 typedef nvmlReturn_t (*nvml_get_dhbi)( nvmlDevice_t, unsigned int, nvmlDevice_t * );
+typedef nvmlReturn_t (*nvml_get_parent)( nvmlDevice_t, nvmlDevice_t * );
 
 #ifndef   DEFINE_GPU_FUNCTION_POINTERS
 	#define GPUFP extern
@@ -52,6 +53,7 @@ GPUFP nvml_get_uint      nvmlDeviceGetMaxMigDeviceCount;
 GPUFP nvml_get_char      nvmlDeviceGetUUID;
 GPUFP nvml_get_char      nvmlDeviceGetName;
 GPUFP nvml_get_dhbi      nvmlDeviceGetMigDeviceHandleByIndex;
+GPUFP nvml_get_parent    nvmlDeviceGetDeviceHandleFromMigDeviceHandle;
 
 typedef nvmlReturn_t (*nvml_dgt)( nvmlDevice_t, nvmlTemperatureSensors_t, unsigned int * );
 typedef nvmlReturn_t (*nvml_dgtee)( nvmlDevice_t, nvmlMemoryErrorType_t, nvmlEccCounterType_t, unsigned long long * );

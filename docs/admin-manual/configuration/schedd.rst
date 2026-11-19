@@ -129,7 +129,7 @@ These macros control the *condor_schedd*.
     refers to constants either directly or via macro substitution. The
     default value is an expression that depends on the total amount of
     memory and the operating system. The default expression requires
-    1MByte of RAM per running job on the access point. In some
+    1 MByte of RAM per running job on the access point. In some
     environments and configurations, this is overly generous and can be
     cut by as much as 50%. On Windows platforms, the number of running
     jobs is capped at 2000. A 64-bit version of Windows is recommended
@@ -252,11 +252,19 @@ These macros control the *condor_schedd*.
     the limit is reached, additional transfers will queue up and wait
     before proceeding.
 
+:macro-def:`MAX_CONCURRENT_UPLOADS_PER_USER`
+    This specifies the maximum number of simultaneous transfers per user of input
+    files from the access point to execute machines. The limit applies
+    to all jobs submitted by a user from the same *condor_schedd*. The default is
+    ``$(MAX_CONCURRENT_UPLOADS:0)/5``. A setting of 0 means unlimited transfers. This limit currently
+    does not apply to grid universe jobs. When
+    the limit is reached, the schedd will stop requesting new matches for that user from the *condor_negotiator*
+
 :macro-def:`BYTES_REQUIRED_TO_QUEUE_FOR_TRANSFER`
     This specifies the minimum size in bytes of a job's file transfer
     sandbox that is required before the job needs to enter the transfer
     queue. Job file transfers with a sandbox size smaller than this
-    this threshold will bypass the transfer queue and proceed
+    threshold will bypass the transfer queue and proceed
     immediately, regardless of the limits set by
     :macro:`MAX_CONCURRENT_UPLOADS` and :macro:`MAX_CONCURRENT_DOWNLOADS`.
     The default value is 100000000 (100 million bytes).
@@ -311,7 +319,7 @@ These macros control the *condor_schedd*.
     jobs waiting to transfer files within the limits set by
     :macro:`MAX_CONCURRENT_UPLOADS` and/or :macro:`MAX_CONCURRENT_DOWNLOADS`.
     When choosing a new job to allow to transfer, the first job belonging
-    to the transfer queue user who has least number of active transfers
+    to the transfer queue user who has the least number of active transfers
     will be selected. In case of a tie, the user who has least recently
     been given an opportunity to start a transfer will be selected. By
     default, a transfer queue user is identified as the job owner. A
@@ -587,13 +595,12 @@ These macros control the *condor_schedd*.
     transactions that were performed on the queue (such as new jobs
     submitted or jobs completing). Periodically, the
     *condor_schedd* will go through this log, truncate all the
-    transactions and create a new file with containing only the new
-    initial state of the log. This is a somewhat expensive operation,
+    transactions and create a new file containing only the new initial state of the log. This is a somewhat expensive operation,
     but it speeds up when the *condor_schedd* restarts since there are
     fewer transactions it has to play to figure out what state the job
     queue is really in. This macro determines how often the
-    *condor_schedd* should rework this queue to cleaning it up. It is
-    defined in terms of seconds and defaults to 86400 (once a day).
+    *condor_schedd* should rework this queue to clean it up. It is
+    defined in terms of seconds and defaults to 28800 (every 8 hours).
 
 :macro-def:`WALL_CLOCK_CKPT_INTERVAL`
     The job queue contains a counter for each job's "wall clock" run
@@ -614,7 +621,7 @@ These macros control the *condor_schedd*.
     allowed to write to the queue, and also we always trust whatever the
     :ad-attr:`Owner` value is set to be by the client in the job ad. This was
     added so users can continue to use the SOAP web-services interface
-    over HTTP (w/o authenticating) to submit jobs in a secure,
+    over HTTP (without authenticating) to submit jobs in a secure,
     controlled environment - for instance, in a portal setting.
 
 :macro-def:`QUEUE_SUPER_USERS`
@@ -631,11 +638,22 @@ These macros control the *condor_schedd*.
     :ref:`admin-manual/security:user accounts in htcondor on unix platforms`
     on UIDs in HTCondor for more details on this. By default, the Unix user root
     and the Windows user administrator are given the ability to remove
-    other user's jobs, in addition to user condor. In addition to a
+    other users' jobs, in addition to user condor. In addition to a
     single user, Unix user groups may be specified by using a special
     syntax defined for this configuration variable; the syntax is the
     percent character (``%``) followed by the user group name. All
     members of the user group are given super-user access.
+
+:macro-def:`ENABLE_SLOT_BUNDLES`
+    A boolean value that defaults to ``False``. When ``True``, this
+    *condor_schedd* honors slot bundles. A slot bundle is a cluster of jobs
+    submitted with ``+IsBundle = true`` in the submit file: the
+    *condor_schedd* claims one slot for every job of the cluster, ahead of
+    normal fair-share matchmaking and without charging the accountant, and
+    holds them all until the whole cluster can start at once. That lets a
+    user reserve capacity ahead of everyone else, so the feature is off
+    unless an administrator turns it on. When ``False``, ``IsBundle`` is
+    ignored and such jobs are scheduled normally.
 
 :macro-def:`QUEUE_SUPER_USER_MAY_IMPERSONATE`
     A regular expression that matches the operating system user names
@@ -847,17 +865,10 @@ These macros control the *condor_schedd*.
 
     .. code-block:: condor-config
 
-        if version > 9.5
-           # use hold names if the version supports it
-           SYSTEM_PERIODIC_HOLD_NAMES = Mem Disk
-           SYSTEM_PERIODIC_HOLD_Mem = ImageSize > 3000000
-           SYSTEM_PERIODIC_HOLD_Disk = JobStatus == 2 && DiskUsage > 10000000
-           SYSTEM_PERIODIC_HOLD = JobStatus == 1 && JobRunCount > 10
-        else
-           SYSTEM_PERIODIC_HOLD = \
-          (JobStatus == 1 || JobStatus == 2) && \
-          (JobRunCount > 10 || ImageSize > 3000000 || DiskUsage > 10000000)
-        endif
+        SYSTEM_PERIODIC_HOLD_NAMES = Mem Disk
+        SYSTEM_PERIODIC_HOLD_Mem = ImageSize > 3000000
+        SYSTEM_PERIODIC_HOLD_Disk = JobStatus == 2 && DiskUsage > 10000000
+        SYSTEM_PERIODIC_HOLD = JobStatus == 1 && NumJobStarts > 10
 
 :macro-def:`SYSTEM_PERIODIC_HOLD_REASON`
     .. faux-definition::
@@ -911,7 +922,7 @@ These macros control the *condor_schedd*.
     .. code-block:: condor-config
 
         SYSTEM_PERIODIC_RELEASE = \
-          (JobRunCount < 20 && (time() - EnteredCurrentStatus) > 1200 ) &&  \
+          (NumJobStarts < 20 && (time() - EnteredCurrentStatus) > 1200 ) &&  \
             (HoldReasonCode == 6 && HoldReasonSubCode == 110)
 
 :macro-def:`SYSTEM_PERIODIC_REMOVE_NAMES`
@@ -974,6 +985,11 @@ These macros control the *condor_schedd*.
     If it evaluates to a positive integer, then the job is put into a
     cool-down state for that number of seconds. During this time, the
     job will not be run again.
+
+:macro-def:`SCHEDULER_UNIVERSE_COOL_DOWN_DURATION`
+    An integer representing the time in seconds that a scheduler universe job,
+    such as *condor_dagman*, will be in the cool down state when it exits
+    with a non-zero exit code. The default value is 300 seconds, i.e. 5 minutes.
 
 :macro-def:`SCHEDD_ASSUME_NEGOTIATOR_GONE`
     This macro determines the period, in seconds, that the
@@ -1284,14 +1300,13 @@ These macros control the *condor_schedd*.
        fail if the result does not convert to ``true`` or ``false``.
     -  *expression* - any expression or floating point number that is not one of the above. e.g. ``a+b``. *expression*
        values will be parsed as a classad expression and stored in the job.
-    -  *error* - the literal ``error`` will tell submit to generate an error when the command is used. 
-       this provides a way for admins to disable existing submit commands.
+    -  *error* - the literal ``error`` will tell submit to generate an error when the command is used. This provides a way for admins to disable existing submit commands.
     -  *undefined* - the literal ``undefined`` will be treated by :tool:`condor_submit` as if that
-       attribute is not in this ad. This is intended to aid composibility of this ad across multiple
+       attribute is not in this ad. This is intended to aid composability of this ad across multiple
        configuration files.
 
-    The following example will add four new submit commands and disable the use of the
-    the ``accounting_group_user`` submit command.
+    The following example will add four new submit commands and disable the use of
+    the :subcom:`accounting_group_user` submit command.
 
     .. code-block:: condor-config
 
@@ -1320,8 +1335,7 @@ These macros control the *condor_schedd*.
 
 :macro-def:`SUBMIT_TEMPLATE_<Name>`
     A single submit template containing one or more submit commands.
-    The template can be invoked with or without arguments.  The template
-    can refer arguments by number using the ``$(<N>)`` where ``<N>`` is
+    The template can be invoked with or without arguments.  The template can refer to arguments by number using the ``$(<N>)`` where ``<N>`` is
     a value from 0 thru 9.  ``$(0)`` expands to all of the arguments,
     ``$(1)`` to the first argument, ``$(2)`` to the second argument, and so on.
     The argument number can be followed by ``?`` to test if the argument
@@ -1438,12 +1452,11 @@ These macros control the *condor_schedd*.
 :macro-def:`SYSTEM_PROTECTED_JOB_ATTRS`
     A predefined comma and/or space separated list of attributes that
     can only be altered by the queue super-user, once they have
-    committed values. The hard-code value is empty.
+    committed values. The hard-coded value is empty.
 
 :macro-def:`ALTERNATE_JOB_SPOOL`
     A ClassAd expression evaluated in the context of the job ad. If the
-    result is a string, the value is used an an alternate spool
-    directory under which the job's files will be stored. This alternate
+    result is a string, the value is used as an alternate spool directory under which the job's files will be stored. This alternate
     directory must already exist and have the same file ownership and
     permissions as the main :macro:`SPOOL` directory. Care must be taken that
     the value won't change during the lifetime of each job.
@@ -1501,7 +1514,7 @@ These macros control the *condor_schedd*.
 
 :macro-def:`CHECKPOINT_DESTINATION_MAPFILE`
     The location on disk of the file which maps from checkpoint destinations
-    to how invoke the corresponding clean-up plug-in.  Defaults to
+    to how to invoke the corresponding clean-up plug-in.  Defaults to
     ``$(ETC)/checkpoint-destination-mapfile``.
 
 :macro-def:`AUTO_USE_FEATURE_PelicanRetryPolicy`
@@ -1524,7 +1537,7 @@ These macros control the *condor_schedd*.
 
 :macro-def:`ENABLE_HTTP_PUBLIC_FILES`
     A boolean that defaults to false.  When true, the schedd will
-    use an external http server to transfer public input file.
+    use an external http server to transfer public input files.
 
 :macro-def:`HTTP_PUBLIC_FILES_ADDRESS`
     The full web address (hostname + port) where your web server is serving files (default:
@@ -1537,3 +1550,70 @@ These macros control the *condor_schedd*.
    User security level used to write links to the directory specified by
    HTTP_PUBLIC_FILES_ROOT_DIR. There are three valid options for
    this knob:  **<user>**, **<condor>** or **<%username%>**
+
+:macro-def:`DISABLE_DIRECT_ATTACH_IDENTITY_CHECK`
+    When an EP offers its slots directly to this *condor_schedd* (see
+    :ref:`direct-attach`), and the EP's authenticated identity does not have
+    ``DAEMON`` authorization, the *condor_schedd* will only match jobs owned
+    by that authenticated identity to the offered slots.  Setting this knob to
+    ``True`` disables that restriction, allowing any EP with ``WRITE``
+    authorization to run any user's jobs.  Do not set this unless every
+    identity with ``WRITE`` access to this AP is trusted to do so.
+
+    Defaults to ``False``.
+
+:macro-def:`FORBID_COMMON_FILE_TRANSFER`
+    Common file transfer is a new feature, and while it ought to work for
+    everyone everywhere under the proper circumstances
+    (see :ref:`common_file_transfer`), we may have missed something.
+
+    Defaults to false.  Setting this knob to true will prevent the schedd
+    from trying to use common files; instead, it will fall back on normal
+    file transfer for jobs which define common files.
+
+:macro-def:`CONTAINER_IMAGES_COMMON_BY_DEFAULT`
+    Container images are definitionally immutable and usually the same for
+    every job in a cluster (and many clusters in a DAG); in addition, they
+    are usually large.  Thus, container images are prime candidates for
+    :ref:`common file transfer<common_file_transfer>`,
+    so that they get transferred to an EP once and
+    can be used many times.  (Because they use the same common file transfer
+    mechanism as any other common file, container images are not presently
+    shared between different job owners.)
+
+    Defaults to false.  Setting this knob to true will cause HTCondor to
+    do common file transfer for every container image that HTCondor transfers
+    (*i.e.*, not Docker images) unless :subcom:`container_is_common` is set.
+
+    We expect this knob to default to true in a later version of HTCondor.
+
+:macro-def:`CONTAINER_REGEX_COMMON_BY_DEFAULT`
+    Not all container images are transferred by HTCondor, and therefore must
+    be excluded from common file transfer.  HTCondor always excludes
+    ``docker://`` and ``oras://`` URLs, so you shouldn't need to set this.
+
+    Defaults to unset.  If set, this knob is a regular expression which the
+    container image must match to be eligible for common file transfer.
+
+:macro-def:`KEEP_DATA_CLAIM_IDLE`
+    After an AP stages common files to an EP, it is responsible for keeping
+    those files there for as long as jobs running on that EP require them.
+    This integer duration in seconds defines how long the AP will keep those
+    common files on the EP after the last such job exits.  This delay gives
+    other jobs using those common files time to be submitted (if necessary)
+    and matched (if no claim can be re-used).  It is analogous to
+    :subcom:`keep_claim_idle`, but the latency reductions are probably
+    larger and reduce overall system overhead.
+
+    Defaults to 300 seconds.
+
+:macro-def:`DATA_SLOT_MAX_DISCONNECT_DURATION`
+    Like :ad-attr:`JobLeaseDuration`, except for data slots and set by
+    the administrator for the whole AP, rather than by the submitter for a
+    specific job.
+
+    Defaults to 20 (seconds).  This is much shorter than for jobs because
+    no output is lost as a result of giving up on the data slot quickly, so
+    we want to give other jobs using the same common file(s) a chance to
+    run elsewhere.
+

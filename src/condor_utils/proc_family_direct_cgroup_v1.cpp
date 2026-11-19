@@ -193,6 +193,8 @@ ProcFamilyDirectCgroupV1::register_subfamily_before_fork(FamilyInfo *fi) {
 		// in the child process
 		success = makeCgroupV1(fi->cgroup);
 		get_user_sys_cpu_hz(fi->cgroup, start_user_cpu_hz, start_sys_cpu_hz);
+		// Set here, in the parent, as register_subfamily only runs in the child
+		start_time = time(nullptr);
 	}
 
 	return success;
@@ -427,11 +429,16 @@ ProcFamilyDirectCgroupV1::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 	bool cpu_result = get_user_sys_cpu_hz(cgroup_name, user_hz, sys_hz);
 
 	if (cpu_result) {
-		user_hz -= start_user_cpu_hz;
-		sys_hz  -= start_sys_cpu_hz;
+		// Clamp at zero so a stale baseline can't wrap the unsigned subtraction
+		user_hz = (user_hz > start_user_cpu_hz) ? user_hz - start_user_cpu_hz : 0;
+		sys_hz  = (sys_hz  > start_sys_cpu_hz)  ? sys_hz  - start_sys_cpu_hz  : 0;
 
+		// percent_cpu is a percentage, like the procd's, where 100 is one full core
 		time_t wall_time = time(nullptr) - start_time;
-		usage.percent_cpu = double(user_hz + sys_hz) / double((wall_time * USER_HZ));
+		usage.percent_cpu = 0.0;
+		if (start_time > 0 && wall_time > 0) {
+			usage.percent_cpu = 100.0 * double(user_hz + sys_hz) / double(wall_time * USER_HZ);
+		}
 
 		usage.user_cpu_time = user_hz / USER_HZ; // usage.user_cpu_times in seconds, ugh
 		usage.sys_cpu_time  =  sys_hz / USER_HZ; //  usage.sys_cpu_times in seconds, ugh

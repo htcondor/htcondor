@@ -52,6 +52,20 @@ def remote_job(condor, path_to_sleep):
     ch.event_log._event_log_path = Path(condor.spool_dir / f"{sr.cluster()}" / "0" / f"cluster{sr.cluster()}.proc0.subproc0" / "the_job.log")
 
     assert ch.wait(condition=ClusterState.all_complete, timeout=60)
+
+    # The event log shows the completion event before the schedd's shadow
+    # reaper has necessarily updated JobStatus to COMPLETED.  retrieve()
+    # only sets StageOutStart/StageOutFinish for jobs already in a terminal
+    # state, so we must wait for the schedd to catch up.
+    for _ in range(60):
+        ads = schedd.query(
+            constraint=f"ClusterID == {sr.cluster()}",
+            projection=["JobStatus"],
+        )
+        if ads and ads[0]["JobStatus"] == JobStatus.COMPLETED:
+            break
+        sleep(1)
+
     schedd.retrieve(sr.cluster())
 
     return ch

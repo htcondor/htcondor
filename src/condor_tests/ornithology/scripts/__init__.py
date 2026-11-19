@@ -40,8 +40,16 @@ def prepare_script(path):
             with open(source, 'rb') as f:
                 body = f.read()
             if body:
+                # cmd.exe requires CRLF line endings; an LF-only batch file is
+                # mis-parsed (the caret line-continuation in the prolog breaks)
+                # and falls straight through without ever launching python, so
+                # the job exits immediately instead of honoring its argument.
+                # Emit CRLF throughout -- python accepts CRLF source via
+                # universal newlines, so the wrapped body still runs.
+                prolog = "\r\n".join(WIN32_PY_SCRIPT_PROLOG).encode('utf8')
+                body = body.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
                 with open(path,'wb') as f:
-                    f.write("\n".join(WIN32_PY_SCRIPT_PROLOG).encode('utf8') + body)
+                    f.write(prolog + body)
                 os.remove(source)
         except IOError:
             return # do nothing

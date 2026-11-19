@@ -53,7 +53,7 @@ REMOTE_CONDOR_register_starter_info(const ClassAd& ad)
 	CurrentSysCall = CONDOR_register_starter_info;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -107,7 +107,7 @@ REMOTE_CONDOR_register_job_info(const ClassAd& ad)
 		*/
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -145,7 +145,7 @@ REMOTE_CONDOR_get_job_info(ClassAd *ad)
 	CurrentSysCall = CONDOR_get_job_info;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -192,7 +192,7 @@ REMOTE_CONDOR_get_user_info(ClassAd *ad)
 	CurrentSysCall = CONDOR_get_user_info;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -244,7 +244,7 @@ REMOTE_CONDOR_job_exit(int status, int reason, ClassAd *ad)
 		  hoping to get a request for a reconnect.
 		*/
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -284,7 +284,7 @@ REMOTE_CONDOR_job_termination(const ClassAd& ad)
 	CurrentSysCall = CONDOR_job_termination;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -329,7 +329,7 @@ REMOTE_CONDOR_begin_execution( void )
 	CurrentSysCall = CONDOR_begin_execution;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -371,7 +371,7 @@ REMOTE_CONDOR_open( char const *  path , open_flags_t flags , int   lastarg)
         CurrentSysCall = CONDOR_open;
 
         if( ! syscall_sock->is_connected() ) {
-                dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+                dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
                 errno = ETIMEDOUT;
                 return -1;
         }
@@ -419,7 +419,7 @@ REMOTE_CONDOR_close(int   fd)
         CurrentSysCall = CONDOR_close;
 
         if( ! syscall_sock->is_connected() ) {
-                dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+                dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
                 errno = ETIMEDOUT;
 	            return -1;
         }
@@ -463,7 +463,7 @@ REMOTE_CONDOR_read(int   fd , void *  buf , size_t   len)
         CurrentSysCall = CONDOR_read;
 
         if( ! syscall_sock->is_connected() ) {
-                dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+                dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
                 errno = ETIMEDOUT;
                 return -1;
         }
@@ -511,7 +511,7 @@ REMOTE_CONDOR_write(int   fd , void *  buf , size_t   len)
         CurrentSysCall = CONDOR_write;
 
         if( ! syscall_sock->is_connected() ) {
-                dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+                dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
                 errno = ETIMEDOUT;
                 return -1;
         }
@@ -560,7 +560,7 @@ REMOTE_CONDOR_lseek(int   fd , off_t   offset , int   whence)
         CurrentSysCall = CONDOR_lseek;
 
         if( ! syscall_sock->is_connected() ) {
-                dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+                dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
                 errno = ETIMEDOUT;
                 return -1;
         }
@@ -608,7 +608,7 @@ REMOTE_CONDOR_unlink( char *  path )
         CurrentSysCall = CONDOR_unlink;
 
         if( ! syscall_sock->is_connected() ) {
-                dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+                dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
                 errno = ETIMEDOUT;
                 return -1;
         }
@@ -652,7 +652,7 @@ REMOTE_CONDOR_rename( char *  from , char *  to)
         CurrentSysCall = CONDOR_rename;
 
         if( ! syscall_sock->is_connected() ) {
-                dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+                dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
                 errno = ETIMEDOUT;
                 return -1;
         }
@@ -698,7 +698,7 @@ REMOTE_CONDOR_mkdir( char *  path, int mode )
         CurrentSysCall = CONDOR_mkdir;
 
         if( ! syscall_sock->is_connected() ) {
-                dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+                dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
                 errno = ETIMEDOUT;
                 return -1;
         }
@@ -744,7 +744,7 @@ REMOTE_CONDOR_rmdir( char *  path )
         CurrentSysCall = CONDOR_rmdir;
 
         if( ! syscall_sock->is_connected() ) {
-                dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+                dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
                 errno = ETIMEDOUT;
                 return -1;
         }
@@ -788,7 +788,7 @@ REMOTE_CONDOR_fsync(int   fd)
         CurrentSysCall = CONDOR_fsync;
 
         if( ! syscall_sock->is_connected() ) {
-                dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+                dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
                 errno = ETIMEDOUT;
                 return -1;
         }
@@ -833,7 +833,7 @@ REMOTE_CONDOR_get_file_info_new(char *  logical_name , char *&actual_url)
 		ASSERT( actual_url == NULL );
  
         if( ! syscall_sock->is_connected() ) {
-                dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+                dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
                 errno = ETIMEDOUT;
                 return -1;
         }
@@ -888,7 +888,7 @@ REMOTE_CONDOR_ulog(const ClassAd& ad)
 	CurrentSysCall = CONDOR_ulog;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -918,7 +918,7 @@ REMOTE_CONDOR_get_job_attr(char *  attrname , char *& expr)
 	CurrentSysCall = CONDOR_get_job_attr;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -955,7 +955,7 @@ REMOTE_CONDOR_set_job_attr(char *  attrname , char *  expr)
 	CurrentSysCall = CONDOR_set_job_attr;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -992,7 +992,7 @@ REMOTE_CONDOR_constrain( char *  expr)
 	CurrentSysCall = CONDOR_constrain;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -1035,7 +1035,7 @@ int REMOTE_CONDOR_get_sec_session_info(
 	CurrentSysCall = CONDOR_get_sec_session_info;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -1091,7 +1091,7 @@ REMOTE_CONDOR_pread(int fd , void* buf , size_t len, size_t offset)
 	CurrentSysCall = CONDOR_pread;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -1140,7 +1140,7 @@ REMOTE_CONDOR_pwrite(int fd , void* buf ,size_t len, size_t offset)
 	CurrentSysCall = CONDOR_pwrite;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -1190,7 +1190,7 @@ REMOTE_CONDOR_sread(int fd , void* buf , size_t len, size_t offset,
 	CurrentSysCall = CONDOR_sread;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -1244,7 +1244,7 @@ REMOTE_CONDOR_swrite(int fd , void* buf ,size_t len, size_t offset,
 	CurrentSysCall = CONDOR_swrite;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -1297,7 +1297,7 @@ REMOTE_CONDOR_rmall(char *path)
 	CurrentSysCall = CONDOR_rmall;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -1340,7 +1340,7 @@ REMOTE_CONDOR_getfile(char *path, char **buffer)
 	CurrentSysCall = CONDOR_getfile;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -1386,7 +1386,7 @@ REMOTE_CONDOR_putfile(char *path, int mode, int length)
 	CurrentSysCall = CONDOR_putfile;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -1429,7 +1429,7 @@ REMOTE_CONDOR_getlongdir(char *path, char *&buffer)
 	CurrentSysCall = CONDOR_getlongdir;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -1474,7 +1474,7 @@ REMOTE_CONDOR_getdir(char *path, char *&buffer)
 	CurrentSysCall = CONDOR_getdir;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -1519,7 +1519,7 @@ REMOTE_CONDOR_whoami(int length, void *buffer)
 	CurrentSysCall = CONDOR_whoami;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -1564,7 +1564,7 @@ REMOTE_CONDOR_whoareyou(char *host, int length, void *buffer)
 	CurrentSysCall = CONDOR_whoareyou;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -1611,7 +1611,7 @@ REMOTE_CONDOR_fstat(int fd, char* buffer)
 	CurrentSysCall = CONDOR_fstat;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -1656,7 +1656,7 @@ REMOTE_CONDOR_fstatfs(int fd, char* buffer)
 	CurrentSysCall = CONDOR_fstat;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -1701,7 +1701,7 @@ REMOTE_CONDOR_fchown(int fd, int uid, int gid)
 	CurrentSysCall = CONDOR_fchown;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -1748,7 +1748,7 @@ REMOTE_CONDOR_fchmod(int fd, int mode)
 	CurrentSysCall = CONDOR_fchmod;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -1793,7 +1793,7 @@ REMOTE_CONDOR_ftruncate(int fd, int length)
 	CurrentSysCall = CONDOR_ftruncate;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -1840,7 +1840,7 @@ REMOTE_CONDOR_putfile_buffer(void *buffer, int length)
 	dprintf ( D_SYSCALLS, "Doing CONDOR_putfile_buffer\n" );
 	
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -1877,7 +1877,7 @@ REMOTE_CONDOR_link(char *path, char *newpath)
 	CurrentSysCall = CONDOR_link;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -1922,7 +1922,7 @@ REMOTE_CONDOR_symlink(char *path, char *newpath)
 	CurrentSysCall = CONDOR_symlink;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -1967,7 +1967,7 @@ REMOTE_CONDOR_readlink(char *path, int length, char **buffer )
 	CurrentSysCall = CONDOR_readlink;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -2015,7 +2015,7 @@ REMOTE_CONDOR_stat(char *path, char *buffer)
 	CurrentSysCall = CONDOR_stat;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -2060,7 +2060,7 @@ REMOTE_CONDOR_lstat(char *path, char *buffer)
 	CurrentSysCall = CONDOR_lstat;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -2105,7 +2105,7 @@ REMOTE_CONDOR_statfs(char *path, char *buffer)
 	CurrentSysCall = CONDOR_statfs;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -2150,7 +2150,7 @@ REMOTE_CONDOR_access(char *path, int mode)
 	CurrentSysCall = CONDOR_access;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -2195,7 +2195,7 @@ REMOTE_CONDOR_chmod(char *path, int mode)
 	CurrentSysCall = CONDOR_chmod;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -2240,7 +2240,7 @@ REMOTE_CONDOR_chown(char *path, int uid, int gid)
 	CurrentSysCall = CONDOR_chown;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -2287,7 +2287,7 @@ REMOTE_CONDOR_lchown(char *path, int uid, int gid)
 	CurrentSysCall = CONDOR_lchown;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -2334,7 +2334,7 @@ REMOTE_CONDOR_truncate(char *path, int length)
 	CurrentSysCall = CONDOR_truncate;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -2379,7 +2379,7 @@ REMOTE_CONDOR_utime(char *path, int actime, int modtime)
 	CurrentSysCall = CONDOR_utime;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -2426,7 +2426,7 @@ REMOTE_CONDOR_dprintf_stats(const char *message)
 	CurrentSysCall = CONDOR_dprintf_stats;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -2484,7 +2484,7 @@ REMOTE_CONDOR_getcreds(const char* creds_receive_dir,
 	char* empty_ptr = empty;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -2569,7 +2569,7 @@ REMOTE_CONDOR_get_delegated_proxy( const char* proxy_source_path, const char* pr
 	CurrentSysCall = CONDOR_get_delegated_proxy;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -2619,7 +2619,7 @@ int REMOTE_CONDOR_get_docker_creds(const ClassAd &query, ClassAd &creds) {
 	CurrentSysCall = CONDOR_get_docker_creds;
 
 	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__);
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -2653,7 +2653,7 @@ REMOTE_CONDOR_event_notification(const ClassAd& event ) {
 	CurrentSysCall = CONDOR_event_notification;
 
 	if(! syscall_sock->is_connected()) {
-		dprintf( D_ALWAYS, "RPC error: disconnected from shadow\n" );
+		dprintf( D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__ );
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -2684,7 +2684,7 @@ REMOTE_CONDOR_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 	CurrentSysCall = CONDOR_request_guidance;
 
 	if(! syscall_sock->is_connected()) {
-		dprintf( D_ALWAYS, "RPC error: disconnected from shadow\n" );
+		dprintf( D_ALWAYS, "RPC error: disconnected from shadow (%s)\n", __FUNCTION__ );
 		errno = ETIMEDOUT;
 		return -1;
 	}

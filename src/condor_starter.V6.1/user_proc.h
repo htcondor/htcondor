@@ -26,8 +26,17 @@
 #include "env.h"
 #include "condor_classad.h"
 
+/** Return type for JobReaper() indicating what happened when a pid exited.
+*/
+enum class ReapResult {
+	JobNotFound,      ///< This UserProc did not match the exited pid
+	JobDone,          ///< This UserProc matched the pid and the job is finished and next job should not start
+	JobShouldReExec,  ///< This UserProc matched the pid but will re-exec the job locally (e.g. self-checkpoint)
+	JobNext,          ///< This UserProc matched the pid and the next job should be started (if any).
+};
+
 /** This class is a base class for the various types of startable
-	processes.  It defines a bunch of pure virtual functions that 
+	processes.  It defines a bunch of pure virtual functions that
 	are to be implemented in child classes.
 
  */
@@ -50,13 +59,14 @@ public:
 	virtual int StartJob() = 0;
 
 		/** A pid exited.  If this UserProc wants to do any cleanup
-			now that this pid has exited, it does so here.  If we
-			return true, the starter will consider this UserProc done,
-			remove it from the active job list, and put it in a list
-			of jobs that are already reaped.
-		    @return true if this UserProc is no longer active, false if it is
+			now that this pid has exited, it does so here.
+		    @return JobDone if this UserProc is finished and should be
+			        moved to the reaped list, JobShouldReExec if this
+			        UserProc handled the exit but will re-exec the job
+			        (e.g. after a self-checkpoint), or JobNotFound if
+			        this UserProc did not match the exited pid.
 		*/
-	virtual bool JobReaper(int pid, int status);
+	virtual ReapResult JobReaper(int pid, int status);
 
 		/** Job exits.  Starter has decided it's done with everything
 			it needs to do, and we can now notify the job's controller
@@ -101,9 +111,18 @@ public:
 	virtual bool Ckpt() { return false; }
 	virtual void CkptDone(bool /*success*/) {};
 
+	virtual bool ThisProcRunsAlongsideMainProc();
+
 		/** Returns the pid of this job.
 			@return The pid. */
 	int GetJobPid() const { return JobPid; }
+
+	ClassAd * taskAd() const { return JobAd; }
+	int taskId() const { return taskid; }
+	void set_taskId(int id) { taskid = id; } // TODO: move this into constructor?
+	void set_finalTask(bool val) { m_finalTask = val; }
+	void skipFutureTasks(int code) { m_skipFutureTasks = code; }
+	int shouldSkipFutureTasks() { return m_skipFutureTasks; }
 
 		/** Check if user's job process has actually been started yet.
 			For instance, it may not have been forked yet because we're
@@ -116,12 +135,8 @@ public:
 		*/
 	bool RequestedExit( void ) const { return requested_exit; };
 
-		/** This is the login id used for execute login is dedicated pid tracking.
-		 *  If there is no dedicated login for job execution, this is NULL.
-		 *  (public so it can be seen by derived grandchildren classes; protected
-		 *   only allow derived child classes access, not grandchildren).
-		 */
-	char const *m_dedicated_account;
+	const ClassAd * jobAd() { return JobAd; }
+	int Universe() { return job_universe; }
 
 protected:
 
@@ -131,6 +146,8 @@ protected:
 	int JobPid;
 	int job_universe;
 	int exit_status;
+	int taskid{0};
+	int m_skipFutureTasks{0}; // set when this task fails in such a way that we should not try and run more tasks
 	bool requested_exit;
 	bool m_proc_exited;
 
@@ -138,6 +155,9 @@ protected:
 		// JobAd. Most of the time, we aren't. But in at least one case,
 		// we are.
 	bool m_deleteJobAd;
+
+		// this is the last task, so notifyJobExit when JobExit is called
+	bool m_finalTask{true};
 
 		/** This is the identifier for this UserProc.  It's used for
 			dprintf messages() and in some cases as a prefix for
@@ -175,7 +195,6 @@ protected:
 
 	void SetStdFiles(const int std_fds[], char const *std_fnames[]);
 
-	virtual bool ThisProcRunsAlongsideMainProc();
 
 	virtual char const *getArgv0();
 

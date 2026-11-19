@@ -86,10 +86,17 @@ def the_cluster_ads(the_condor, the_job_description):
     return clusterAds
 
 
+def getAttributeByPrefix( ad, prefix ):
+    for k,v in ad.items():
+        if k.startswith(prefix):
+            return v
+    return None
+
+
 class TestCIC_Regex():
 
     def test_container_commonality_is_as_expected(self, the_cluster_ads):
         for name, ad in the_cluster_ads.items():
-            common = ad.get('_x_catalog_condor_container_image') is not None
+            common = getAttributeByPrefix(ad, '_x_catalog_container') is not None
             print(f"{name} -> {common}")
             assert TEST_CASES[name]['expected'] == common

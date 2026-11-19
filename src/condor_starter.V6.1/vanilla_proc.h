@@ -74,7 +74,7 @@ public:
 		/** Make certain all decendants are	dead via the ProcFamily,
 			save final usage statistics, and call OsProc::JobReaper().
 		*/
-	virtual bool JobReaper(int pid, int status);
+	virtual ReapResult JobReaper(int pid, int status);
 
 		/** Call family->suspend() */
 	virtual void Suspend();
@@ -104,6 +104,10 @@ public:
 	virtual std::string CgroupSuffix() { return "";}
 
 	virtual bool ShouldConvertCmdToAbsolutePath() { return m_pid_ns_status_filename.empty();}
+
+	void set_pid_ns_status_filename(const std::string & filename) {
+		m_pid_ns_status_filename = filename;
+	}
 
 	bool finishShutdownFast();
 

@@ -5,7 +5,7 @@ Configuration for Central Managers
 Introduction
 ------------
 
-The Center Manager machine, or CM, is a role that usually runs on one machine
+The Central Manager machine, or CM, is a role that usually runs on one machine
 in your pool.  In some ways, it defines the extent and scope of the pool.  A
 central manager must run at least one *condor_collector* and
 *condor_negotiator* daemon, and most pools run exactly one of each.  Some large
@@ -14,7 +14,7 @@ over a very large pool (say, more than 100,000 slots), or to move the load of
 handling monitoring and reporting queries to a different collector than is
 handling the operational aspects of running a pool, or to improve the
 availability of the pool as a whole.  In the same way, most pools run with a
-single negotiator negotiator daemon, but in some specialized configurations,
+single negotiator daemon, but in some specialized configurations,
 separate negotiators can handle fast matching to a subset of the pool, or break
 the pool accounting into separate shards.
 
@@ -42,7 +42,7 @@ to users according to the policies of the administrators of the CM and the EP.
 Thus, there is a lot of configuration control that you have over this daemon
 and how it works.  Scheduling of jobs is a two-phased process.  The *condor_negotiator*
 tries to balance the allocation of all the slots in the pool in some fair way.
-It then give these allocated slots to the *condor_schedd*'s that hold the jobs
+It then gives these allocated slots to the *condor_schedd*'s that hold the jobs
 of those users, and it is the *condor_schedd* on the AP that is responsible for the
 final selection of which jobs run on which slots.  The *condor_schedd* can re-use a
 match the negotiator has given it to run multiple jobs in succession.  Because of this,
@@ -307,7 +307,7 @@ according to the inverse ratio rule.
 
 Assume two users with no history, named A and B, using a pool with 100 cores. To
 simplify the math, also assume both users have an equal priority factor of 1.0.
-User A submits a very large number of short-running jobs at time t = 0 zero.  User
+User A submits a very large number of short-running jobs at time t = 0.  User
 B waits until 48 hours later, and also submits an infinite number of short jobs.
 At the beginning, the EUP doesn't matter, as there is only one user with jobs, 
 and so user A gets the whole pool.  At the 48 hour mark, both users compete for
@@ -581,7 +581,7 @@ the username selected by setting the submit file option
     accounting_group_user = ishmael
 
 This means this job should be treated, for accounting purposes only, as
-"ishamel", but "ishmael" will not be the operating system id the shadow
+"ishmael", but "ishmael" will not be the operating system id the shadow
 or job uses.  Note that HTCondor trusts the user to set this
 to a valid value.  The administrator can use schedd requirements or transforms
 to validate such settings, if desired.  accounting_group_user is frequently used
@@ -773,7 +773,7 @@ the following example:
 This configuration is the same as above for the chemistry users.
 However, :macro:`GROUP_ACCEPT_SURPLUS` is set to ``False`` globally,
 ``False`` for the physics parent group, and ``True`` for the subgroups
-group_physics.lep and group_physics.lep. This means that
+group_physics.lep and group_physics.hep. This means that
 group_physics.lep and group_physics.hep are allowed to exceed their
 quota of 15 and 5, but their sum cannot exceed 20, for that is their
 parent's quota. If the group_physics had :macro:`GROUP_ACCEPT_SURPLUS` set
@@ -785,7 +785,7 @@ is, any leaf nodes of this tree with excess quota will share it with any
 peers which accept surplus. Any subsequent excess will then be passed up
 to the parent node and over to all of its children, recursively. Any
 node that does not accept surplus implements a hard cap on the number of
-slots that the sum of it's children use.
+slots that the sum of its children use.
 
 After the *condor_negotiator* calculates the quota assigned to each group,
 possibly adding in surplus, it then negotiates with the *condor_schedd* daemons
@@ -1094,7 +1094,7 @@ should use.
 
 Running with multiple negotiators also means you need to be careful with the
 :tool:`condor_userprio` command.  As there is no default negotiator, you should
-always name the specific negotiator you want to :tool:`condor_userprio` to talk to
+always name the specific negotiator you want :tool:`condor_userprio` to talk to
 with the `-name` option.
 
 Defragmenting Dynamic Slots
@@ -1203,86 +1203,6 @@ ClassAd:
 :index:`configuration<single: configuration; SMP machines>`
 :index:`configuration<single: configuration; multi-core machines>`
 
-Configuring The HTCondorView Server
------------------------------------
-
-:index:`Server<single: Server; HTCondorView>`
-
-The HTCondorView server is an alternate use of the *condor_collector*
-that logs information on disk, providing a persistent, historical
-database of pool state. This includes machine state, as well as the
-state of jobs submitted by users.
-
-An existing *condor_collector* may act as the HTCondorView collector
-through configuration. This is the simplest situation, because the only
-change needed is to turn on the logging of historical information. The
-alternative of configuring a new *condor_collector* to act as the
-HTCondorView collector is slightly more complicated, while it offers the
-advantage that the same HTCondorView collector may be used for several
-pools as desired, to aggregate information into one place.
-
-The following sections describe how to configure a machine to run a
-HTCondorView server and to configure a pool to send updates to it.
-
-Configuring a Machine to be a HTCondorView Server
-'''''''''''''''''''''''''''''''''''''''''''''''''
-
-:index:`configuration<single: configuration; HTCondorView>`
-
-To configure the HTCondorView collector, a few configuration variables
-are added or modified for the *condor_collector* chosen to act as the
-HTCondorView collector. These configuration variables are described in
-:ref:`collector_config_options`. Here are brief explanations of the entries that must be customized:
-
-:macro:`POOL_HISTORY_DIR`
-    The directory where historical data will be stored. This directory
-    must be writable by whatever user the HTCondorView collector is
-    running as (usually the user condor). There is a configurable limit
-    to the maximum space required for all the files created by the
-    HTCondorView server called (:macro:`POOL_HISTORY_MAX_STORAGE`).
-
-    NOTE: This directory should be separate and different from the
-    ``spool`` or ``log`` directories already set up for HTCondor. There
-    are a few problems putting these files into either of those
-    directories.
-
-:macro:`KEEP_POOL_HISTORY`
-    A boolean value that determines if the HTCondorView collector should
-    store the historical information. It is ``False`` by default, and
-    must be specified as ``True`` in the local configuration file to
-    enable data collection.
-
-Once these settings are in place in the configuration file for the
-HTCondorView server host, create the directory specified in
-:macro:`POOL_HISTORY_DIR` and make it writable by the user the HTCondorView
-collector is running as. This is the same user that owns the
-``CollectorLog`` file in the ``log`` directory. The user is usually
-condor.
-
-If using the existing *condor_collector* as the HTCondorView collector,
-no further configuration is needed. To run a different
-*condor_collector* to act as the HTCondorView collector, configure
-HTCondor to automatically start it.
-
-If using a separate host for the HTCondorView collector, to start it, add the
-value ``COLLECTOR`` to :macro:`DAEMON_LIST`, and restart HTCondor on that
-host. To run the HTCondorView collector on the same host as another
-*condor_collector*, ensure that the two *condor_collector* daemons use
-different network ports. Here is an example configuration in which the main
-*condor_collector* and the HTCondorView collector are started up by the same
-:tool:`condor_master` daemon on the same machine. In this example, the HTCondorView
-collector uses port 12345.
-
-.. code-block:: condor-config
-
-      VIEW_SERVER = $(COLLECTOR)
-      VIEW_SERVER_ARGS = -f -p 12345
-      VIEW_SERVER_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog"
-      DAEMON_LIST = MASTER, NEGOTIATOR, COLLECTOR, VIEW_SERVER
-
-For this change to take effect, restart the :tool:`condor_master` on this
-host. This may be accomplished with the :tool:`condor_restart` command, if
-the command is run with administrator access to the pool.
 
 .. _Central Manager High Availability:
 
@@ -1326,7 +1246,7 @@ jobs and allocating new slots. High availability of the
 problem.
 
 Configuration allows one of multiple machines within the pool to
-function as the central manager. While there are may be many active
+function as the central manager. While there may be many active
 *condor_collector* daemons, only a single, active *condor_negotiator*
 daemon will be running. The machine with the *condor_negotiator* daemon
 running is the active central manager. The other potential central
@@ -1372,7 +1292,7 @@ communications between machines when
    running, yet the machine is functioning
 
 The high availability mechanism distinguishes between these two, and it
-operates based only on first (when a central manager machine is down). A
+operates based only on the first (when a central manager machine is down). A
 lack of executing daemons does not cause the protocol to choose or use a
 new active central manager.
 
@@ -1533,8 +1453,7 @@ machines.
     # See note above the length of the negotiation cycle.
     MASTER_HAD_BACKOFF_CONSTANT = 360
 
-The following shared-port configuration is for the machines which that
-will not be central managers.
+The following shared-port configuration is for the machines that will not be central managers.
 
 .. code-block:: condor-config
 
@@ -1670,231 +1589,6 @@ identical for the fixed- and shared- port cases.
     CONDOR_HOST = $(CENTRAL_MANAGER1),$(CENTRAL_MANAGER2)
 
 
-Monitoring with Ganglia, Elasticsearch, etc.
---------------------------------------------
-
-:index:`monitoring<single: monitoring; pool management>`
-:index:`monitoring pools` :index:`pool monitoring`
-
-HTCondor keeps operational data about different aspects of the system in
-different places: The *condor_collector* stores current data about all the
-slots and all the daemons in the system.  If absent ads are enabled, the
-*condor_collector* also stores information about slots that are no longer in
-the system, for a fixed amount of time.  All this data may be queried with
-appropriate options to the :tool:`condor_status` command. The AP's job history file
-stores data about recent completed and removed jobs, similarly, each EP stores
-a startd_history file with information about jobs that have only run on that
-EP. Both of these may be queried with the :tool:`condor_history` command.
-
-While using :tool:`condor_status` or :tool:`condor_history` works well for one-off or
-ad-hoc queries, both tend to be slow, because none of the data is indexed or
-stored in a proper database.  Furthermore, all these data sources age old data
-out quickly.  Also, there is no graphical UI provided to visualize or analyze
-any of the data.
-
-As there are many robust, well-documented systems to do these sorts of things,
-the best solution is to copy the original data out of the proprietary HTCondor
-formats and into third party monitoring, database and visualization systems.
-
-The *condor_gangliad* is an HTCSS daemon that periodically copies data out of
-the *condor_collector* and into the ganglia monitoring system.  It can also be
-used to populate grafana.  :tool:`condor_adstash` is a HTCSS daemon which can copy
-job history information out of the AP's history file and into the Elasticsearch
-database for further querying.
-
-Ganglia
--------
-
-:index:`with Ganglia<single: with Ganglia; Monitoring>`
-:index:`Ganglia monitoring`
-:index:`condor_gangliad daemon`
-
-Installation and configuration of Ganglia itself is beyond the scope of this
-document: complete information is available at the ganglia homepage at
-(`http://ganglia.info/ <http://ganglia.info/>`_), from the O'Reilly book on
-the subject, or numerous webpages.
-
-Generally speaking, the *condor_gangliad* should be setup to run on the same
-system where the ganglia *gmetad* is running.  Unless the pools is exceptionally
-large, putting the gmetad and the *condor_gangliad* on the central manager
-machine is a good choice.  To enable the *condor_gangliad*, simply add
-the line
-
-.. code-block:: condor-config
-
-      use FEATURE: ganglia
-
-to the config file on the central manager machine, and :tool:`condor_restart` the
-HTCondor system on that machine.  If the *condor_gangliad* daemon is to run on
-a different machine than the one running Ganglia's *gmetad*, modify
-configuration variable :macro:`GANGLIA_GSTAT_COMMAND` to get the list of
-monitored hosts from the master *gmond* program.
-
-The above steps alone should be sufficient to get a default set of metrics
-about the pool into ganglia.  Additional metrics, tuning and other
-information, if needed, follows.
-
-By default, the *condor_gangliad* will only propagate metrics to hosts that are
-already monitored by Ganglia. Set configuration variable
-:macro:`GANGLIA_SEND_DATA_FOR_ALL_HOSTS` to ``True`` to set up a Ganglia host
-to monitor a pool not monitored by Ganglia or have a heterogeneous pool where
-some hosts are not monitored. In this case, default graphs that Ganglia
-provides will not be present. However, the HTCondor metrics will appear.
-
-On large pools, setting configuration variable
-:macro:`GANGLIAD_PER_EXECUTE_NODE_METRICS` to ``False`` will reduce the amount
-of data sent to Ganglia. The execute node data is the least important to
-monitor. One can also limit the amount of data by setting configuration
-variable :macro:`GANGLIAD_REQUIREMENTS` Be aware that aggregate sums over the
-entire pool will not be accurate if this variable limits the ClassAds queried.
-
-Metrics to be sent to Ganglia are specified in files within the directory
-specified by variable :macro:`GANGLIAD_METRICS_CONFIG_DIR`.  Here is an example
-of a single metric definition given as a New ClassAd:
-
-.. code-block:: condor-classad
-
-    [
-      Name   = "JobsSubmitted";
-      Desc   = "Number of jobs submitted";
-      Units  = "jobs";
-      TargetType = "Scheduler";
-    ]
-
-A nice set of default metrics is in file:
-``$(GANGLIAD_METRICS_CONFIG_DIR)/00_default_metrics``.
-
-Recognized metric attribute names and their use:
-
- Name
-    The name of this metric, which corresponds to the ClassAd attribute
-    name. Metrics published for the same machine must have unique names.
- Value
-    A ClassAd expression that produces the value when evaluated. The
-    default value is the value in the daemon ClassAd of the attribute
-    with the same name as this metric.
- Desc
-    A brief description of the metric. This string is displayed when the
-    user holds the mouse over the Ganglia graph for the metric.
- Verbosity
-    The integer verbosity level of this metric. Metrics with a higher
-    verbosity level than that specified by configuration variable
-    :macro:`GANGLIAD_VERBOSITY` will not be published.
- TargetType
-    A string containing a comma-separated list of daemon ClassAd types
-    that this metric monitors. The specified values should match the
-    value of :ad-attr:`MyType` of the daemon ClassAd. In addition, there are
-    special values that may be included. "Machine_slot1" may be
-    specified to monitor the machine ClassAd for slot 1 only. This is
-    useful when monitoring machine-wide attributes. The special value
-    "ANY" matches any type of ClassAd.
- Requirements
-    A boolean expression that may restrict how this metric is
-    incorporated. It defaults to ``True``, which places no restrictions
-    on the collection of this ClassAd metric.
- Title
-    The graph title used for this metric. The default is the metric
-    name.
- Group
-    A string specifying the name of this metric's group. Metrics are
-    arranged by group within a Ganglia web page. The default is
-    determined by the daemon type. Metrics in different groups must have
-    unique names.
- Cluster
-    A string specifying the cluster name for this metric. The default
-    cluster name is taken from the configuration variable
-    :macro:`GANGLIAD_DEFAULT_CLUSTER`.
- Units
-    A string describing the units of this metric.
- Scale
-    A scaling factor that is multiplied by the value of the ``Value``
-    attribute. The scale factor is used when the value is not in the
-    basic unit or a human-interpretable unit. For example, duty cycle is
-    commonly expressed as a percent, but the HTCondor value ranges from
-    0 to 1. So, duty cycle is scaled by 100. Some metrics are reported
-    in KiB. Scaling by 1024 allows Ganglia to pick the appropriate
-    units, such as number of bytes rather than number of KiB. When
-    scaling by large values, converting to the "float" type is
-    recommended.
- Derivative
-    A boolean value that specifies if Ganglia should graph the
-    derivative of this metric. Ganglia versions prior to 3.4 do not
-    support this.
- Type
-    A string specifying the type of the metric. Possible values are
-    "double", "float", "int32", "uint32", "int16", "uint16", "int8",
-    "uint8", and "string". The default is "string" for string values,
-    the default is "int32" for integer values, the default is "float"
-    for real values, and the default is "int8" for boolean values.
-    Integer values can be coerced to "float" or "double". This is
-    especially important for values stored internally as 64-bit values.
- Regex
-    This string value specifies a regular expression that matches
-    attributes to be monitored by this metric. This is useful for
-    dynamic attributes that cannot be enumerated in advance, because
-    their names depend on dynamic information such as the users who are
-    currently running jobs. When this is specified, one metric per
-    matching attribute is created. The default metric name is the name
-    of the matched attribute, and the default value is the value of that
-    attribute. As usual, the ``Value`` expression may be used when the
-    raw attribute value needs to be manipulated before publication.
-    However, since the name of the attribute is not known in advance, a
-    special ClassAd attribute in the daemon ClassAd is provided to allow
-    the ``Value`` expression to refer to it. This special attribute is
-    named ``Regex``. Another special feature is the ability to refer to
-    text matched by regular expression groups defined by parentheses
-    within the regular expression. These may be substituted into the
-    values of other string attributes such as ``Name`` and ``Desc``.
-    This is done by putting macros in the string values. "\\\\1" is
-    replaced by the first group, "\\\\2" by the second group, and so on.
- Aggregate
-    This string value specifies an aggregation function to apply,
-    instead of publishing individual metrics for each daemon ClassAd.
-    Possible values are "sum", "avg", "max", and "min".
- AggregateGroup
-    When an aggregate function has been specified, this string value
-    specifies which aggregation group the current daemon ClassAd belongs
-    to. The default is the metric ``Name``. This feature works like
-    GROUP BY in SQL. The aggregation function produces one result per
-    value of ``AggregateGroup``. A single aggregate group would
-    therefore be appropriate for a pool-wide metric. As an example, to
-    publish the sum of an attribute across different types of slot
-    ClassAds, make the metric name an expression that is unique to each
-    type. The default ``AggregateGroup`` would be set accordingly. Note
-    that the assumption is still that the result is a pool-wide metric,
-    so by default it is associated with the *condor_collector* daemon's
-    host. To group by machine and publish the result into the Ganglia
-    page associated with each machine, make the ``AggregateGroup``
-    contain the machine name and override the default ``Machine``
-    attribute to be the daemon's machine name, rather than the
-    *condor_collector* daemon's machine name.
- Machine
-    The name of the host associated with this metric. If configuration
-    variable :macro:`GANGLIAD_DEFAULT_MACHINE` is not specified, the
-    default is taken from the ``Machine`` attribute of the daemon
-    ClassAd. If the daemon name is of the form name@hostname, this may
-    indicate that there are multiple instances of HTCondor running on
-    the same machine. To avoid the metrics from these instances
-    overwriting each other, the default machine name is set to the
-    daemon name in this case. For aggregate metrics, the default value
-    of ``Machine`` will be the name of the *condor_collector* host.
- IP
-    A string containing the IP address of the host associated with this
-    metric. If :macro:`GANGLIAD_DEFAULT_IP` is not specified, the default is
-    extracted from the ``MyAddress`` attribute of the daemon ClassAd.
-    This value must be unique for each machine published to Ganglia. It
-    need not be a valid IP address. If the value of ``Machine`` contains
-    an "@" sign, the default IP value will be set to the same value as
-    ``Machine`` in order to make the IP value unique to each instance of
-    HTCondor running on the same host.
- Lifetime
-    A positive integer value representing the max number of seconds
-    without updating a metric will be kept before deletion. This is
-    represented in ganglia as DMAX. If no Lifetime is defined for a
-    metric then the default value will be set to a calculated value
-    based on the ganglia publish interval with a minimum value set by
-    :macro:`GANGLIAD_MIN_METRIC_LIFETIME`.
-
 Absent ClassAds
 ---------------
 
@@ -1945,124 +1639,6 @@ instead of invalidated, set :macro:`EXPIRE_INVALIDATED_ADS` to ``True``.
 Invalidated ClassAds will instead be treated as if they expired, including when
 evaluating :macro:`ABSENT_REQUIREMENTS`.
 
-Elasticsearch
--------------
-
-:index:`Elasticsearch`
-:index:`adstash`
-:index:`condor_adstash`
-
-HTCondor supports pushing *condor_schedd* and *condor_startd* job
-and job epoch ClassAds to Elasticsearch (and other targets) via the
-:tool:`condor_adstash` tool/daemon.
-:tool:`condor_adstash` collects job ClassAds as specified by its
-configuration, either querying specified daemons
-or reading job ClassAds from a specified file,
-converts each ClassAd to a JSON document,
-and pushes each doc to the configured Elasticsearch index.
-The index is automatically created if it does not exist, and fields
-are added and configured based on well known job ClassAd attributes.
-(Custom attributes are also pushed, though always as keyword fields.)
-
-:tool:`condor_adstash` is a Python 3.6+ script that uses the
-HTCondor :ref:`apis/python-bindings/index:Python Bindings`
-and the
-`Python Elasticsearch Client <https://elasticsearch-py.readthedocs.io/>`_,
-both of which must be available to the system Python 3 installation
-if using the daemonized version of :tool:`condor_adstash`.
-:tool:`condor_adstash` can also be run as a stand alone tool (e.g. in a
-Python 3 virtual environment containing the necessary libraries).
-
-Running :tool:`condor_adstash` as a daemon (i.e. under the watch of the
-:tool:`condor_master`) can be enabled by adding
-``use feature : adstash``
-to your HTCondor configuration.
-By default, this configuration will poll the job history on all
-*condor_schedds* that report to the ``$(CONDOR_HOST)`` *condor_collector*
-every 20 minutes and push the contents of the job history ClassAds to an
-Elasticsearch instance running on ``localhost`` to an index named
-``htcondor-000001``.
-Your situation and monitoring needs are likely different!
-See the ``condor_config.local.adstash`` example configuration file in
-the ``examples/`` directory for detailed information on how to modify
-your configuration.
-
-If you prefer to run :tool:`condor_adstash` in standalone mode, or are
-curious about other ClassAd sources or targets, see the
-:doc:`../man-pages/condor_adstash` man page for more
-details.
-
-Configuring a Pool to Report to the HTCondorView Server
-'''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-For the HTCondorView server to function, configure the existing
-collector to forward ClassAd updates to it. This configuration is only
-necessary if the HTCondorView collector is a different collector from
-the existing *condor_collector* for the pool. All the HTCondor daemons
-in the pool send their ClassAd updates to the regular
-*condor_collector*, which in turn will forward them on to the
-HTCondorView server.
-
-Define the following configuration variable:
-
-.. code-block:: condor-config
-
-      CONDOR_VIEW_HOST = full.hostname[:portnumber]
-
-where full.hostname is the full host name of the machine running the
-HTCondorView collector. The full host name is optionally followed by a
-colon and port number. This is only necessary if the HTCondorView
-collector is configured to use a port number other than the default.
-
-Place this setting in the configuration file used by the existing
-*condor_collector*. It is acceptable to place it in the global
-configuration file. The HTCondorView collector will ignore this setting
-(as it should) as it notices that it is being asked to forward ClassAds
-to itself.
-
-Once the HTCondorView server is running with this change, send a
-:tool:`condor_reconfig` command to the main *condor_collector* for the
-change to take effect, so it will begin forwarding updates. A query to
-the HTCondorView collector will verify that it is working. A query
-example:
-
-.. code-block:: console
-
-      $ condor_status -pool condor.view.host[:portnumber]
-
-A *condor_collector* may also be configured to report to multiple
-HTCondorView servers. The configuration variable 
-:macro:`CONDOR_VIEW_HOST` can be given as a list of HTCondorView
-servers separated by commas and/or spaces.
-
-The following demonstrates an example configuration for two HTCondorView
-servers, where both HTCondorView servers (and the *condor_collector*)
-are running on the same machine, localhost.localdomain:
-
-.. code-block:: condor-config
-
-    VIEWSERV01 = $(COLLECTOR)
-    VIEWSERV01_ARGS = -f -p 12345 -local-name VIEWSERV01
-    VIEWSERV01_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog01"
-    VIEWSERV01.POOL_HISTORY_DIR = $(LOCAL_DIR)/poolhist01
-    VIEWSERV01.KEEP_POOL_HISTORY = TRUE
-    VIEWSERV01.CONDOR_VIEW_HOST =
-
-    VIEWSERV02 = $(COLLECTOR)
-    VIEWSERV02_ARGS = -f -p 24680 -local-name VIEWSERV02
-    VIEWSERV02_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog02"
-    VIEWSERV02.POOL_HISTORY_DIR = $(LOCAL_DIR)/poolhist02
-    VIEWSERV02.KEEP_POOL_HISTORY = TRUE
-    VIEWSERV02.CONDOR_VIEW_HOST =
-
-    CONDOR_VIEW_HOST = localhost.localdomain:12345 localhost.localdomain:24680
-    DAEMON_LIST = $(DAEMON_LIST) VIEWSERV01 VIEWSERV02
-
-Note that the value of :macro:`CONDOR_VIEW_HOST` for VIEWSERV01 and VIEWSERV02
-is unset, to prevent them from inheriting the global value of
-:macro:`CONDOR_VIEW_HOST` and attempting to report to themselves or each other. If
-the HTCondorView servers are running on different machines where there is no
-global value for :macro:`CONDOR_VIEW_HOST`, this precaution is not required.
 
 Scaling and Performance Considerations for the CM
 -------------------------------------------------

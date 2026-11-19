@@ -47,34 +47,41 @@ class IOStats {
 // transfer queue server's representation of a client
 class TransferQueueRequest {
  public:
-	TransferQueueRequest(ReliSock *sock,filesize_t sandbox_size,char const *fname,char const *jobid,char const *queue_user,bool downloading,time_t max_queue_age);
+	TransferQueueRequest(ReliSock *sock,filesize_t sandbox_size,char const *fname,char const *jobid,char const *queue_user,bool downloading,time_t max_queue_age)
+		: m_sock(sock)
+		, m_up_down_queue_user(std::string(downloading ? "D":"U") + queue_user)
+		, m_fname(fname)
+		, m_jobid(jobid)
+		, m_sandbox_size_MB(sandbox_size/1024.0/1024.0)
+		, m_downloading(downloading)
+		, m_max_queue_age(max_queue_age)
+	{}
 	~TransferQueueRequest();
 
 	char const *Description();
 	char const *SinlessDescription(); // client description without the <IP:port> part
+	const char *Name() { 
+		if (m_up_down_queue_user.empty()) return "?";
+		return m_up_down_queue_user.c_str()+1; // +1 to skip the leading U or D.
+	}
 
 	bool SendGoAhead(XFER_QUEUE_ENUM go_ahead=XFER_QUEUE_GO_AHEAD,char const *reason=NULL);
 
 	bool ReadReport(class TransferQueueManager *manager) const;
 
-	ReliSock *m_sock;
-	std::string m_queue_user;   // Name of file transfer queue user. (TRANSFER_QUEUE_USER_EXPR)
+	ReliSock *m_sock{nullptr};
 	std::string m_up_down_queue_user; // queue user prefixed by "U" or "D" for upload/download
-	std::string  m_jobid;   // For information purposes, the job associated with
-	                    // this file transfer.
-	double m_sandbox_size_MB;
-	std::string  m_fname;   // File this client originally requested to transfer.
-	                    // In current implementation, it may silently move on
-	                    // to a different file without notifying us.
-	bool m_downloading; // true if client wants to download a file; o.w. upload
-	bool m_gave_go_ahead; // true if we told this client to go ahead
-
-	time_t m_max_queue_age; // clean transfer from queue after this time
-	                        // 0 indicates no limit
-	time_t m_time_born;
-	time_t m_time_go_ahead;
-
+	std::string m_fname;   // First file this client originally requested to transfer.
 	std::string m_description; // buffer for Description()
+	JOB_ID_KEY  m_jobid;   // For information purposes, the job associated with this file transfer.
+	double m_sandbox_size_MB{0.0}; // reported size of the transfer, probably does not include size of URL transfers
+
+	bool m_downloading{false};   // true if client wants to download a file; o.w. upload
+	bool m_gave_go_ahead{false}; // true if we told this client to go ahead
+
+	time_t m_max_queue_age{0}; // clean transfer from queue after this time, 0 indicates no limit
+	time_t m_time_born{0};
+	time_t m_time_go_ahead{0};
 };
 
 class TransferQueueManager: public Service {
@@ -112,6 +119,8 @@ class TransferQueueManager: public Service {
 	void publish(ClassAd *ad, char const *publish_config);
 	void publish(ClassAd *ad,int pubflags);
 	void publish_user_stats(ClassAd * ad, const char *user, int pubflags);
+
+	bool per_user_activity(bool uploading, const char * user, unsigned int & transferring, unsigned int & waiting);
 
 	void AddRecentIOStats(IOStats &s,const std::string &up_down_queue_user);
  private:
@@ -157,11 +166,11 @@ class TransferQueueManager: public Service {
 
 	class TransferQueueUser {
 	public:
-		TransferQueueUser(): running(0), idle(0), recency(0) {}
+		TransferQueueUser() = default;
 		bool Stale(unsigned int stale_recency);
-		unsigned int running;
-		unsigned int idle;
-		unsigned int recency; // round robin counter at time of last GoAhead
+		unsigned int running{0};
+		unsigned int idle{0};
+		unsigned int recency{0}; // round robin counter at time of last GoAhead
 		IOStats iostats;
 	};
 	typedef std::map< std::string,TransferQueueUser > QueueUserMap;
@@ -178,7 +187,7 @@ class TransferQueueManager: public Service {
 	int m_publish_flags{0};
 
 	bool AddRequest( TransferQueueRequest *client );
-	void RemoveRequest( TransferQueueRequest *client );
+	//void RemoveRequest( TransferQueueRequest *client );
 
 	TransferQueueUser &GetUserRec(const std::string &user);
 	void SetRoundRobinRecency(const std::string &user);

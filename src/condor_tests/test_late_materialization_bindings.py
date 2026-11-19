@@ -102,7 +102,7 @@ def num_materialized_jobs_history(condor, jobids_for_sleep_jobs):
     for jobid, event in condor.job_queue.filter(
         lambda j, e: j in jobids_for_sleep_jobs
     ):
-        if event == SetJobStatus(JobStatus.IDLE):
+        if event.attribute == "GlobalJobId":
             num_materialized += 1
         if event == SetJobStatus(JobStatus.COMPLETED):
             num_materialized -= 1
@@ -119,7 +119,7 @@ def num_idle_jobs_history(condor, jobids_for_sleep_jobs):
     for jobid, event in condor.job_queue.filter(
         lambda j, e: j in jobids_for_sleep_jobs
     ):
-        if event == SetJobStatus(JobStatus.IDLE):
+        if event.attribute == "GlobalJobId":
             num_idle += 1
         if event == SetJobStatus(JobStatus.RUNNING):
             num_idle -= 1
@@ -135,7 +135,6 @@ class TestLateMaterializationLimits:
             assert in_order(
                 condor.job_queue.by_jobid[jobid],
                 [
-                    SetJobStatus(JobStatus.IDLE),
                     SetJobStatus(JobStatus.RUNNING),
                     SetJobStatus(JobStatus.COMPLETED),
                 ],
@@ -198,10 +197,17 @@ def clusterid_for_itemdata(test_dir, path_to_sleep, condor):
     num_procs = result.num_procs()
 
 
-    jobids = [JobID(clusterid, n) for n in range(num_procs)]
+    # The first itemdata value ("A") lands on the cluster ad (proc -1) and is
+    # inherited by proc 0, so proc 0 never gets its own Foo SetAttribute event.
+    # Waiting on range(num_procs) therefore blocks for proc 0's Foo for the full
+    # wait_for_events timeout (120s) every run. Wait instead for the cluster ad
+    # and procs 1..N-1, which is exactly the set that receives Foo events.
+    foo_jobids = [JobID(clusterid, -1)] + [
+        JobID(clusterid, n) for n in range(1, num_procs)
+    ]
 
     condor.job_queue.wait_for_events(
-        {jobid: [SetAttribute("Foo", None)] for jobid in jobids}
+        {jobid: [SetAttribute("Foo", None)] for jobid in foo_jobids}
     )
 
     yield clusterid

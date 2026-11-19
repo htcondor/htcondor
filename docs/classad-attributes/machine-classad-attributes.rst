@@ -30,6 +30,13 @@ Machine ClassAd Attributes
     ``"Retiring"``
         Waiting for a job to finish or for the maximum retirement time to expire
 
+    ``"Cleaning"``
+        The job has finished running and the *condor_starter* has sent
+        its final update, but the starter process has not yet been
+        reaped. When the starter exits, the slot leaves this activity
+        and returns to ``"Idle"`` (or moves to the ``"Preempting"``
+        state if a release, kill, or preempting claim is pending).
+
 :classad-attribute-def:`Arch`
     String with the architecture of the machine. Currently supported
     architectures have the following string definitions:
@@ -65,10 +72,6 @@ Machine ClassAd Attributes
     *condor_startd* initializes, it checks for this support. If the
     machine has the ability to hibernate, then this boolean ClassAd
     attribute will be ``True``. By default, it is ``False``.
-
-:classad-attribute-def:`CgroupEnforced`
-    If a job is running inside a per-job cgroup, this boolean attribute
-    is ``True``.
 
 :classad-attribute-def:`ClaimEndTime`
     The time at which the slot will leave the ``Claimed`` state.
@@ -228,6 +231,15 @@ Machine ClassAd Attributes
     This is useful for Vanilla universe jobs which require remote file
     access.
 
+:classad-attribute-def:`GPUs`
+    The number of GPUs in this slot. For a partitionable slot, it is
+    the remaining number of GPUs in the partitionable slot. Only present
+    on machines configured with GPU resources.
+
+:classad-attribute-def:`HasCgroup`
+    A boolean attribute that is ``True`` if jobs run on this slot will
+    be placed in a per-job cgroup, and ``Undefined`` otherwise.
+
 :classad-attribute-def:`HasContainer`
     A boolean value set to ``True`` if the machine is capable of
     executing container universe jobs.
@@ -328,6 +340,31 @@ Machine ClassAd Attributes
     software, a boolean value reporting the success thereof; otherwise
     undefined. May also become ``False`` if HTCondor determines that it
     can't start a VM (even if the appropriate software is detected).
+
+:classad-attribute-def:`Healthy`
+    A ClassAd expression configured by the :macro:`STARTD_HEALTH_EXPRS` option.
+    The value will be the expression ``min({$(STARTD_HEALTH_EXPRS),1})`` so that
+    it evaluates to 0 if any of the expressions listed in the list evaluates
+    to ``False``.
+
+:classad-attribute-def:`HealthExprs`
+    A ClassAd expression configured by the :macro:`STARTD_HEALTH_EXPRS` option.
+    The value will be the expression ``{$(STARTD_HEALTH_EXPRS)}``.
+
+:classad-attribute-def:`HealthFactor`
+    A ClassAd expression configured by the :macro:`STARTD_HEALTH_EXPRS` option.
+    The value will be the expression ``sum(HealthExprs) / N.0``, where N is the
+    size of the HealthExprs list.
+
+:classad-attribute-def:`IsDataSlot`
+    When ``True``, the slot is in use by the AP to transfer and then store
+    common files, rather than run a job.
+
+:classad-attribute-def:`IsDirectAttach`
+    Defined only when the *condor_startd* is configured to directly attach to
+    an AP; see :ref:`direct-attach`.  The value is the name of the
+    *condor_schedd* named by :macro:`STARTD_DIRECT_ATTACH_SCHEDD_NAME`, to
+    which this slot is offered when it is unclaimed.
 
 :classad-attribute-def:`IsEnforcingDiskUsage`
     A boolean value that when ``True`` identifies that the machine is
@@ -919,6 +956,19 @@ Machine ClassAd Attributes
     the amount offered by the machine's ``MaxJobRetirementTime``
     expression, because the job may ask for less.
 
+:classad-attribute-def:`ResourceConflict`
+    The list of resources that conflict between the current slot and a claimed
+    non-backfill slot.  Slots that are :macro:`SLOT_TYPE_<N>_BACKFILL` will
+    have this attribute and the value will be non-empty when there are conflicts.
+    For instance, when a conflict exist beween ``Cpus`` assigned to the current
+    slot and those assigned to a Claimed non-backfill slot, the value will be ``"Cpus"``.
+    When there is a conflict with both ``CPUs`` and ``Memory``, the value will be 
+    ``"Cpus, Memory"``.  For non-fungible resources like ``GPUs`` the value will include
+    the GPU identifier.  The expression :ad-expr:`size(ResourceConflict?:"") > 0` will evaluate
+    to ``True`` when there is any conflict, and ``False`` when there is no conflict.  Use the
+    above expression in a :macro:`PREEMPT` expression to evict jobs from a backfill slot
+    when a job on a non-backfill slot is using the same resources.
+
 :classad-attribute-def:`SingularityVersion`
     A string containing the version of Singularity available, if the
     machine being advertised supports running jobs within a Singularity
@@ -952,8 +1002,8 @@ Machine ClassAd Attributes
     An string providing a brief general reason that the slot is broken.
     This attribute will only exist in broken slots and should never be empty.
     Slots that have a ``SlotBrokenReason`` attribute will always advertise
-    0 as the quantity of ad-attr:`Cpus`, ad-attr:`Memory`, ad-attr:`GPUs`
-    and other custom resources, and will override the slot ad-attr:``Requirements``
+    0 as the quantity of :ad-attr:`Cpus`, :ad-attr:`Memory`, :ad-attr:`GPUs`
+    and other custom resources, and will override the slot :ad-attr:`Requirements[type=Machine]`
     with the broken reason string to prevent jobs from matching the slot.
 
 :classad-attribute-def:`SlotID`
@@ -1119,6 +1169,12 @@ Machine ClassAd Attributes
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
 
+:classad-attribute-def:`TotalTimeClaimedCleaning`
+    The number of seconds that this machine (slot) has accumulated
+    within the claimed cleaning state and activity pair since the
+    *condor_startd* began executing. This attribute will only be
+    defined if it has a value greater than 0.
+
 :classad-attribute-def:`TotalTimeClaimedIdle`
     The number of seconds that this machine (slot) has accumulated
     within the claimed idle state and activity pair since the
@@ -1242,6 +1298,16 @@ Machine ClassAd Attributes
     version number (currently 0, 1, or 2) for a Windows operating
     system. This attribute only exists on Windows machines.
 
+:classad-attribute-def:`WithinResourceLimits`
+    A ClassAd expression which compares each of the provisioned
+    resources such as :ad-attr:`Cpus` and :ad-attr:`Memory` to the ``Request*``
+    attributes of the job. It evaluates to ``True`` when each of the Requested
+    values is less than or equal to the slot value.  The value is generated
+    by the *condor_startd* so that all resource types defined in the
+    Startd configuration are checked. It will include custom resource types
+    that are declared in the Startd configuration using :macro:`MACHINE_RESOURCE_<name>`
+    and related configuration. This attribute is used by the :ad-attr:`Requirements[type=Machine]`
+    expression.
 
 In addition, there are a few attributes that are automatically inserted
 into the machine ClassAd whenever a resource is in the Claimed state:
@@ -1390,10 +1456,6 @@ the value of configuration variable  :macro:`MACHINE_RESOURCE_INVENTORY_GPUs`
 and what GPUs are detected. In the name of the attribute, ``<name>`` is
 substituted with the *prefix string* assigned for the GPU.
 
-:classad-attribute-def:`<name>BoardTempC`
-    For NVIDIA devices, a dynamic attribute representing the temperature
-    in Celsius of the board containing the GPU.
-
 :classad-attribute-def:`<name>Capability`
     The CUDA-defined capability for the GPU.
 
@@ -1440,6 +1502,22 @@ substituted with the *prefix string* assigned for the GPU.
     For CUDA or Open CL devices, the quantity of memory in Mbytes in
     this GPU.
 
+:classad-attribute-def:`<name>Integrated`
+    For CUDA devices, a boolean value that is true when the GPU shares
+    its memory with the host rather than having discrete device memory.
+    This is the case for unified-memory devices such as the NVIDIA
+    DGX Spark.
+
+:classad-attribute-def:`<name>MigComputeInstanceId`
+    For NVIDIA MIG instances, the integer compute instance id of this
+    instance within its GPU instance. Not present for GPUs which are not
+    MIG instances.
+
+:classad-attribute-def:`<name>MigGpuInstanceId`
+    For NVIDIA MIG instances, the integer GPU instance id of this instance
+    within its physical GPU. Not present for GPUs which are not MIG
+    instances.
+
 :classad-attribute-def:`<name>NvidiaDriver`
     For Nvidia devices, a string representing the Nvidia driver version.
 
@@ -1447,10 +1525,23 @@ substituted with the *prefix string* assigned for the GPU.
     For Open CL devices, a string representing the manufacturer's
     version number.
 
-:classad-attribute-def:`<name>RuntimeVersion`
-    For CUDA devices, a string representing the manufacturer's version
-    number.
-    
+:classad-attribute-def:`<name>ParentUuid`
+    For NVIDIA MIG instances, a string holding the NVML UUID, of the form
+    ``GPU-<uuid>``, of the physical GPU which hosts this instance. Not
+    present for GPUs which are not MIG instances.
+
+:classad-attribute-def:`<name>PowerUsage_mw`
+    For NVIDIA devices, a dynamic attribute representing the integer power
+    draw of the GPU in milliwatts.
+
+:classad-attribute-def:`<name>Rocm`
+    For AMD devices, the integer major version of the HIP (ROCm) library
+    used to discover the GPU.
+
+:classad-attribute-def:`<name>Vendor`
+    For CUDA and HIP devices, a string naming the manufacturer of the
+    GPU, either ``"NVIDIA"`` or ``"AMD"``.
+
 :classad-attribute-def:`DeviceGPUsAverageUsage`
     The number of seconds executed by GPUs assigned to this slot,
     divided by the number of seconds since the startd started up.

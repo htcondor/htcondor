@@ -29,6 +29,14 @@
 void SecureZeroMemory(void *, size_t);
 #endif
 
+// This is the set of allowed characters in the name of an OAUTH credential
+// managed by the credd (when CREDMON_ALLOW_SPECIAL_CHAR_NAMES=false).
+// Note that this is for the name as it appears in OAuthServicesNeeded in the
+// job ad and network communications. For the credential's filename on disk,
+// the '*' is replaced by '_'. These two characters seperate the service
+// and optional handle portions of the full name.
+#define OAUTH_CRED_NAME_CHARS "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-*"
+
 // store cred return codes
 const int SUCCESS = 1; 					// it worked!
 const int FAILURE = 0;					// communication error
@@ -128,8 +136,9 @@ long long store_cred_blob(const char *user, int mode, const unsigned char * cred
 int store_cred_handler(int i, Stream *s);
 // command handler for CREDD_GET_PASSWD in Credd and Shadow
 int cred_get_password_handler(int i, Stream *s);
-// command handler for CREDD_GET_CRED in Shadow
-int cred_get_cred_handler(int i, Stream *s);
+// command handler for CREDD_GET_CRED in Shadow.  job_owner is the bare
+// name of the job's owner, the only user whose credential will be sent
+int cred_get_cred_handler(int i, Stream *s, const char *job_owner);
 // check whether credfile has matching scopes and audience to those in requestAd
 int cred_matches(const std::string & credfile, const classad::ClassAd * requestAd);
 
@@ -180,15 +189,21 @@ class CredSorter
 	CredSorter() { Init(); }
 	void Init();
 
-	enum CredType { OAuth2Type, LocalIssuerType, LocalClientType, VaultType, UnknownType };
+	enum CredType { OAuth2Type, LocalIssuerType, LocalClientType, VaultType, PelicanType, UnknownType };
 
 	CredType Sort(const std::string& cred_name) const;
+
+	// Map a CredType to the mode string passed to the credential storer via
+	// the CONDOR_CREDENTIAL_STORER_MODE environment variable.  Returns nullptr
+	// for types the storer does not handle.
+	static const char *StorerMode(CredType type);
 
  private:
 	std::string m_local_names;
 	std::string m_client_names;
 	std::string m_oauth2_names;
 	std::string m_vault_names;
+	std::string m_pelican_names;
 	bool m_vault_enabled{false};
 };
 

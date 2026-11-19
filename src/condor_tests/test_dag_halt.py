@@ -45,6 +45,12 @@ DAG_TEST_DETAILS = "test.details"
 # Base DAG file to work with
 DAG_FILENAME = "test.dag"
 DAG_FILE = """
+# Turn off job cool down when DAG exits with non-zero code
+# so tests do not time out.
+# Note: Can't be set per test case because dagman utility
+#       code does not process include files at submission time
+SET_JOB_ATTR DisableCoolDown = True
+
 SUBMIT-DESCRIPTION touch @=desc
     executable = {touch_script}
     arguments  = "$(dag_node_name) job"

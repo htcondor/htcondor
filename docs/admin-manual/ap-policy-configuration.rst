@@ -275,12 +275,11 @@ We recommend that you select a single machine within an HTCondor pool to
 act as the dedicated scheduler. This becomes the machine from upon which
 all users submit their parallel universe jobs. The perfect choice for
 the dedicated scheduler is the single, front-end machine for a dedicated
-cluster of compute nodes. For the pool without an obvious choice for a
-access point, choose a machine that all users can log into, as well as
+cluster of compute nodes. For the pool without an obvious choice for an access point, choose a machine that all users can log into, as well as
 one that is likely to be up and running all the time. All of HTCondor's
-other resource requirements for a access point apply to this machine,
+other resource requirements for an access point apply to this machine,
 such as having enough disk space in the spool directory to hold jobs.
-See :ref:`admin-manual/logging:directories` for more information.
+See :ref:`admin-manual/monitoring:directories` for more information.
 
 Configuration Examples for Dedicated Resources
 ''''''''''''''''''''''''''''''''''''''''''''''
@@ -571,7 +570,7 @@ to set timing and polling intervals.
 Performance Tuning of the AP
 ----------------------------
 
-Of the three roles (AP, CM, EP) in a HTCondor system, the AP is the most common
+Of the three roles (AP, CM, EP) in an HTCondor system, the AP is the most common
 place performance tuning is done.  The CM is mostly stateless, and can
 typically scale out to very large pools without much additional work.  The EP
 daemons aren't resource intensive.  However, as the AP stores the state of all
@@ -597,6 +596,72 @@ overloaded schedd.  An administrator can see this attribute by running
 
     $ condor_status -direct -schedd name-of-schedd -af RecentDaemonCoreDutyCycle
 
+
+Recording AP performance over time
+''''''''''''''''''''''''''''''''''
+
+The command above reports the duty cycle *now*, which does not help with the
+question an administrator usually has, namely what the AP was doing at three
+o'clock this morning when users could not submit.  For that, the
+*condor_schedd* keeps a history of its own daemon ClassAd, in the same spirit
+as the job history file but recording the daemon rather than the jobs that
+passed through it.
+
+This is enabled by default: :macro:`<SUBSYS>_DAEMON_HISTORY` for the schedd
+defaults to ``$(SPOOL)/schedd_daemon_history``.  Every time the schedd sends
+its ad to the *condor_collector* it also appends that ad to this file, but no
+more often than :macro:`SCHEDD_HISTORY_RECORD_INTERVAL` seconds (900 by
+default).  Because the record rides along with the collector update, the real
+interval between records is a multiple of :macro:`SCHEDD_INTERVAL`; with the
+default settings of both knobs, a record lands every twenty minutes.  The file
+is rotated at :macro:`MAX_DAEMON_HISTORY_LOG` bytes (20 MB by default) keeping
+:macro:`MAX_DAEMON_HISTORY_ROTATIONS` older copies (one by default), so it
+takes a bounded amount of space and needs no external cleanup, and
+:tool:`condor_preen` will not remove it from the spool directory.  Setting the
+knob to nothing turns the feature off:
+
+.. code-block:: condor-config
+
+    # Keep a record every five minutes instead, and more of them.
+    SCHEDD_HISTORY_RECORD_INTERVAL = 300
+    MAX_DAEMON_HISTORY_LOG = 200000000
+    MAX_DAEMON_HISTORY_ROTATIONS = 5
+
+    # Or, to disable the schedd's daemon history entirely:
+    # SCHEDD_DAEMON_HISTORY =
+
+Each record holds more than the ad the collector receives.  The schedd adds its
+own verbose statistics, the DaemonCore statistics, and the file transfer queue
+statistics before writing, so attributes that are too voluminous to advertise
+pool-wide are still available afterwards.  Read the file with
+:tool:`condor_history`, whose **-daemon** option displays a table of the
+values most often wanted -- when the record was written, the duty cycle, the
+number of running, idle and held jobs, and the depth of the transfer queues:
+
+.. code-block:: console
+
+    $ condor_history -daemon
+
+Any other attribute of the record can be printed with the usual options, and
+the records can be read from a remote AP with **-name**:
+
+.. code-block:: console
+
+    $ condor_history -daemon -name ap1.example.com -limit 24 \
+          -af RecordWriteDate RecentDaemonCoreDutyCycle TotalRunningJobs TotalIdleJobs
+
+Used this way the daemon history answers questions that no single
+:tool:`condor_status` query can: whether the duty cycle climbed gradually or
+spiked, whether a growing transfer queue preceded the slowdown, and how the
+queue depth on this AP has trended over the past weeks.  It is not a substitute
+for a real monitoring system -- the records are coarse, local to one AP, and
+eventually rotate away -- but it is always there, which the monitoring system
+frequently is not on the day it is needed.
+
+.. note::
+
+    Although :macro:`<SUBSYS>_DAEMON_HISTORY` is named for a subsystem, the
+    *condor_schedd* is the only daemon that writes a daemon history today.
 
 Horizontal Scaling
 ''''''''''''''''''
@@ -658,7 +723,7 @@ Using third party (url / plugin) transfers when able
 HTCondor can transfer user's sandboxes to the EP in many ways.  The default
 method, called HTCondor file transfer, or "cedar" file transfer, copies files
 from the AP to the EP.  Obviously, this uses cpu, disk and network bandwidth on
-the AP.  To the degree possible, changing large input file file transfers from
+the AP.  To the degree possible, changing large input file transfers from
 cedar, to http transfers from some third party server, moves the load off of
 the AP, and onto an http server.  If one http server isn't sufficient there are
 many methods for scaling http servers to handle additional load.
@@ -740,8 +805,7 @@ In order to conserve storage space, HTCondor defaults to keeping only one
 HTCondor will keep the newly-uploaded checkpoint, the immediately-previous
 checkpoint, and remove (or schedule the removal of) all the rest (of which
 there will normally be only one).  Note that this means self-checkpoint jobs
-which use third-party storage will need there
-three times the storage space of a single checkpoint: one for the current
+which use third-party storage will need three times the storage space of a single checkpoint: one for the current
 checkpoint, one for the previous checkpoint, and one for the checkpoint
 currently being uploaded.  You can adjust the number of checkpoints to keep
 by setting :macro:`DEFAULT_NUM_EXTRA_CHECKPOINTS`.
@@ -749,6 +813,540 @@ by setting :macro:`DEFAULT_NUM_EXTRA_CHECKPOINTS`.
 HTCondor stores this extra checkpoint by default to guard against corrupted
 checkpoints: it computes and records the checksum of every file uploaded as
 part of a checkpoint and computes and compares the checksum of every file
-download from a checkpoint; if any don't match, the checkpoint is considered
+downloaded from a checkpoint; if any don't match, the checkpoint is considered
 invalid and deleted, and the job is rescheduled (and will resume from the
 "extra" checkpoint(s), if one remains available).
+
+.. _job-epoch-history:
+
+Job Epoch History
+-----------------
+
+:index:`job epoch history`
+:index:`epoch history<single: epoch history; job history>`
+:index:`run instance`
+
+The history file named by :macro:`HISTORY` holds one record per job, written
+when the job leaves the queue.  A job that is evicted and restarted, or that
+fails and is retried, still leaves only that single final record, so questions
+about *individual run attempts*, how many times did this job start, which machine ran
+it the first time, how long did input transfer take on each attempt, which
+transfer plugin failed, cannot be answered from the job history at all.  The
+*job epoch history* addresses this issue.  Every time a *condor_shadow* runs a job it
+appends records describing that one run to a separate archive.  Each run is
+called an *epoch*, or a *run instance*, and is numbered in the record attribute
+``RunInstanceID``, starting at zero for a job's first run.
+
+Epoch history is written by the AP's shadows, and is enabled by default:
+:macro:`JOB_EPOCH_HISTORY` defaults to ``$(SPOOL)/epoch_history``.  The file is
+rotated like the job history file, at :macro:`MAX_EPOCH_HISTORY_LOG` bytes (20
+MB by default) keeping :macro:`MAX_EPOCH_HISTORY_ROTATIONS` older copies (2 by
+default), so it occupies a bounded amount of space and needs no external
+cleanup.  :tool:`condor_preen` knows about the configured file and will not
+remove it from the spool directory.  To move the archive, or to turn the
+feature off entirely by setting it to nothing:
+
+.. code-block:: condor-config
+
+    # Somewhere with more room than SPOOL.
+    JOB_EPOCH_HISTORY = /var/log/condor/epoch_history
+    MAX_EPOCH_HISTORY_LOG = 200000000
+    MAX_EPOCH_HISTORY_ROTATIONS = 5
+
+    # Or, to disable epoch history entirely:
+    # JOB_EPOCH_HISTORY =
+
+A single run of a job produces several records, each one a ClassAd followed by
+a banner line naming its type, the job id, the run instance, and the time it
+was written:
+
+.. code-block:: text
+
+    *** EPOCH ClusterId=12 ProcId=0 RunInstanceId=1 Owner="alice" CurrentTime=1758000000
+
+The types are:
+
+.. list-table::
+    :header-rows: 1
+    :widths: 15 85
+
+    * - Type
+      - Written
+    * - ``SPAWN``
+      - When the *condor_shadow* starts, before the job runs.  By default this
+        is a small ad identifying the job and the run; see
+        :macro:`SPAWN_JOB_ATTRS`.
+    * - ``INPUT``
+      - When input transfer for the run finishes, with the file transfer
+        plugin invocations and their results.
+    * - ``COMMON``
+      - When a common files transfer finishes, with the same plugin
+        information plus statistics about the common file transfer.
+    * - ``CHECKPOINT``
+      - When a self-checkpointing job transfers a checkpoint.
+    * - ``OUTPUT``
+      - When output transfer for the run finishes.
+    * - ``EPOCH``
+      - When the run ends, whether the job completed, was held, or was
+        evicted.  This is the full job ClassAd as it stood at the end of that
+        run, so it carries the exit status, resource usage, and the machine
+        the job ran on.
+
+The transfer records describe a transfer, not a job, so only a few job
+attributes are copied into them: the job's user, project name, global job id,
+DAGMan job id, batch id, batch name, and the machine it ran on are always
+included, and :macro:`TRANSFER_JOB_ATTRS` names any others to copy.  A single record type can
+override that list with a knob of its own named after the type --
+``INPUT_JOB_ATTRS``, ``OUTPUT_JOB_ATTRS``, ``CHECKPOINT_JOB_ATTRS`` or
+``COMMON_JOB_ATTRS``.  Attributes that a job does not have are skipped.
+
+Read the archive with :tool:`condor_history`.  The **-epochs** option reads the
+epoch history rather than the job history, and by default displays the
+``EPOCH`` records:
+
+.. code-block:: console
+
+    $ condor_history -epochs
+    $ condor_history -epochs 12.0
+
+The **-transfer-history** option displays the ``INPUT``, ``OUTPUT`` and
+``CHECKPOINT`` records instead, optionally narrowed to particular types.  These
+records have no default display format, so one must be given:
+
+.. code-block:: console
+
+    $ condor_history -transfer-history -json
+    $ condor_history -transfer-history:IO -af RunInstanceID RemoteHost TransferSuccess
+
+Epoch records can also be shipped to Elasticsearch by :tool:`condor_adstash`
+with its ``--schedd_job_epoch_history`` and ``--schedd_transfer_epoch_history``
+options; see :ref:`admin-manual/monitoring:elasticsearch`.
+
+Per-job epoch files
+'''''''''''''''''''
+
+Instead of, or in addition to, the single archive, the shadow can write one
+file per job.  Setting :macro:`JOB_EPOCH_HISTORY_DIR` to an existing directory
+makes each job's records go to ``job.runs.<cluster>.<proc>.ads`` in that
+directory, which is convenient when something outside HTCondor consumes the
+records for one job at a time.
+
+These files are neither rotated nor cleaned up, so the directory grows without
+bound until something removes them.  Reading them with ``-epochs:d`` deletes
+each file once it has been read, which makes :tool:`condor_history` the
+consumer that also does the cleanup:
+
+.. code-block:: console
+
+    $ condor_history -epochs:d -directory
+
+Note that :tool:`condor_preen` does not know about this directory, so it should
+be placed outside ``$(SPOOL)`` or added to :macro:`VALID_SPOOL_FILES`.
+
+.. _archive-librarian:
+
+Archive Librarian
+-----------------
+
+The archive librarian is a daemon that makes an SQLite3 database indexing
+historical job records stored within an Access Point's :macro:`HISTORY` file.
+The purpose of the librarian's database is:
+
+1. Keep a smaller amount of metadata about what jobs have completed for longer.
+2. To allow client tools to quickly locate a full archived record assuming
+   the associated file has not been rotated out.
+
+To enable simply set the following in the configuration
+
+.. code-block:: condor-config
+
+    # Version conditional to prevent older versions from failing
+    # to read configuration
+    if version >= 25.11.0
+        use feature:librarian
+    endif
+
+The following tools will automatically utilize the librarian in certain cases
+when the Access Point is configured with :config:`USING_LIBRARIAN = True`
+
+.. list-table::
+    :header-rows: 1
+    :widths: 20 15 80
+
+    * - Tool
+      - Disable
+      - Conditions
+    * - :tool:`condor_history`
+      - ``-no-librarian``
+      - When asked to query final job records for a specific user or cluster
+        and for a set of specific job ids.
+
+.. note::
+
+    The **Disable** section denotes how to disable the use of the librarian
+    database even when enabled. This may be useful for cases of jobs that have
+    recently finished but are not indexed yet and thus appear to not exist in
+    the history.
+
+Update Process
+''''''''''''''
+
+The librarian will periodically scan the archive files reading new entries
+and update the database accordingly. The librarian reads from oldest to newest
+to reduce the chance of losing record metadata before files are rotated.
+The librarian will always begin reading from where it left off or the oldest
+point it discovers. During the update process, if the backing database is found
+to be over the configured size then it will garbage collect old job id and job
+record entries associated with archive files that have already rotated out. This
+process will prioritize removing entries associated with the oldest timestamped
+history files. Garbage collection also timestamps any user left with no indexed
+jobs, and removes users that have had no indexed jobs for longer than
+:macro:`LIBRARIAN_USER_RETENTION_DAYS`. A user that has new jobs indexed before
+being removed is retained as normal.
+
+.. note::
+
+    The librarian may take some time to initially process any backlog of
+    records on startup.
+
+Schema
+''''''
+
+The librarian maintains a SQLite database with six tables. Five are persistent;
+``Status`` accumulates one row per update cycle and is periodically pruned.
+
+.. tabs::
+
+    .. tab:: Files
+
+        Tracks each archive file the librarian has discovered, including rotated copies.
+
+        .. list-table::
+           :header-rows: 1
+           :widths: 20 12 8 60
+
+           * - Column
+             - Type
+             - Default
+             - Description
+           * - ``FileId``
+             - INTEGER
+             - —
+             - Primary key (auto-increment).
+           * - ``FileName``
+             - TEXT
+             - —
+             - Absolute path of the archive file (e.g. ``/var/lib/condor/history`` or ``/var/lib/condor/history.20240101T120000``).
+           * - ``FileInode``
+             - INTEGER
+             - —
+             - Inode number used for rotation detection on POSIX systems.
+           * - ``FileHash``
+             - TEXT
+             - —
+             - FNV-1a hex hash of the first record; used as the rotation identity on Windows.
+           * - ``LastOffset``
+             - INTEGER
+             - —
+             - Byte position after the last record processed in this file.
+           * - ``DateOfRotation``
+             - INTEGER
+             - —
+             - Unix timestamp set when the file is rotated. ``NULL`` while the file is active.
+           * - ``DateOfDeletion``
+             - INTEGER
+             - —
+             - Unix timestamp set when the file disappears from disk. ``NULL`` while present.
+           * - ``FullyRead``
+             - INTEGER
+             - 0
+             - Set to ``1`` once a rotated file reaches clean EOF and its reader is released.
+           * - ``AvgRecordSize``
+             - REAL
+             - 0.0
+             - Running mean of compressed ClassAd record sizes in bytes (used for backlog estimation).
+           * - ``RecordsRead``
+             - INTEGER
+             - 0
+             - Count of records processed from this file across all cycles.
+
+        **Indexes**
+
+        - ``idx_unique_inode_hash`` — unique on ``(FileInode, FileHash)``; enforces that the same physical file is never registered twice.
+        - ``idx_date_of_deletion`` — on ``DateOfDeletion``; speeds up the garbage collection file selection query.
+
+    .. tab:: Users
+
+        One row per unique submitting user, normalized out of ``Jobs`` to save space.
+
+        .. list-table::
+           :header-rows: 1
+           :widths: 20 12 8 60
+
+           * - Column
+             - Type
+             - Default
+             - Description
+           * - ``UserId``
+             - INTEGER
+             - —
+             - Primary key.
+           * - ``UserName``
+             - TEXT
+             - —
+             - HTCondor owner string (unique constraint enforced).
+           * - ``DateOfLastJob``
+             - INTEGER
+             - —
+             - Unix timestamp set by garbage collection when the user's last indexed job is
+               removed. ``NULL`` while the user has indexed jobs, and cleared back to ``NULL``
+               when a new job for the user is indexed. Users are removed once this is older
+               than :macro:`LIBRARIAN_USER_RETENTION_DAYS`.
+
+    .. tab:: JobLists
+
+        Groups all jobs of a cluster together under a single owner, so cluster-level
+        queries can be answered with a single index lookup.
+
+        .. list-table::
+           :header-rows: 1
+           :widths: 20 12 8 60
+
+           * - Column
+             - Type
+             - Default
+             - Description
+           * - ``JobListId``
+             - INTEGER
+             - —
+             - Primary key.
+           * - ``ClusterId``
+             - INTEGER
+             - —
+             - HTCondor cluster ID (not null).
+           * - ``UserId``
+             - INTEGER
+             - —
+             - Foreign key → ``Users.UserId``.
+
+        **Indexes**
+
+        - ``idx_unique_cluster_user`` — unique on ``(ClusterId, UserId)``; one ``JobList`` per cluster/owner pair.
+        - ``idx_UserIdInJobLists`` — on ``UserId``; used by garbage collection to check whether a user has any remaining jobs.
+
+    .. tab:: Jobs
+
+        One row per job (``ClusterId.ProcId``), populated from spawn ads.
+
+        .. list-table::
+           :header-rows: 1
+           :widths: 20 12 8 60
+
+           * - Column
+             - Type
+             - Default
+             - Description
+           * - ``JobId``
+             - INTEGER
+             - —
+             - Primary key (auto-increment).
+           * - ``ClusterId``
+             - INTEGER
+             - —
+             - HTCondor cluster ID (not null).
+           * - ``ProcId``
+             - INTEGER
+             - —
+             - HTCondor proc ID (not null).
+           * - ``UserId``
+             - INTEGER
+             - —
+             - Foreign key → ``Users.UserId``.
+           * - ``TimeOfCreation``
+             - INTEGER
+             - —
+             - Unix timestamp when the job was first submitted.
+           * - ``JobListId``
+             - INTEGER
+             - —
+             - Foreign key → ``JobLists.JobListId``.
+
+        **Indexes**
+
+        - ``idx_unique_cluster_proc_jobs`` — unique on ``(ClusterId, ProcId)``; prevents duplicate proc entries.
+        - ``idx_OwnerInJobs`` — on ``UserId``; accelerates owner-filtered history queries.
+        - ``idx_JobListIdInJobs`` — on ``JobListId``; accelerates cluster-level aggregation.
+
+    .. tab:: JobRecords
+
+        One row per completed job ad ingested from an archive file. Multiple records
+        for the same ``JobId`` are possible if the ad appears in more than one file
+        (e.g. after a rotation).
+
+        .. list-table::
+           :header-rows: 1
+           :widths: 20 12 8 60
+
+           * - Column
+             - Type
+             - Default
+             - Description
+           * - ``JobRecordId``
+             - INTEGER
+             - —
+             - Primary key (auto-increment).
+           * - ``Offset``
+             - INTEGER
+             - —
+             - Byte offset within the archive file where this record begins.
+           * - ``CompletionDate``
+             - INTEGER
+             - —
+             - Unix timestamp from the job's ``CompletionDate`` ClassAd attribute.
+           * - ``JobId``
+             - INTEGER
+             - —
+             - Foreign key → ``Jobs.JobId``.
+           * - ``FileId``
+             - INTEGER
+             - —
+             - Foreign key → ``Files.FileId``; identifies which archive file holds the raw ad.
+           * - ``JobListId``
+             - INTEGER
+             - —
+             - Foreign key → ``JobLists.JobListId``; denormalized here to speed up cluster-count queries without joining through ``Jobs``.
+           * - ``DAGManJobId``
+             - INTEGER
+             - NULL
+             - The ``DAGManJobId`` ClassAd attribute from the job ad. ``NULL`` when the job was not submitted as part of a DAG.
+           * - ``JobBatchId``
+             - TEXT
+             - NULL
+             - The ``JobBatchId`` ClassAd attribute from the job ad. ``NULL`` when not present in the record.
+           * - ``JobBatchName``
+             - TEXT
+             - NULL
+             - The ``JobBatchName`` ClassAd attribute from the job ad. ``NULL`` when not present in the record.
+
+        **Indexes**
+
+        - ``idx_JobIdInJobRecords`` — on ``JobId``.
+        - ``idx_JobListIdInJobRecords`` — on ``JobListId``.
+        - ``idx_FileIdInJobRecords`` — on ``FileId``; used by garbage collection to find all records in a file slated for deletion.
+
+    .. tab:: Status
+
+        Append-only cycle log. One row is inserted after every update cycle and rows
+        older than :macro:`LIBRARIAN_STATUS_RETENTION_SECONDS` are pruned each cycle.
+
+        .. list-table::
+           :header-rows: 1
+           :widths: 24 12 8 56
+
+           * - Column
+             - Type
+             - Default
+             - Description
+           * - ``StatusId``
+             - INTEGER
+             - —
+             - Primary key (auto-increment).
+           * - ``TimeOfUpdate``
+             - INTEGER
+             - —
+             - Unix timestamp for this cycle (not null).
+           * - ``FileIdLastRead``
+             - INTEGER
+             - —
+             - ``FileId`` of the last archive file touched in this cycle.
+           * - ``FileOffsetLastRead``
+             - INTEGER
+             - —
+             - Byte offset after the last record read in that file.
+           * - ``TotalRecordsRead``
+             - INTEGER
+             - 0
+             - Number of records processed during this cycle.
+           * - ``DurationMs``
+             - INTEGER
+             - 0
+             - Wall-clock duration of the cycle in milliseconds.
+           * - ``JobBacklogEstimate``
+             - INTEGER
+             - 0
+             - Estimated number of unprocessed job ads remaining across all tracked files.
+           * - ``HitMaxIngestLimit``
+             - BOOLEAN
+             - 0
+             - ``1`` if the cycle stopped early because :macro:`LIBRARIAN_MAX_UPDATES_PER_CYCLE` was reached.
+           * - ``GarbageCollectionRun``
+             - BOOLEAN
+             - 0
+             - ``1`` if garbage collection executed during this cycle.
+           * - ``RecordsLostOnInsertFailure``
+             - INTEGER
+             - 0
+             - Count of job ads read from disk but dropped during this cycle because the database
+               insert transaction failed and was rolled back.
+
+        **Indexes**
+
+        - ``idx_TimeOfUpdateInStatus`` — on ``TimeOfUpdate``; used by the pruning query to efficiently drop old rows.
+
+    .. tab:: StatusData
+
+        Holds cumulative running statistics across all cycles, updated on every cycle.
+        Normally contains a single active row (``StatusDataId = 1``). When any integer
+        counter (``TotalCycles``, ``TotalAdsIngested``, or ``TotalRecordsLost``) would
+        overflow ``INT64_MAX``, the active row is automatically rotated to
+        ``StatusDataId = 2`` and the affected counters reset to ``0``. At most two rows
+        exist at any time: row ``1`` (active) and row ``2`` (pre-reset snapshot).
+
+        .. list-table::
+           :header-rows: 1
+           :widths: 28 12 60
+
+           * - Column
+             - Type
+             - Description
+           * - ``StatusDataId``
+             - INTEGER
+             - Primary key; ``1`` for the active row, ``2`` for the pre-reset snapshot
+               preserved after a counter overflow. CHECK constraint allows only these two values.
+           * - ``AvgAdsIngestedPerCycle``
+             - REAL
+             - Cumulative mean of records processed per cycle.
+           * - ``AvgIngestDurationMs``
+             - REAL
+             - Cumulative mean cycle duration in milliseconds.
+           * - ``MeanIngestHz``
+             - REAL
+             - Cumulative mean ingest rate in ads per second.
+           * - ``MeanArrivalHz``
+             - REAL
+             - Estimated mean arrival rate of new ads (ads/sec), updated when the daemon begins an update cycle.
+           * - ``MeanBacklogEstimate``
+             - REAL
+             - Cumulative mean estimated backlog across all cycles.
+           * - ``TotalCycles``
+             - INTEGER
+             - Total number of update cycles completed. Resets to ``0`` if it would overflow
+               ``INT64_MAX``; when this happens all Welford rolling means are also reset to
+               ``0`` (since they use the cycle count as their denominator).
+           * - ``TotalAdsIngested``
+             - INTEGER
+             - Cumulative count of job ads successfully ingested across all cycles. Resets to
+               ``0`` if it would overflow ``INT64_MAX``.
+           * - ``TotalRecordsLost``
+             - INTEGER
+             - Cumulative count of job ads read from disk but dropped due to a failed database
+               insert transaction. Resets to ``0`` if it would overflow ``INT64_MAX``.
+           * - ``HitMaxIngestLimitRate``
+             - REAL
+             - Rolling proportion of cycles that hit :macro:`LIBRARIAN_MAX_UPDATES_PER_CYCLE`.
+           * - ``LastRunLeftBacklog``
+             - BOOLEAN
+             - ``1`` if the most recent cycle did not drain the backlog.
+           * - ``TimeOfLastUpdate``
+             - INTEGER
+             - Unix timestamp of the most recent update.

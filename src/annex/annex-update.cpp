@@ -65,9 +65,9 @@ updateOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 
 	if( secretKeyFile != USE_INSTANCE_ROLE_MAGIC_STRING ) {
 		struct stat sw = {};
-		stat( secretKeyFile.c_str(), &sw );
+		int sr = stat( secretKeyFile.c_str(), &sw );
 		mode_t mode = sw.st_mode;
-		if( mode & S_IRWXG || mode & S_IRWXO || getuid() != sw.st_uid ) {
+		if( sr != 0 || mode & S_IRWXG || mode & S_IRWXO || getuid() != sw.st_uid ) {
 			formatstr( errorString, "Secret key file must be accessible only by owner.  Please verify that your user owns the file and that the file permissons are restricted to the owner." );
 		}
 	}

@@ -40,10 +40,10 @@ def expected_prl():
             "TransferUrl": 'file://no-such.file/2',
         },
         {
-            "TransferUrl": 'http://no-such.tld/3',
+            "TransferUrl": 'http://nonexistent.invalid/3',
         },
         {
-            "TransferUrl": 'http://no-such.tld/4',
+            "TransferUrl": 'http://nonexistent.invalid/4',
         },
     ]
 
@@ -83,8 +83,8 @@ def the_held_job(the_condor, path_to_sleep, test_dir):
             'file://no-such.file/2',
             'debug://error/resolution[FailedName="a.b.c"]',
             'debug://error/resolution[FailedName="x.y.z"]',
-            'http://no-such.tld/3',
-            'http://no-such.tld/4',
+            'http://nonexistent.invalid/3',
+            'http://nonexistent.invalid/4',
         ]),
     }
     job_handle = the_condor.submit(the_description, count=1)

@@ -22,6 +22,7 @@
 
 
 typedef enum {
+	PFT_CRASH = -1, // %n or %*, which we cannot support.
 	PFT_NONE = 0,
 	PFT_INT,
 	PFT_FLOAT,
@@ -35,6 +36,7 @@ typedef enum {
 } printf_fmt_t;
 
 
+#define PRINTF_FMT_STAR_WIDTH -42 // ASCII 42 is *
 struct printf_fmt_info {
 		/* What kind of format string are we? */
 	char fmt_letter;		/* actual letter in the % escape */
@@ -43,6 +45,7 @@ struct printf_fmt_info {
 		/* standard modifiers */
 	int width;
 	int precision;
+	bool unsafe() const { return (type == PFT_CRASH || width == PRINTF_FMT_STAR_WIDTH || precision == PRINTF_FMT_STAR_WIDTH); }
 
 		/* special-case modifiers */
 	int is_short;		/* if the 'h' flag is set */
@@ -59,6 +62,15 @@ struct printf_fmt_info {
 
 
 int parsePrintfFormat(const char **fmt_p, struct printf_fmt_info *info);
+
+// Check to see if a printf format is ok for the given data type.
+// When extended_types is true, %V, %R, %T and %Y are permitted.
+// Optionally, the offset of the format letter in the fmt string is returned.
+// returns:
+//   0 for not a print format
+//  -1 for bad printformat
+//   1 for good print format
+int validatePrintfFormat(const char* fmt, printf_fmt_t data_type, bool extended_types=false, int* fmt_char_offset=nullptr);
 
 
 #endif /* _CONDOR_PRINTF_FORMAT_H */

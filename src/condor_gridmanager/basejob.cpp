@@ -25,7 +25,6 @@
 #include "condor_daemon_core.h"
 #include "spooled_job_files.h"
 #include "write_user_log.h"
-#include "condor_string.h"
 
 #include "gridmanager.h"
 #include "basejob.h"
@@ -404,7 +403,6 @@ void BaseJob::UpdateRuntimeStats()
 		jobAd->LookupInteger( ATTR_NUM_JOB_STARTS, num_job_starts );
 		num_job_starts++;
 		jobAd->Assign( ATTR_NUM_JOB_STARTS, num_job_starts );
-		jobAd->Assign( ATTR_JOB_RUN_COUNT, num_job_starts );
 
 		requestScheddUpdate( this, false );
 

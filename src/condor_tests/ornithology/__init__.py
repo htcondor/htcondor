@@ -20,7 +20,7 @@ logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.NullHandler())
 
 from .cmd import run_command, parse_submit_result
-from .condor import Condor, get_port_host_from_sinful
+from .condor import Condor, RestartMode, get_port_host_from_sinful
 from .daemons import DaemonLog, DaemonLogStream, DaemonLogMessage
 from .env import SetEnv, SetCondorConfig, ChangeDir
 from .helpers import in_order, track_quantity

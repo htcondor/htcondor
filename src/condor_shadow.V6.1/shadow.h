@@ -29,6 +29,7 @@
 #include <optional>
 #include "guidance.h"
 #include "catalog_utils.h"
+#include "condor_holdcodes.h"
 
 class ShadowHookMgr;
 
@@ -79,6 +80,17 @@ class UniShadow : public BaseShadow
 
 	virtual void checkInputFileTransfer();
 
+		/** If this shadow will stage or map common files, put the job on
+		 *  hold unless they match the expected hashes the schedd gave us.
+		 */
+	void checkCommonFilesHashes();
+
+		/** A transfer shadow's job ad has a synthetic proc ID; set the
+		 *  prompting job's hold reason and exit with JOB_CXFER_FAILED_HOLD,
+		 *  so that the schedd puts the prompting job on hold.
+		 */
+	void holdPromptingJobAndExit( const std::string & reason, int hold_reason_subcode );
+
 		/** Shadow should spawn a new starter for this job.
 		 *  May be asynchronous if there's a shadow hook defined.
 		 */
@@ -122,6 +134,8 @@ class UniShadow : public BaseShadow
 		/**
 		 */
 	int handleJobRemoval(int sig);
+
+	virtual void recordActivationEndingForWastedMemory();
 
 		/// Log an execute event to the UserLog
 	void logExecuteEvent( void );
@@ -206,13 +220,15 @@ class UniShadow : public BaseShadow
 	virtual GuidanceResult pseudo_request_guidance( const ClassAd & request, ClassAd & guidance );
 
 	virtual std::optional<ListOfCatalogs> computeCommonInputFileCatalogs(
-		ClassAd * jobAd
+		ClassAd * jobAd,
+		std::map<std::string, std::string> * internalToSimpleNameMap
 	);
 
 	virtual bool computeCommonInputFiles(
 		ClassAd * jobAd,
 		ListOfCatalogs & commonFileCatalogs,
-		int & required_version
+		int & required_version,
+		std::map<std::string, std::string> * internalToSimpleNameMap
 	);
 
 	virtual std::optional<ClassAd> getCommonTransferInfoStats() {
@@ -240,6 +256,12 @@ class UniShadow : public BaseShadow
 	// Set when we receive TRANSFER_SANDBOX_AND_RM_JOB (condor_rm -transfer)
 	bool transfer_and_remove_requested = false;
 
+	// When this shadow saw the sandbox transfers enter the transfer queue,
+	// or 0 if they haven't.  We can't use TransferInQueued/TransferOutQueued
+	// from the job ad for this, because they persist from earlier runs.
+	time_t m_transfer_in_queued = 0;
+	time_t m_transfer_out_queued = 0;
+
 	//
 	// Internal implementation details specific to pseudo_request_guidance().
 	//
@@ -247,19 +269,43 @@ class UniShadow : public BaseShadow
 	ClassAd before_common_file_transfer(
 		const std::string & cifName, const std::string & commonInputFiles
 	);
+
 	bool after_common_file_transfer(
-	    const ClassAd & request,
-	    const std::string & cifName,
-	    std::string & stagingDir
+		const ClassAd & request,
+		const std::string & cifName,
+		std::string & stagingDir,
+		long long & size
 	);
 
 	ClassAd handle_wiring_failure();
 
 	condor::cr::Piperator<ClassAd, ClassAd> start_common_input_conversation(
-	    ClassAd request,
-	    ListOfCatalogs common_file_catalogs,
-	    bool print_waiting=true
+		ClassAd request,
+		ListOfCatalogs common_file_catalogs,
+		bool print_waiting=true
 	);
+
+
+	// Use only with start_staging_only_conversation():
+	// 		co_return VACATE_REQEUEST_ABORT(...);
+	ClassAd vacate_requeue_abort(
+		const std::string & holdMessage, CONDOR_HOLD_CODE holdCode, int holdSubCode,
+		const char * file, int line
+	);
+
+	condor::cr::Piperator<ClassAd, ClassAd> start_staging_only_conversation(
+		ClassAd request,
+		ListOfCatalogs common_file_catalogs,
+		std::map<std::string, std::string> internalToSimpleNameMap
+	);
+
+	condor::cr::Piperator<ClassAd, ClassAd> start_mapping_only_conversation(
+		ClassAd request,
+		ListOfCatalogs common_file_catalogs,
+		std::map<std::string, std::string> internalToSimpleNameMap
+	);
+
+
 
 	void set_provider_keep_alive( const std::string & cifName );
 	int producer_keep_alive = -1;

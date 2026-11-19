@@ -42,10 +42,10 @@ TEST_CASES = {
     "CURLE_COULDNT_RESOLVE_HOST": {
         "expected": {
             "ErrorType":        "Resolution",
-            "FailedName":       "no-such.tld",
+            "FailedName":       "nonexistent.invalid",
             "FailureType":      "Unknown",
         },
-        "url":    "http://no-such.tld/file",
+        "url":    "http://nonexistent.invalid/file",
     },
     # I don't know how to generate this one, actually.
     # CURLE_REMOTE_ACCESS_DENIED
@@ -130,8 +130,8 @@ def the_closed_port():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(('127.0.0.1', 0))
     (address, port) = s.getsockname()
-    s.close()
     yield port
+    s.close()
 
 
 def slow_reply_handler(request):

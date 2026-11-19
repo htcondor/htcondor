@@ -30,6 +30,7 @@
 #include <string.h>
 #include <vector>
 #include <string>
+#include <string_view>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -66,7 +67,8 @@
 // managing GPUs, sets some nvidia-related environment variables that the
 // condor starter doesn't know about.  So, condor_nsenter extracts the environment
 // variables from the contained job process, and sets them in the shell
-// it spawns.
+// it spawns.  Additional variables can be set (or the job's values overridden)
+// with one or more "-e NAME=VALUE" options, like apptainer's --env.
 
 void
 usage( char *cmd )
@@ -76,6 +78,9 @@ usage( char *cmd )
 	fprintf(stderr,"-t target_pid:\n");
 	fprintf(stderr,"-S user_id:\n");
 	fprintf(stderr,"-G group_id:\n");
+	fprintf(stderr,"-groups gid:gid:...:  supplemental groups\n");
+	fprintf(stderr,"-e NAME=VALUE:      set environment variable in the launched process\n");
+	fprintf(stderr,"                    (may be repeated, overrides the job's value)\n");
 	fprintf(stderr,"    -help              Display options\n");
 }
 
@@ -92,13 +97,19 @@ void reset_pty_and_exit(int signo) {
 }
 
 int enter_ns(pid_t pid, const char *ns) {
-	struct stat st;
+	struct stat st{};
 	char buf[256];
-	sprintf(buf, "/proc/self/ns/%s", ns);
-	stat(buf, &st);
+	snprintf(buf, sizeof(buf), "/proc/self/ns/%s", ns);
+	if (stat(buf, &st) < 0) {
+		fprintf(stderr, "stat(%s) failed: %s\n", buf, strerror(errno));
+		exit(-1);
+	}
 	long my_ns = st.st_ino;
-	sprintf(buf, "/proc/%d/ns/%s", pid, ns);
-	stat(buf, &st);
+	snprintf(buf, sizeof(buf), "/proc/%d/ns/%s", pid, ns);
+	if (stat(buf, &st) < 0) {
+		fprintf(stderr, "stat(%s) failed: %s\n", buf, strerror(errno));
+		exit(-1);
+	}
 	long your_ns = st.st_ino;
 
 	// It is an error to try to setns to a namespace we are already in.
@@ -120,6 +131,13 @@ int enter_ns(pid_t pid, const char *ns) {
 	return 0;
 }
 
+// The name part of a NAME=VALUE environment entry
+static std::string_view
+env_name(const std::string &entry)
+{
+	return std::string_view(entry).substr(0, entry.find('='));
+}
+
 int main( int argc, char *argv[] )
 {
 	std::string condor_prefix;
@@ -127,12 +145,20 @@ int main( int argc, char *argv[] )
 	uid_t uid = 0;
 	gid_t gid = 0;
 	const char *supp_groups = nullptr;
+	std::vector<std::string> extra_env; // NAME=VALUE entries from -e
+	int cmd_start = 0; // index into argv where the command begins, 0 = none
 
 	// parse command line args
 	for( int i=1; i<argc; i++ ) {
 		if(is_arg_prefix(argv[i],"-help")) {
 			usage(argv[0]);
 			exit(1);
+		}
+
+		// "--" ends option parsing; everything after is the command
+		if(strcmp(argv[i], "--") == 0) {
+			if (i + 1 < argc) cmd_start = i + 1;
+			break;
 		}
 
 		// target pid to enter
@@ -155,7 +181,22 @@ int main( int argc, char *argv[] )
 
 		// supplemental groups, colon separated
 		if(is_arg_prefix(argv[i],"-groups")) {
-			//supp_groups = argv[i + 1];
+			supp_groups = argv[i + 1];
+			i++;
+		}
+
+		// environment variable to set in the launched process
+		if(is_arg_prefix(argv[i],"-e")) {
+			if (i + 1 >= argc) {
+				fprintf(stderr, "-e requires a NAME=VALUE argument\n");
+				exit(1);
+			}
+			const char *eq = strchr(argv[i + 1], '=');
+			if (eq == nullptr || eq == argv[i + 1]) {
+				fprintf(stderr, "-e argument must be of the form NAME=VALUE: %s\n", argv[i + 1]);
+				exit(1);
+			}
+			extra_env.emplace_back(argv[i + 1]);
 			i++;
 		}
 	}
@@ -224,33 +265,102 @@ int main( int argc, char *argv[] )
 		env.replace(eqpos, insidePath.length(), outsidePath);  
 	}
 
-	// make a vector to hold all the pointers to env entries
-	std::vector<const char *> envp;
+	std::vector<std::string> env_entries;
 
 	// copy DISPLAY from outside to inside.  sshd has set this,
 	// it is the only one from the outside we need on the inside,
 	// and one way that an ssh-to-job shell is different than the job.
-
-	std::string display;
+	// It goes first, so it wins over any DISPLAY in the job's environment.
 	if (getenv("DISPLAY")) {
-		formatstr(display, "DISPLAY=%s", getenv("DISPLAY"));
-		envp.push_back(display.c_str());
+		env_entries.emplace_back(std::string("DISPLAY=") + getenv("DISPLAY"));
 	}
 
-	// the first one
-	envp.push_back(env.c_str());
-	auto it = env.cbegin();
-	while (env.cend() != (it = std::find(it, env.cend(), '\0'))) {
-		// skip past null terminator
-		it++;	
-		if (*it != '\0') {
-			envp.push_back(& (*it));
+	// split the job's environment into its NUL-separated entries
+	size_t start = 0;
+	while (start < env.size()) {
+		size_t end = env.find('\0', start);
+		if (end == std::string::npos) {
+			end = env.size();
 		}
+		if (end > start) {
+			env_entries.emplace_back(env, start, end - start);
+		}
+		start = end + 1;
 	}
-	envp.push_back(nullptr);
+
+	// variables from -e replace any existing ones of the same name,
+	// and a later -e for the same name replaces an earlier one
+	for (const auto &extra: extra_env) {
+		std::string_view name = env_name(extra);
+		std::erase_if(env_entries, [&](const std::string &entry) {
+			return env_name(entry) == name;
+		});
+		env_entries.push_back(extra);
+	}
+
+	// make a vector to hold all the pointers to env entries
+	std::vector<const char *> envp;
+	for (const auto &entry: env_entries) {
+		envp.push_back(entry.c_str());
+	}
 	envp.push_back(nullptr);
 
 	std::string filename;
+
+	// Move into the job's cgroup so that the ssh shell shares the same
+	// resource limits as the job.  We must do this before entering the
+	// mnt namespace, because /sys/fs/cgroup won't be visible after that.
+	// Read /proc/<pid>/cgroup to find the cgroupv2 path, then write our
+	// PID into that cgroup.
+	{
+		std::string cgroupfile;
+		formatstr(cgroupfile, "/proc/%d/cgroup", pid);
+		FILE *f = fopen(cgroupfile.c_str(), "r");
+		if (f) {
+			char line[1024];
+			while (fgets(line, sizeof(line), f)) {
+				// cgroupv2 format: "0::<path>\n"
+				if (strncmp(line, "0::", 3) == 0) {
+					// strip trailing newline
+					char *nl = strchr(line, '\n');
+					if (nl) *nl = '\0';
+					std::string cgroup_procs;
+					formatstr(cgroup_procs, "/sys/fs/cgroup%s/cgroup.procs", line + 3);
+					FILE *cp = fopen(cgroup_procs.c_str(), "w");
+					if (cp) {
+						fprintf(cp, "%d\n", getpid());
+						fclose(cp);
+					} else {
+						fprintf(stderr, "Warning: cannot move into job cgroup %s: %s\n",
+							cgroup_procs.c_str(), strerror(errno));
+					}
+					break;
+				}
+			}
+			fclose(f);
+		}
+	}
+
+	// Set supplementary groups while we are still root in the initial
+	// user namespace.  Once we setns() into a rootless container's user
+	// namespace, /proc/<pid>/setgroups is typically "deny" and any
+	// setgroups(2) call will fail with EPERM regardless of capabilities.
+	if (supp_groups != nullptr) {
+		std::vector<gid_t> setgroups_vec;
+		for (const auto &g: StringTokenIterator(supp_groups, ":")) {
+			setgroups_vec.emplace_back(atoi(g.c_str()));
+		}
+		int r = setgroups(setgroups_vec.size(), setgroups_vec.data());
+		if (r < 0) {
+			fprintf(stderr, "warning: cannot set supplemental groups to %s: %s\n",
+				supp_groups, strerror(errno));
+		}
+	} else {
+		int r = setgroups(0, nullptr);
+		if (r < 0) {
+			fprintf(stderr, "warning: setgroups(0) failed: %s\n", strerror(errno));
+		}
+	}
 
 	// start changing namespaces.  Note that once we do this, things
 	// get funny in this process
@@ -259,24 +369,8 @@ int main( int argc, char *argv[] )
 	enter_ns(pid, "pid");
 	enter_ns(pid, "mnt");
 
-	int r = setgroups(0, nullptr);
-	if (r < 0) {
-		fprintf(stderr, "Can't setgroups to 0: %s\n", strerror(errno));
-	}
-
-	if (supp_groups != nullptr) {
-		std::vector<gid_t> setgroups_vec;
-		for (const auto &g: StringTokenIterator(supp_groups, ":")) {
-			setgroups_vec.emplace_back(atoi(g.c_str()));
-		}
-		int r = setgroups(setgroups_vec.size(), setgroups_vec.data());
-		if (r < 0) {
-			fprintf(stderr, "warning: cannot set supplemental groups to %s\n", supp_groups);
-		}
-	}
-
 	// order matters!
-	r = setgid(gid);
+	int r = setgid(gid);
 	if (r < 0) {
 		fprintf(stderr, "Can't setgid to %d\n", gid);
 		exit(1);
@@ -285,6 +379,37 @@ int main( int argc, char *argv[] )
 	if (r < 0) {
 		fprintf(stderr, "Can't setuid to %d\n", uid);
 		exit(1);
+	}
+
+	// For non-interactive commands, skip the pty and just exec directly.
+	// The fds from the ssh client are already on 0/1/2.
+	if (cmd_start > 0) {
+		int childpid = fork();
+		if (childpid == 0) {
+			if (getenv("_CONDOR_SCRATCH_DIR")) {
+				int r = chdir(getenv("_CONDOR_SCRATCH_DIR"));
+				if (r < 0) {
+					fprintf(stderr, "Cannot chdir to %s: %s\n", getenv("_CONDOR_SCRATCH_DIR"), strerror(errno));
+				}
+			}
+			setsid();
+
+			// Build a null-terminated argv for the command
+			std::vector<const char *> cmd_argv;
+			for (int i = cmd_start; i < argc; i++) {
+				cmd_argv.push_back(argv[i]);
+			}
+			cmd_argv.push_back(nullptr);
+
+			execvpe(cmd_argv[0], const_cast<char *const *>(cmd_argv.data()),
+				const_cast<char *const *>(envp.data()));
+			fprintf(stderr, "exec of %s failed: %s\n", cmd_argv[0], strerror(errno));
+			exit(errno);
+		} else {
+			int status;
+			waitpid(childpid, &status, 0);
+		}
+		return 0;
 	}
 
 	struct winsize win;
@@ -309,8 +434,8 @@ int main( int argc, char *argv[] )
 
 	int childpid = fork();
 	if (childpid == 0) {
-	
-		// in the child -- 
+
+		// in the child --
 
 		close(0);
 		close(1);
@@ -336,7 +461,7 @@ int main( int argc, char *argv[] )
 
 		// and make it the process group leader
 		tcsetpgrp(workerPty, getpid());
- 
+
 		// and set the window size properly
 		ioctl(0, TIOCSWINSZ, &win);
 
@@ -366,7 +491,7 @@ int main( int argc, char *argv[] )
 		tio.c_cc[VMIN] = 1;
 		tio.c_cc[VTIME] = 0;
 		tcsetattr(0, TCSAFLUSH, &tio);
-		
+
 		struct sigaction handler;
 		struct sigaction oldhandler;
 		handler.sa_handler = reset_pty_and_exit;
@@ -389,7 +514,7 @@ int main( int argc, char *argv[] )
 			if (FD_ISSET(masterPty, &readfds)) {
 				char buf[4096];
 				int r = read(masterPty, buf, 4096);
-				if (r > 0) {	
+				if (r > 0) {
 					int ret = write(1, buf, r);
 					if (ret < 0) {
 						reset_pty_and_exit(0);
@@ -402,7 +527,7 @@ int main( int argc, char *argv[] )
 			if (FD_ISSET(0, &readfds)) {
 				char buf[4096];
 				int r = read(0, buf, 4096);
-				if (r > 0) {	
+				if (r > 0) {
 					int ret = write(masterPty, buf, r);
 					if (ret < 0) {
 						reset_pty_and_exit(0);
@@ -413,7 +538,7 @@ int main( int argc, char *argv[] )
 			}
 		}
 		int status;
-		waitpid(childpid, &status, 0);	
+		waitpid(childpid, &status, 0);
 	}
 	return 0;
 }

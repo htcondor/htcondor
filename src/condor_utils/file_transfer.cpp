@@ -53,6 +53,7 @@
 #include "fcloser.h"
 
 #include <algorithm>
+#include <limits>
 #include <numeric>
 #include <string>
 #include <unordered_set>
@@ -151,9 +152,11 @@ public:
 	void setXferQueue(const std::string &queue) { m_xfer_queue = queue; }
 	void setFileSize(filesize_t new_size) { m_file_size = new_size; }
 	void setDomainSocket(bool value) { is_domainsocket = value; }
+	void setFifo(bool value) { is_fifo = value; }
 	void setSymlink(bool value) { is_symlink = value; }
 	void setDirectory(bool value) { is_directory = value; }
 	bool isDomainSocket() const {return is_domainsocket;}
+	bool isFifo() const {return is_fifo;}
 	bool isSymlink() const {return is_symlink;}
 	bool isDirectory() const {return is_directory;}
 	bool isSrcUrl() const {return !m_src_scheme.empty();}
@@ -267,6 +270,7 @@ private:
 	std::string m_dest_url;
 	std::string m_xfer_queue;
 	bool is_domainsocket{false};
+	bool is_fifo{false};
 	bool is_directory{false};
 	bool is_symlink{false};
 	condor_mode_t m_file_mode{NULL_FILE_PERMISSIONS};
@@ -1856,37 +1860,40 @@ FileTransfer::callClientCallback()
 	}
 }
 
+// The transfer status pipe protocol frames each variable-length payload
+// with an `int` byte count (and some callers add 1 for a trailing null),
+// so a payload whose size doesn't fit in a positive int can't be sent:
+// narrowing it would either wrap to a negative length (which the reader
+// then uses for an allocation) or, on the writer's side, make the retry
+// loop below believe there's nothing left to write.  Reject it up front
+// instead of narrowing it.
+static bool
+PipeMsgLengthOk(size_t size, const char * what) {
+	// '>=' (not '>') leaves room for callers that add one for a trailing null
+	if (size >= static_cast<size_t>(std::numeric_limits<int>::max())) {
+		dprintf(D_ALWAYS, "FileTransfer: %s is too large (%zu bytes) to send "
+		                   "over the transfer status pipe\n", what, size);
+		return false;
+	}
+	return true;
+}
+
 bool
 FileTransfer::PipeReadFullString(std::string& buf, const int nBytes) {
-	int nleft = nBytes;
-	int num_reads = 0;
-
-	while (nleft > 0) {
-		char* tmp_buf = new char[nleft];
-		ASSERT(tmp_buf);
-
-		num_reads++;
-
-		int nread = daemonCore->Read_Pipe(TransferPipe[0],
-		                                  tmp_buf,
-		                                  nleft);
-
-		if (nread < 0) {
-			delete [] tmp_buf;
-			return false;
-		}
-
-		buf.insert(buf.size(), tmp_buf, nread);
-		nleft -= nread;
-
-		delete [] tmp_buf;
-
-		if (nread == 0) { break; }
+	// Check before resize(): a negative length would convert to a huge
+	// size_t and throw rather than fail the read.
+	if (nBytes < 0) {
+		dprintf(D_ERROR, "PipeReadFullString: invalid length: %d\n", nBytes);
+		return false;
 	}
+	buf.resize(static_cast<size_t>(nBytes));
+
+	int num_reads = 0;
+	bool success = daemonCore->Read_Pipe_Full(TransferPipe[0], buf.data(), nBytes, &num_reads);
 
 	dprintf(D_TEST, "PipeReadFullString(%d) Total Reads: %d\n", nBytes, num_reads);
 
-	return nleft == 0;
+	return success;
 }
 
 bool
@@ -2014,7 +2021,7 @@ FileTransfer::ReadTransferPipeMsg()
 		while( total_read < size_of_ad ) {
 			n = daemonCore->Read_Pipe( TransferPipe[0],
 			                           plugin_output_ad_string + total_read,
-			                           size_of_ad );
+			                           size_of_ad - total_read );
 			if( n <= 0 ) { delete [] plugin_output_ad_string; goto read_failed; }
 			total_read += n;
 		}
@@ -2068,6 +2075,10 @@ FileTransfer::SendPluginOutputAd( const ClassAd & plugin_output_ad ) {
 	classad::ClassAdUnParser caup;
 	caup.Unparse( plugin_output_ad_string, & plugin_output_ad );
 
+	if (!PipeMsgLengthOk(plugin_output_ad_string.size(), "plugin output ad")) {
+		return false;
+	}
+
 	// Write the size of the serialization.
 	int size_of_ad = plugin_output_ad_string.size();
 	n = daemonCore->Write_Pipe(
@@ -2076,13 +2087,9 @@ FileTransfer::SendPluginOutputAd( const ClassAd & plugin_output_ad ) {
 	if( n != sizeof(size_of_ad) ) { return false; }
 
 	// Write the serialization.
-	n = daemonCore->Write_Pipe(
-		TransferPipe[1],
-		plugin_output_ad_string.c_str(),
-		plugin_output_ad_string.size()
-	);
-	// I'm also asserting that our ads aren't >= 2GB.
-	ASSERT( n == (int)plugin_output_ad_string.size() );
+	if (!daemonCore->Write_Pipe_Full(TransferPipe[1], plugin_output_ad_string.data(), (int)plugin_output_ad_string.size())) {
+		return false;
+	}
 
 	return true;
 }
@@ -2494,7 +2501,7 @@ FileTransfer::DoDownload(ReliSock *s)
 	}
 
 	if( !final_transfer && IsServer() ) {
-		SpooledJobFiles::createJobSpoolDirectory(&_fix_me_copy_,desired_priv_state);
+		SpooledJobFiles::createJobSpoolDirectory(&_fix_me_copy_);
 	}
 
 	std::string outputDirectory = Iwd;
@@ -3774,7 +3781,7 @@ FileTransfer::CommitFiles()
 
 		std::string SwapSpoolSpace;
 		formatstr(SwapSpoolSpace,"%s.swap",SpoolSpace);
-		bool swap_dir_ready = SpooledJobFiles::createJobSwapSpoolDirectory(&_fix_me_copy_,desired_priv_state);
+		bool swap_dir_ready = SpooledJobFiles::createJobSwapSpoolDirectory(&_fix_me_copy_);
 		if( !swap_dir_ready ) {
 			EXCEPT("Failed to create %s",SwapSpoolSpace.c_str());
 		}
@@ -3932,7 +3939,6 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 									sizeof(cmd) );
 		if(n != sizeof(cmd)) write_failed = true;
 	}
-
 	if(!write_failed) {
 		n = daemonCore->Write_Pipe( TransferPipe[1],
 				   (char *)&total_bytes,
@@ -3962,7 +3968,14 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 	std::string stats;
 	classad::ClassAdUnParser unparser;
 	unparser.Unparse(stats, &Info.stats);
-	int stats_len = stats.length();
+
+	int stats_len = 0;
+	if (!PipeMsgLengthOk(stats.length(), "stats ad")) {
+		write_failed = true;
+	} else {
+		stats_len = static_cast<int>(stats.length());
+	}
+
 	if(!write_failed) {
 		n = daemonCore->Write_Pipe( TransferPipe[1],
 				   (char *)&stats_len,
@@ -3970,16 +3983,20 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 		if(n != sizeof(int)) write_failed = true;
 	}
 	if(!write_failed) {
-		n = daemonCore->Write_Pipe( TransferPipe[1],
-				   stats.c_str(),
-				   stats_len );
-		if(n != stats_len) write_failed = true;
+		if (!daemonCore->Write_Pipe_Full(TransferPipe[1], stats.data(), stats_len)) write_failed = true;
 		dprintf(D_ZKM, "sent stats ad to pipe: %s\n", stats.c_str());
 	}
-	int error_len = Info.error_desc.length();
-	if(error_len) {
-		error_len++; //write the null too
+
+	int error_len = 0;
+	if (!PipeMsgLengthOk(Info.error_desc.length(), "error description")) {
+		write_failed = true;
+	} else {
+		error_len = static_cast<int>(Info.error_desc.length());
+		if (error_len) {
+			error_len++; //write the null too
+		}
 	}
+
 	if(!write_failed) {
 		n = daemonCore->Write_Pipe( TransferPipe[1],
 				   (char *)&error_len,
@@ -3987,17 +4004,20 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 		if(n != sizeof(int)) write_failed = true;
 	}
 	if(!write_failed) {
-		n = daemonCore->Write_Pipe( TransferPipe[1],
-				   Info.error_desc.c_str(),
-				   error_len );
-		if(n != error_len) write_failed = true;
+		if (!daemonCore->Write_Pipe_Full(TransferPipe[1], Info.error_desc.c_str(), error_len)) write_failed = true;
 		dprintf(D_ZKM, "sent error to pipe: %s\n", Info.error_desc.c_str());
 	}
 
-	int spooled_files_len = Info.spooled_files.length();
-	if(spooled_files_len) {
-		spooled_files_len++; //write the null too
+	int spooled_files_len = 0;
+	if (!PipeMsgLengthOk(Info.spooled_files.length(), "spooled files list")) {
+		write_failed = true;
+	} else {
+		spooled_files_len = static_cast<int>(Info.spooled_files.length());
+		if (spooled_files_len) {
+			spooled_files_len++; //write the null too
+		}
 	}
+
 	if(!write_failed) {
 		n = daemonCore->Write_Pipe( TransferPipe[1],
 				   (char *)&spooled_files_len,
@@ -4005,10 +4025,7 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 		if(n != sizeof(int)) write_failed = true;
 	}
 	if(!write_failed) {
-		n = daemonCore->Write_Pipe( TransferPipe[1],
-				   Info.spooled_files.c_str(),
-				   spooled_files_len );
-		if(n != spooled_files_len) write_failed = true;
+		if (!daemonCore->Write_Pipe_Full(TransferPipe[1], Info.spooled_files.c_str(), spooled_files_len)) write_failed = true;
 	}
 
 	if(write_failed) {
@@ -4302,7 +4319,7 @@ createCheckpointManifest(
 	//
 	std::string manifestText;
 	for( auto & fileitem : filelist ) {
-		if( fileitem.isDirectory() || fileitem.isDomainSocket() ) { continue; }
+		if( fileitem.isDirectory() || fileitem.isDomainSocket() || fileitem.isFifo() ) { continue; }
 		const std::string & sourceName = fileitem.srcName();
 
 		std::string sourceHash;
@@ -4991,6 +5008,16 @@ FileTransfer::uploadFileList(
 	// (Of course, it would arguably be better not to generate such entries
 	// in the first place, but that's scary for other reasons.)
 	//
+
+	// If the file list is empty, the loop below never runs and we would
+	// never report XFER_STATUS_ACTIVE.  The shadow logs a transfer-started
+	// userlog event when it first sees the transfer become active, so an
+	// empty transfer would otherwise log a finished event with no matching
+	// started event.  Report active here so that an empty transfer still
+	// logs its start.
+	if( filelist.empty() ) {
+		UpdateXferStatus(XFER_STATUS_ACTIVE);
+	}
 
 	for (auto &fileitem : filelist)
 	{
@@ -6238,6 +6265,22 @@ FileTransfer::abortActiveTransfer()
 		daemonCore->Kill_Thread(ActiveTransferTid);
 		TransThreadTable.erase(ActiveTransferTid);
 		ActiveTransferTid = -1;
+
+// This conditional makes me sad, but such is the life of bad abstractions.
+#ifndef   WINDOWS
+		// Given that we just shot the forked child in the head, we should
+		// consider splitting FileTransfer::Reap() into the section that
+		// prevents us from hanging and the section that we can/must do
+		// after we receive its SIGCHLD.
+		if( daemonCore && (TransferPipe[0] >= 0) ) {
+			if( registered_xfer_pipe ) {
+				registered_xfer_pipe = false;
+				daemonCore->Cancel_Pipe(TransferPipe[0]);
+			}
+			daemonCore->Close_Pipe(TransferPipe[0]);
+			TransferPipe[0] = -1;
+		}
+#endif /* WINDOWS */
 	}
 }
 
@@ -6403,6 +6446,11 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 	PeerDoesS3Urls = peer_version.built_since_version(8,9,4);
 	PeerRenamesExecutable = ! peer_version.built_since_version(10, 6, 0);
 	PeerKnowsProtectedURLs = peer_version.built_since_version(23, 1, 0);
+}
+
+void FileTransfer::setDisableUserSuppliedTransferPlugins(UserPluginDisableMode disable_mode)
+{
+	I_dont_allow_user_supplied_transfer_plugins = disable_mode;
 }
 
 
@@ -6840,10 +6888,12 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 	const char * label = plugin.path.c_str();
 	if (plugin.bad_plugin) {
-		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
-			"Plugin %s marked as non-working, aborting\n", plugin.name.c_str());
-		// e.pushf(...)
 		exit_status = CONDOR_HOLD_SUBCODE::FileTransferPluginNotOperational;
+		if (plugin.from_job) {
+			e.pushf("FILETRANSFER", 1, "user-supplied plugin %s not allowed", label);
+		} else {
+			e.pushf("FILETRANSFER", 1, "plugin %s is not operational", label);
+		}
 		return TransferPluginResult::Error;
 	}
 
@@ -7548,7 +7598,7 @@ std::string FileTransfer::GetSupportedMethods(CondorError &e) {
 
 int FileTransfer::AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, std::vector<std::string> &infiles) const {
 
-	if ( ! I_support_filetransfer_plugins ) {
+	if ( ! I_support_filetransfer_plugins || I_dont_allow_user_supplied_transfer_plugins) {
 		return 0;
 	}
 
@@ -7578,7 +7628,7 @@ int FileTransfer::AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, 
 
 int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 {
-	if ( ! I_support_filetransfer_plugins ) {
+	if ( ! I_support_filetransfer_plugins) {
 		return 0;
 	}
 
@@ -7590,6 +7640,14 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 	// start with the system table
 	if (-1 == InitializeSystemPlugins(e, false)) {
 		return -1;
+	}
+
+	bool fail_job_plugins = I_dont_allow_user_supplied_transfer_plugins == UserPluginDisableMode::Fail;
+	bool skip_job_plugins = I_dont_allow_user_supplied_transfer_plugins == UserPluginDisableMode::Ignore;
+	if (skip_job_plugins) {
+		// If mode is ignore, just don't load the user supplied plugins and assume that
+		// one of the built-in plugins will handle things.
+		return 0;
 	}
 
 	// process the user plugins
@@ -7604,8 +7662,11 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 			std::string plugin_path(equals + 1);
 			trim(plugin_path);
 			auto & plugin = InsertPlugin(plugin_path, true);
+			if (fail_job_plugins) plugin.bad_plugin = true;
 			std::string dummy;
 			AddPluginMappings(methods, plugin, false, dummy);
+			//dprintf(D_ZKM, "AddPluginMappings(%s=%s)%s\n",
+			//	methods.c_str(), plugin_path.c_str(), fail_job_plugins ? " DISABLED" : "");
 			multifile_plugins_enabled = true;
 		} else {
 			dprintf(D_ALWAYS, "FILETRANSFER: IJP: no '=' in " ATTR_TRANSFER_PLUGINS " definition '%s'\n", plug);
@@ -8145,6 +8206,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 #ifndef WIN32
 	file_xfer_item.setFileMode( (condor_mode_t)st.st_mode );
 	file_xfer_item.setDomainSocket( S_ISSOCK(st.st_mode) );
+	file_xfer_item.setFifo( S_ISFIFO(st.st_mode) );
 #endif
 
 	file_xfer_item.setDirectory( st.st_mode & S_IFDIR );
@@ -8153,6 +8215,15 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 		// also not an error. Remove the entry from the list and return true.
 	if( file_xfer_item.isDomainSocket() ) {
 		dprintf(D_FULLDEBUG, "FILETRANSFER: File %s is a domain socket, excluding "
+			"from transfer list\n", UrlSafePrint(full_src_path) );
+		expanded_list.pop_back();
+		return true;
+	}
+
+		// Likewise, named pipes (FIFOs) must not be sent: reading from one
+		// with no writer will block forever and hang the transfer.
+	if( file_xfer_item.isFifo() ) {
+		dprintf(D_FULLDEBUG, "FILETRANSFER: File %s is a FIFO, excluding "
 			"from transfer list\n", UrlSafePrint(full_src_path) );
 		expanded_list.pop_back();
 		return true;
@@ -8443,6 +8514,8 @@ FileTransfer::LegalPathInSandbox(char const *path,char const *sandbox) {
 
 	ASSERT( path );
 	ASSERT( sandbox );
+
+	if( !path[0] ) { return false; }
 
 	std::string buf = path;
 	canonicalize_dir_delimiters( buf );

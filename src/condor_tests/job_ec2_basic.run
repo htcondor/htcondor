@@ -42,7 +42,19 @@ foreach my $key (keys(%ENV)) {
 
 #
 # Start up the simulator, which will print the port to which it binds.
+# Track the pid at file scope so the END block can clean it up on any
+# exit path (including die()).
 #
+my $sim_pid;
+END {
+    if (defined $sim_pid) {
+        kill('TERM', $sim_pid);
+        sleep(1);
+        kill('KILL', $sim_pid);
+        waitpid($sim_pid, 0);
+    }
+}
+
 my $pid = fork();
 if( $pid == 0 ) {
     if( ! open( STDOUT, '>', 'simulator.out' ) ) {
@@ -57,6 +69,7 @@ if( $pid == 0 ) {
     exec { $binary } ( $binary );
     die( "Failed to exec { $binary } ( $binary ): '$!'\n" );
 }
+$sim_pid = $pid;
 
 my $testname = "job_ec2_basic";
 
@@ -152,9 +165,11 @@ CondorLog::RunCheck(
 # FIXME: In the error, any message is a failure.
 
 #
-# Kill the simulator.
+# Kill the simulator. (The END block also handles this on early exits.)
 #
 kill( 'TERM', $pid ); sleep( 1 ); kill( 'KILL', $pid );
+waitpid( $pid, 0 );
+undef $sim_pid;
 
 #
 # Apparently required by the framework.  '2' is a magic constant

@@ -70,6 +70,9 @@ void title_case(std::string &str); // capitalize each word
 
 const char * empty_if_null(const char * c_str);
 
+// malloc a buffer to hold a null terminated copy of data from a string_view
+char * strviewdup(std::string_view sv);
+
 // Return a string based on string src, but for each character in Q that
 // occurs in src, insert the character escape before it.
 // For example, for src="Alain", Q="abc", and escape='_', the result will
@@ -105,14 +108,10 @@ bool contains_prefix_anycase(const std::vector<std::string> &list, const std::st
 bool contains_prefix_anycase(const std::vector<std::string> &list, const char* str);
 
 bool contains_withwildcard(const std::vector<std::string> &list, const std::string& str);
-bool contains_withwildcard(const std::vector<std::string> &list, const char* str);
 bool contains_anycase_withwildcard(const std::vector<std::string> &list, const std::string& str);
-bool contains_anycase_withwildcard(const std::vector<std::string> &list, const char* str);
 
 bool contains_prefix_withwildcard(const std::vector<std::string> &list, const std::string& str);
-bool contains_prefix_withwildcard(const std::vector<std::string> &list, const char* str);
 bool contains_prefix_anycase_withwildcard(const std::vector<std::string> &list, const std::string& str);
-bool contains_prefix_anycase_withwildcard(const std::vector<std::string> &list, const char* str);
 
 bool matches_withwildcard(const char* pattern, const char* str);
 bool matches_anycase_withwildcard(const char* pattern, const char* str);

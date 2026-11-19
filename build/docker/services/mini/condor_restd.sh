@@ -38,4 +38,4 @@ if [[ $flask == NOTFOUND ]]; then
     exit 127
 fi
 
-exec "$flask" run -h 0.0.0.0 -p 8080
+exec "$flask" run -h 0.0.0.0 -p "${RESTD_PORT:-8080}"

@@ -27,6 +27,7 @@
 #include <memory>
 #include <limits>
 #include <assert.h>
+#include <cstdint> // for uint64_t
 
 #include "stl_string_utils.h"
 
@@ -61,6 +62,7 @@ namespace DAG {
 		VARS,
 		PRIORITY,
 		PRE_SKIP,
+		TOLERANCE,
 		DONE,
 		MAXJOBS,
 		CONFIG,
@@ -94,6 +96,19 @@ namespace DAG {
 		DEFAULT = -1,
 		PREPEND,
 		APPEND,
+	};
+
+	// How to handle rest of node job list when tolerance failure occurs
+	enum class ToleranceMode {
+		AUTO,           // Determined by config
+		FAIL_FAST,      // Remove all other jobs immediately
+		WAIT,           // Let remaining jobs complete
+	};
+
+	// Node status file printing format
+	enum class NodeStatusFmt {
+		CLASSAD = 1,
+		JSON,
 	};
 
 	// Quick map of keyword strings to enum value
@@ -349,7 +364,7 @@ public:
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::PARENT_CHILD; }
 	virtual std::string _getDetails() const {
-		std::string ret = "[ ";
+		std::string ret = weak ? "WEAK [ " : "[ ";
 		for (const auto& p : parents) { ret += ToStr(p) + " "; }
 		ret += "] --> [ ";
 		for (const auto& c : children) { ret += ToStr(c) + " "; }
@@ -367,9 +382,12 @@ public:
 	const std::set<std::string_view>& GetParents() const { return parents; }
 	const std::set<std::string_view>& GetChildren() const { return children; }
 
+	void SetIsWeak() { weak = true; }
+	bool IsWeak() const { return weak; }
 private:
 	std::set<std::string_view> parents{}; // List of parent nodes
 	std::set<std::string_view> children{}; // List of child nodes
+	bool weak{false}; // Is weak dependency declaration
 };
 
 // Abstract class to modify some behavior of a node type
@@ -546,6 +564,43 @@ private:
 	int code{0}; // PRE Script exit code that triggers skip
 };
 
+// TOLERANCE Command
+class ToleranceCommand : public NodeModifierCommand {
+public:
+	ToleranceCommand() = delete;
+	ToleranceCommand(const std::string& n) { node = DAG::STRING_SPACE::__DEDUP(n); }
+
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::TOLERANCE; };
+	virtual std::string _getDetails() const {
+		std::string ret;
+		const char* mode_str = "UNKNOWN";
+		switch (mode) {
+			case DAG::ToleranceMode::AUTO: mode_str = "AUTO"; break;
+			case DAG::ToleranceMode::FAIL_FAST: mode_str = "FAIL-FAST"; break;
+			case DAG::ToleranceMode::WAIT: mode_str = "WAIT"; break;
+		}
+		formatstr(ret, "%s %d %s %s", Disp(node), tolerance, is_percent ? "T" : "F", mode_str);
+		return ret;
+	}
+
+	void SetTolerance(const int t, const bool percent = false) {
+		tolerance = t;
+		is_percent = percent;
+	}
+
+	int GetTolerance() const { return tolerance; }
+	bool IsPercentage() const { return is_percent; }
+
+	void FailFast() { mode = DAG::ToleranceMode::FAIL_FAST; }
+	void Wait() { mode = DAG::ToleranceMode::WAIT; }
+	DAG::ToleranceMode GetMode() const { return mode; }
+
+private:
+	int tolerance{0}; // Amount of failures to tolerate before considering failed
+	DAG::ToleranceMode mode{DAG::ToleranceMode::AUTO}; // What to do when failure is detected
+	bool is_percent{false}; // Tolerance value is a percent value
+};
+
 // DONE Command
 class DoneCommand : public NodeModifierCommand {
 public:
@@ -683,10 +738,23 @@ public:
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::NODE_STATUS_FILE; };
 	virtual std::string _getDetails() const {
+		const char* format = "UNKNOWN";
+		switch (fmt) {
+			case DAG::NodeStatusFmt::CLASSAD: format = "CLASSAD"; break;
+			case DAG::NodeStatusFmt::JSON: format = "JSON"; break;
+		}
+
 		std::string ret;
-		formatstr(ret, "%s %d %s", Disp(file), min_update, always_update ? "T" : "F");
+		formatstr(ret, "%s %d %s %s %s", Disp(file), min_update, always_update ? "T" : "F",
+		          format, compact ? "T" : "F");
 		return ret;
 	}
+
+	void SetFmt(const DAG::NodeStatusFmt f) { fmt = f; }
+	DAG::NodeStatusFmt GetFmt() const { return fmt; }
+
+	void SetCompact() { compact = true; }
+	bool Compact() const { return compact; }
 
 	void SetMinUpdateTime(const int t) { min_update = t; }
 	int GetMinUpdateTime() const { return min_update; }
@@ -694,8 +762,10 @@ public:
 	void SetAlwaysUpdate() { always_update = true; }
 	bool AlwaysUpdate() const { return always_update; }
 private:
+	DAG::NodeStatusFmt fmt{DAG::NodeStatusFmt::CLASSAD};
 	int min_update{60}; // Minimal time between file updates
 	bool always_update{false}; // Whether or not to update file regardless of state change
+	bool compact{false}; // Print format compact: True (single line) | False (multiline)
 };
 
 // JOBSTATE_LOG Command

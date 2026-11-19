@@ -27,6 +27,9 @@ class OAuthCredmon(AbstractCredentialMonitor):
     def __init__(self, *args, **kw):
         super(OAuthCredmon, self).__init__(*args, **kw)
         self.providers = kw.get("providers", set())
+        self.allow_special_chars = False
+        if htcondor is not None:
+            self.allow_special_chars = htcondor.param.get("CREDMON_ALLOW_SPECIAL_CHAR_NAMES", False) is True
 
     def should_renew(self, username, token_name):
 
@@ -141,14 +144,23 @@ class OAuthCredmon(AbstractCredentialMonitor):
         (cred_dir, username) = os.path.split(basename)
         token_name = os.path.splitext(token_filename)[0] # strip .use
 
+        # When handles are enabled, extract provider prefix for matching
+        if not self.allow_special_chars:
+            if token_name.endswith("_"):
+                self.log.warning(f"Skipping credential file with trailing underscore: {access_token_path}")
+                return
+            provider_name = token_name.split("_", 1)[0]
+        else:
+            provider_name = token_name
+
         # Check that this token is part of provider list, or that "*" is in the provider list
         # (Treat the lack of a provider list as if "*" is in the provider list)
-        if self.providers and (token_name not in self.providers) and ("*" not in self.providers):
+        if self.providers and (provider_name not in self.providers) and ("*" not in self.providers):
             return
 
         # Then, only consider tokens which have client ids defined in the config
-        if htcondor and f"{token_name}_CLIENT_ID" not in htcondor.param:
-            self.log.warning(f"Ignoring {token_name} token for {username}, {token_name}_CLIENT_ID not set in config")
+        if htcondor and f"{provider_name}_CLIENT_ID" not in htcondor.param:
+            self.log.warning(f"Ignoring {token_name} token for {username}, {provider_name}_CLIENT_ID not set in config")
             return
 
         # OAuthCredmon only handles OAuth access tokens, which must have metadata files

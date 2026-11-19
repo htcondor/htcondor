@@ -1,0 +1,78 @@
+name: PR Security Review Cleanup
+
+# Removes what pr-security-review.yml leaves behind for PRs that are no longer
+# open: the llm-security-review/pr-N branch and the code scanning analyses
+# (and thus alerts) uploaded against it.
+#
+# This is a scheduled sweep rather than a pull_request "closed" trigger,
+# because for PRs from forks that trigger only gets a read-only token.
+# Its only input is the list of llm-security-review/pr-N branches, which this
+# repository's own workflow created.
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Only report what would be deleted'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-security-review-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: read
+      security-events: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+      SARIF_TOOL_NAME: opencode-nrp-security-review
+    steps:
+      - name: Delete review branches and analyses for closed PRs
+        run: |
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/git/matching-refs/heads/llm-security-review/pr-" \
+            --jq '.[].ref' > "$RUNNER_TEMP/refs.txt"
+          echo "Found $(wc -l < "$RUNNER_TEMP/refs.txt") review branches"
+
+          while read -r ref; do
+            if ! [[ "$ref" =~ ^refs/heads/llm-security-review/pr-([0-9]{1,10})$ ]]; then
+              echo "Ignoring unexpected ref $ref"
+              continue
+            fi
+            pr="${BASH_REMATCH[1]}"
+            state=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr}" --jq .state 2> /dev/null || echo missing)
+            if [ "$state" = "open" ]; then
+              echo "PR #$pr is open; keeping $ref"
+              continue
+            fi
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "[dry run] PR #$pr is $state; would delete analyses for and then $ref"
+              continue
+            fi
+
+            # Only the most recent analysis in a set is deletable, so keep
+            # deleting whichever ones are deletable until none remain.
+            for _ in $(seq 1 50); do
+              ids=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/code-scanning/analyses?ref=${ref}&tool_name=${SARIF_TOOL_NAME}&per_page=100" \
+                      --jq '.[] | select(.deletable) | .id' 2> /dev/null || true)
+              [ -z "$ids" ] && break
+              for id in $ids; do
+                gh api -X DELETE "repos/${GITHUB_REPOSITORY}/code-scanning/analyses/${id}?confirm_delete=true" --silent
+                echo "PR #$pr: deleted analysis $id"
+              done
+            done
+
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/${ref}" --silent
+            echo "PR #$pr is $state; deleted $ref"
+          done < "$RUNNER_TEMP/refs.txt"

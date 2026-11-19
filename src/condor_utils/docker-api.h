@@ -47,7 +47,8 @@ class DockerAPI {
 						const Env & environment,
 						const std::string & outside_directory,
 						const std::string & inside_directory,
-						const std::list<std::string> extraVolumes,
+						const std::vector<std::string> extraVolumes,
+						const std::vector<std::string> extraMounts,
 						const std::string credentials_dir,
 						int & pid,
 						int * childFDs,
@@ -73,17 +74,9 @@ class DockerAPI {
 					    const Env &environment,
 					    int *childFDs,
 					    int reaperid,
-					    int &pid);
+					    int &pid,
+					    bool interactive = true);
 
-		/**
-		 * copy files/folders from srcPath to the given path in the container
-		 *   invokes
-		 *      docker cp SRC_PATH CONTAINER:CONTAINER_PATH
-		 */
-		static int copyToContainer(const std::string & srcPath, // path on local file system to copy file/folder from
-						const std::string &container,       // container to copy into
-						const std::string & containerPath,  // destination path in container
-						const std::vector<std::string>& options);
 		/**
 		 * copy files/folders from given path in the container to destPath
 		 *   invokes
@@ -185,8 +178,11 @@ class DockerAPI {
 		static int64_t imageCacheUsed();
 
 		static bool imageArchIsCompatible(const std::string &);
-		/* Return the cpu architecture of a cached image, or empty string */
-		static int getImageArch(const std::string &image_name, std::string &arch);
+		/* Return the cpu architecture and the content hash (the "sha256:..."
+		 * id) of a cached image.  Either may be set to the empty string if
+		 * docker doesn't report it.
+		 */
+		static int getImageArchAndId(const std::string &image_name, std::string &arch, std::string &image_id);
 
 		static int removeImagesInImageFile();
 

@@ -269,6 +269,9 @@ public:
 	virtual int fetch_docker_creds(const ClassAd &query, ClassAd &creds);
 
 	virtual bool colorSlot( const ClassAd & colorAd, ClassAd & replyAd );
+	virtual bool announceCatalog( const ClassAd & catalogAd, ClassAd & replyAd );
+
+	virtual void updateStartd( ClassAd *ad, bool final_update );
 
 private:
 
@@ -299,11 +302,6 @@ private:
 			@return true if success, false if failure
 		*/
 	bool updateShadow( ClassAd* update_ad );
-
-		/** Send an update ClassAd to the startd.
-			@param ad Update ad
-		 */
-	void updateStartd( ClassAd *ad, bool final_update );
 
 		/** Send a command to the startd and get a classad reply
 		*/
@@ -520,6 +518,7 @@ private:
 	FileTransfer *filetrans;
 	bool m_ft_rval;
 	FileTransfer::FileTransferInfo m_ft_info;
+	FileTransfer::UserPluginDisableMode m_ft_user_plugin_disable{FileTransfer::UserPluginDisableMode::Allow};
 	bool m_did_output_transfer;
 	bool m_output_transfer_active{false};
 
@@ -588,6 +587,18 @@ private:
 		*/
 	bool m_job_update_attrs_set;
 	std::vector<std::string> m_job_update_attrs;
+
+
+    class AverageUsage {
+    public:
+        double firstUpdateValue = 0;
+        bool firstUpdateValueInitialized = false;
+        time_t firstUpdateTimestamp = 0;
+        bool firstUpdateTimestampInitialized = false;
+    };
+    std::map<std::string, AverageUsage> AverageUsageByResource;
+	std::vector<std::string> m_sum_metrics;
+
 
 	time_t file_xfer_last_alive_time = 0;
 	int    file_xfer_last_alive_tid = 0;

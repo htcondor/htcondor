@@ -241,6 +241,21 @@ static bool cgroup_is_writeable(const std::string &relative_cgroup) {
 }
 #endif
 
+void Starter::ReportProcessTracking(FamilyInfo & fi, UserProc* up)
+{
+	if (fi.login) {
+		// The following message is documented in the manual as the
+		// way to tell whether the dedicated execution account
+		// configuration is being used.
+		dprintf(D_ALWAYS, "Tracking process family by login \"%s\"\n", fi.login);
+	}
+	// cgroup_active is set by Create_Process when it actually uses the cgroup
+	// we want to capture that, but only for non-side car processes.
+	if ( ! up->ThisProcRunsAlongsideMainProc()) {
+		main_job_fi.cgroup_active = fi.cgroup_active;
+	}
+}
+
 int
 VanillaProc::StartJob()
 {
@@ -250,60 +265,143 @@ VanillaProc::StartJob()
 	// with the ProcD in its call to DaemonCore::Create_Process
 	//
 	FamilyInfo fi;
+	starter->SetupProcessTracking(fi, this, m_memory_limit);
 
-	// take snapshots at no more than 15 seconds in between, by default
-	//
-	fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 15);
-
-	m_dedicated_account = starter->jic->getExecuteAccountIsDedicated();
-	if( ThisProcRunsAlongsideMainProc() ) {
-			// If we track a secondary proc's family tree (such as
-			// sshd) using the same dedicated account as the job's
-			// family tree, we could end up killing the job when we
-			// clean up the secondary family.
-		m_dedicated_account = NULL;
-	}
-	if (m_dedicated_account) {
-			// using login-based family tracking
-		fi.login = m_dedicated_account;
-			// The following message is documented in the manual as the
-			// way to tell whether the dedicated execution account
-			// configuration is being used.
-		dprintf(D_ALWAYS,
-		        "Tracking process family by login \"%s\"\n",
-		        fi.login);
-	}
-
-	std::unique_ptr<FilesystemRemap> fs_remap;
-#if defined(LINUX)
-	// on Linux, we also have the ability to track processes via
-	// a phony supplementary group ID
-	//
-	gid_t tracking_gid = 0;
-	if (param_boolean("USE_GID_PROCESS_TRACKING", false)) {
-		if (!can_switch_ids())
-		{
-			EXCEPT("USE_GID_PROCESS_TRACKING enabled, but can't modify "
-			           "the group list of our children unless running as "
-			           "root");
-		}
-		fi.group_ptr = &tracking_gid;
-	}
+	dprintf(D_ALWAYS, "ProcessTracking is %s %s\n",
+		fi.cgroup ? "cgroup" : "procd",
+		fi.login ? fi.login : (fi.cgroup ? fi.cgroup : "")
+	);
 
 	// Increase the OOM score of this process; the child will inherit it.
 	// This way, the job will be heavily preferred to be killed over a normal process.
 	// OOM score is currently exponential - a score of 4 is a factor-16 increase in
 	// the OOM score.
 	setupOOMScore(4,800);
+
+	// TODO: fix pid namespace code so it does not re-write Cmd and Args of the job!!
+#ifdef LINUX
+	bool include_pid_namespace = true;
+#else
+	bool include_pid_namespace = false;
 #endif
+	FilesystemRemap * remaps = nullptr;
+	if ( ! starter->GetFsRemaps(this, remaps, include_pid_namespace)) {
+		return FALSE;
+	}
+	fi.want_pid_namespace = ! m_pid_ns_status_filename.empty();
+
+	// have OsProc start the job
+	//
+	int retval = OsProc::StartJob(&fi, remaps);
+
+	// Now that the job is started, decrease the likelihood that the starter
+	// is killed instead of the job itself.
+	setupOOMScore(0,0);
+
+	if (retval) {
+		m_statistics.Reconfig();
+
+		if (fi.cgroup_active) {
+			int interval = param_integer("CGROUP_POLLING_INTERVAL", 5);
+			procFamilyTimerId = daemonCore->Register_Timer( 0, interval,
+				(TimerHandlercpp)&VanillaProc::pollFamilyUsage, "cgroup usage poller", this );
+		}
+	}
+
+	return retval;
+}
+
+// This function really belongs in Starter.cpp, Leaving it in this file
+// to minimize diffs for now.
+void Starter::SetupProcessTracking(FamilyInfo & fiOut, UserProc* up, int64_t & mem_limit)
+{
+	FamilyInfo & fi = main_job_fi;
+	int job_universe = up->Universe();
+	if ( ! job_universe) { // if we have not set the universe for the Proc, look in the job classad.
+		jic->jobClassAd()->LookupInteger(ATTR_JOB_UNIVERSE, job_universe);
+	}
+	VanillaProc * vanilla = dynamic_cast<VanillaProc*>(up);
+
+	// take snapshots at no more than 15 seconds in between, by default
+	//
+	bool first_time = main_job_fi.max_snapshot_interval < 0;
+	if (first_time) {
+		fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 15);
+
+		fi.login = jic->getExecuteAccountIsDedicated();
+
+	#if defined(LINUX)
+		// on Linux, we also have the ability to track processes via
+		// a phony supplementary group ID
+		//
+		if (param_boolean("USE_GID_PROCESS_TRACKING", false)) {
+			if (!can_switch_ids())
+			{
+				EXCEPT("USE_GID_PROCESS_TRACKING enabled, but can't modify "
+						   "the group list of our children unless running as "
+						   "root");
+			}
+			fi.group_ptr = &m_tracking_gid;
+		}
+
+		if (param_boolean("NO_JOB_NETWORKING", false)) {
+			fi.want_net_namespace = true;
+		}
+	#endif
+
+		// choose the main cgroup for the job and set FamilyInfo limits
+		if (vanilla) {
+			fi.cgroup = ChooseCGroup(fi, job_universe, "");
+		}
+	}
+
+	// oom memory limit is set when we setup the main cgroup
+	mem_limit = m_oom_memory_limit;
+
+	fiOut = fi;
+	if (up->ThisProcRunsAlongsideMainProc()) {
+		// If we track a secondary proc's family tree (such as
+		// sshd) using the same dedicated account as the job's
+		// family tree, we could end up killing the job when we
+		// clean up the secondary family.
+		fiOut.login = nullptr;
+
+		// if tracking by cgroup, we want to get a sub-cgroup name for the sidecar proc
+		// this can probably be simplified to just constructing the sub-cgroup name.
+		// we expect all of the other things set in fiOut to be the same as main_job_fi
+		if (vanilla && fi.cgroup) {
+			std::string cgroup_suffix = vanilla->CgroupSuffix();
+			fiOut.cgroup = ChooseCGroup(fiOut, job_universe, cgroup_suffix);
+		}
+	}
+}
+
+// Construct a cgroup name for the given universe and suffix and store that name
+// in the Starter's table of cgroup names by suffix. If cgroups are not enabled,
+// or not available, the table of cgroup names by suffix will end up with entries
+// that map the suffix to nullptr. This indicates that cgroups are not being used, and is not an error.
+const char * Starter::ChooseCGroup(FamilyInfo & fi, int job_universe, const std::string & suffix)
+{
+	auto [itr, inserted] = m_cgroup_names.emplace(suffix,nullptr);
+	auto & cgroup_cstr = itr->second;
+	if ( ! inserted) {
+		// if we have already inserted the name into the map, then just return the name
+		// even if it is null, since that indicates that we are not using cgroups.
+		fi.cgroup = cgroup_cstr.get();
+		return fi.cgroup;
+	}
 
 #ifdef LINUX
+
+	ClassAd* JobAd = jic->jobClassAd();
+	ClassAd * mad = jic->machClassAd();
+
 	// This works for both v1 and v2 cgroups
 	// Determine the cgroup
 	std::string cgroup_base;
 	param(cgroup_base, "BASE_CGROUP", "");
 	std::string cgroup_str;
-	const char *cgroup = NULL;
+	const char *cgroup = nullptr;
 
 	bool create_cgroup = true;
 	if ((CONDOR_UNIVERSE_LOCAL == job_universe) &&
@@ -329,7 +427,7 @@ VanillaProc::StartJob()
 		std::string execute_str;
 		param(execute_str, "EXECUTE", "EXECUTE_UNKNOWN");
 			// Note: Starter is a global variable from os_proc.cpp
-		starter->jic->machClassAd()->LookupString(ATTR_NAME, starter_name);
+		mad->LookupString(ATTR_NAME, starter_name);
 		if (starter_name.size() == 0) {
 			starter_name = std::to_string(getpid());
 		}
@@ -338,17 +436,23 @@ VanillaProc::StartJob()
 		replace_str(cgroup_uniq, dir_delim, "_");
 		formatstr(cgroup_str, "%s%c%s", cgroup_base.c_str(), DIR_DELIM_CHAR,
 			cgroup_uniq.c_str());
-		cgroup_str += this->CgroupSuffix();
+		if (hasCgroupV2() && !suffix.empty()) {
+			// The v2 tracker appends ".slice" to the job's cgroup name.
+			// Nest sidecars (e.g. sshd) inside that, so they share the
+			// job's limits, rather than in a sibling directory.
+			cgroup_str += ".slice";
+		}
+		cgroup_str += suffix;
 		
-		cgroup = cgroup_str.c_str();
+		cgroup_cstr.reset(strdup(cgroup_str.c_str()));
+		cgroup = cgroup_cstr.get();
 		ASSERT (cgroup != NULL);
-		fi.cgroup = cgroup;
 
 		int numCores = 1;
-		if (!starter->jic->machClassAd()->LookupInteger(ATTR_CPUS, numCores)) {
+		if (!mad->LookupInteger(ATTR_CPUS, numCores)) {
 			dprintf(D_ALWAYS, "Invalid value of Cpus in machine ClassAd.\n");
 			if (param_boolean("LOCAL_UNIVERSE_CGROUP_ENFORCEMENT", false)) {
-				if (!starter->jic->jobClassAd()->LookupInteger(ATTR_REQUEST_CPUS, numCores)) {
+				if (!JobAd->LookupInteger(ATTR_REQUEST_CPUS, numCores)) {
 					dprintf(D_ALWAYS, "   Job does not have RequestCpus either, falling back to 1 cpu\n");
 				}
 			}
@@ -359,19 +463,35 @@ VanillaProc::StartJob()
 		if (param_boolean("STARTER_HIDE_GPU_DEVICES", true)) {
 			// Potentially disable GPU devices from job
 			std::string available_gpus;
-			const char *gpu_expr = "join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))";
+
+			// AvailableGpus is a list of attribute names all the gpus provisioned 
+			// to this slot.  Each attribute itself has a classad with various attributes
+			// about that gpu.  For MIG devices, one of the attributes is ParentUuid, 
+			// which is the GPU device.  We can't hide the MIG device directly, so
+			// if there is a ParentUuid defined in the nested classad, use that instead.
+
+			const char *gpu_expr = "join(\",\",evalInEachContext(strcat(\"GPU-\",(ParentUuid ?: DeviceUuid)),AvailableGPUs))";
 			classad::Value v;
-			starter->jic->machClassAd()->EvaluateExpr(gpu_expr, v);
-			v.IsStringValue(available_gpus);
+
+			// if the expression does not evaluate to a string, available_gpus
+			// remains empty, which means hide all (see below)
+			std::ignore = mad->EvaluateExpr(gpu_expr, v);
+			std::ignore = v.IsStringValue(available_gpus);
+
+			// Hack.  Work around the fact that a mig device has a reference to the
+			// parent device in the ParentUuid entry, but that already has the
+			// GPU- prefix, unlike the DeviceUuid entry.  Thus the strcat above
+			// gives us a double "GPU-GPU-" prefix for mig devices.
+			replace_str(available_gpus, "GPU-GPU-", "GPU-");
 
 			// will remain empty if not set, meaning hide all
 			fi.cgroup_hide_devices = nvidia_env_var_to_exclude_list(available_gpus);
 		}
 		int64_t memory = 0;
-		if (!starter->jic->machClassAd()->LookupInteger(ATTR_MEMORY, memory)) {
+		if (!mad->LookupInteger(ATTR_MEMORY, memory)) {
 			dprintf(D_ALWAYS, "Invalid value of memory in machine ClassAd.\n");
 			if (param_boolean("LOCAL_UNIVERSE_CGROUP_ENFORCEMENT", false)) {
-				if (!starter->jic->jobClassAd()->LookupInteger(ATTR_REQUEST_MEMORY, memory)) {
+				if (!JobAd->LookupInteger(ATTR_REQUEST_MEMORY, memory)) {
 					dprintf(D_ALWAYS, "   Job does not have RequestMemory either, falling back to no memory limit\n");
 					memory = 0; // just to be sure
 				} else {
@@ -383,7 +503,7 @@ VanillaProc::StartJob()
 
 		// Need to set this in the unlikely case that we get OOM killed without
 		// setting cgroup memory limits
-		m_memory_limit = memory * 1024 * 1024;
+		m_oom_memory_limit = memory * 1024 * 1024;
 
 		std::string policy;
 		param(policy, "CGROUP_MEMORY_LIMIT_POLICY", "hard");
@@ -398,7 +518,7 @@ VanillaProc::StartJob()
 					false, // check_ranges
 					0,     // min_value
 					std::numeric_limits<long long>::max(), // max_value
-					starter->jic->machClassAd(), // my ad
+					mad, // my ad
 					JobAd)) {
 			fi.cgroup_memory_limit_low = (uint64_t) low_value * 1024 * 1024;
 		}
@@ -417,11 +537,39 @@ VanillaProc::StartJob()
 					check_ranges,
 					min_value,
 					max_value,
-					starter->jic->machClassAd(),
+					mad,
 					JobAd)) {
 				fi.cgroup_memory_limit = (uint64_t) hard_value * 1024 * 1024;
 			} else {
 				dprintf(D_ALWAYS, "CGROUP_HARD_MEMORY_LIMIT_EXPR did not evalute to numeric, ignoring\n");
+			}
+		}
+
+		// If the admin has set CGROUP_ZSWAP_MAX_EXPR, and it evaluates to a
+		// non-negative number (of megabytes) in the context of the slot and job
+		// ads, set the job's memory.zswap.max.  If unset, or it doesn't evaluate
+		// to such a number, we leave the control file alone.  Note that
+		// param_longlong returns true whenever the knob is *defined*, even when
+		// the expression fails to parse or evaluate, in which case it hands back
+		// the default value -- so we pass a negative sentinel as the default and
+		// reject anything negative below.  Zero is meaningful (it disables zswap
+		// for the job), so we must not confuse it with a failed evaluation.
+		const long long zswap_max_megabytes = std::numeric_limits<long long>::max() / (1024 * 1024);
+		long long zswap_value = -1;
+		if (param_longlong("CGROUP_ZSWAP_MAX_EXPR", zswap_value,
+					true,  // use_default
+					-1,    // default_value (sentinel for failed evaluation)
+					false, // check_ranges
+					0,     // min_value
+					std::numeric_limits<long long>::max(), // max_value
+					starter->jic->machClassAd(), // my ad
+					JobAd)) {
+			if (zswap_value < 0) {
+				dprintf(D_ALWAYS, "CGROUP_ZSWAP_MAX_EXPR did not evaluate to a non-negative number, ignoring\n");
+			} else if (zswap_value > zswap_max_megabytes) {
+				dprintf(D_ALWAYS, "CGROUP_ZSWAP_MAX_EXPR evaluated to %lld megabytes, which overflows, ignoring\n", zswap_value);
+			} else {
+				fi.cgroup_zswap_max = (uint64_t) zswap_value * 1024 * 1024;
 			}
 		}
 
@@ -431,12 +579,26 @@ VanillaProc::StartJob()
 			fi.cgroup_memory_and_swap_limit = fi.cgroup_memory_limit;
 		}
 
-		dprintf(D_FULLDEBUG, "Requesting cgroup %s for job with %d cpu weight and memory limit of %lu (slot memory is %ld).\n", cgroup, fi.cgroup_cpu_shares, fi.cgroup_memory_limit, memory);
+		dprintf(D_ALWAYS, "Requesting cgroup %s for job with %d cpu weight and memory limit of %lu (slot memory is %ld).\n",
+			cgroup, fi.cgroup_cpu_shares, fi.cgroup_memory_limit, memory);
 	}
+#endif // LINUX
 
-#endif
+	fi.cgroup = cgroup_cstr.get();
+	return fi.cgroup;
+}
+
+// This function really belongs in Starter.cpp, Leaving it in this file
+// to minimize diffs for now.
+bool Starter::GetFsRemaps(OsProc * up, FilesystemRemap * & remaps, bool include_pid_namespace)
+{
+	remaps = nullptr;
 
 #ifdef LINUX
+	ClassAd* JobAd = jic->jobClassAd();
+	ClassAd * mad = jic->machClassAd();
+	int job_universe = up->Universe();
+
 	// On Linux kernel 2.4.19 and later, we can give each job its
 	// own FS mounts.
 	std::string mount_under_scratch;
@@ -474,7 +636,7 @@ VanillaProc::StartJob()
 
 	// mount_under_scratch only works with rootly powers
 	if (! mount_under_scratch.empty() && can_switch_ids() && has_sysadmin_cap() && (job_universe != CONDOR_UNIVERSE_LOCAL)) {
-		const char* working_dir = starter->GetWorkingDir(0);
+		const char* working_dir = GetWorkingDir(WD::OUTER);
 
 		if (IsDirectory(working_dir)) {
 			if (!fs_remap) {
@@ -511,7 +673,7 @@ VanillaProc::StartJob()
 					dprintf(D_ALWAYS, "Unable to add mapping %s -> %s because %s doesn't exist.\n", working_dir, next_dir.c_str(), next_dir.c_str());
 				}
 			}
-		starter->setTmpDir("/tmp");
+			setTmpDir("/tmp");
 		} else {
 			dprintf(D_ALWAYS, "Unable to perform mappings because %s doesn't exist.\n", working_dir);
 			return FALSE;
@@ -519,17 +681,25 @@ VanillaProc::StartJob()
 	}
 #endif
 
+	// when the caller is the vanilla proc, we also want to consider pid namespaces
+	// TODO: fix the pid namespace code so that it does not mutate the cmd and args of the job ad.
+	VanillaProc * vanilla = dynamic_cast<VanillaProc*>(up);
+	if ( ! vanilla || ! include_pid_namespace) {
+		remaps = fs_remap.get();
+		return TRUE;
+	}
+
 #if defined(LINUX)
 	// On Linux kernel 2.6.24 and later, we can give each
 	// job its own PID namespace.
 	static bool previously_setup_for_pid_namespace = false;
-
+	bool want_pid_namespace = false;
 	if ( (previously_setup_for_pid_namespace || param_boolean("USE_PID_NAMESPACES", false))
-			&& !htcondor::Singularity::job_enabled(*starter->jic->machClassAd(), *JobAd)
+			&& !htcondor::Singularity::job_enabled(*mad, *JobAd)
 			&& can_switch_ids() )
 	{
-		fi.want_pid_namespace = this->SupportsPIDNamespace();
-		if (fi.want_pid_namespace) {
+		want_pid_namespace = up->SupportsPIDNamespace();
+		if (want_pid_namespace) {
 			if (!fs_remap) {
 				fs_remap.reset(new FilesystemRemap());
 			}
@@ -551,7 +721,7 @@ VanillaProc::StartJob()
 			std::string arg_errors;
 			std::string filename;
 
-			filename = starter->GetWorkingDir(0);
+			filename = GetWorkingDir(WD::OUTER);
 			filename += "/.condor_pid_ns_status";
 
 			if (!env.MergeFrom(JobAd,  env_errors)) {
@@ -565,7 +735,7 @@ VanillaProc::StartJob()
 				return 0;
 			}
 
-			starter->jic->removeFromOutputFiles(condor_basename(filename.c_str()));
+			jic->removeFromOutputFiles(condor_basename(filename.c_str()));
 			
 			// Now, set the job's CMD to the wrapper, and shift
 			// over the arguments by one
@@ -575,10 +745,10 @@ VanillaProc::StartJob()
 
 			JobAd->LookupString(ATTR_JOB_CMD, cmd);
 
-			this->canonicalizeJobPath(cmd, starter->jic->jobRemoteIWD());
+			up->canonicalizeJobPath(cmd, jic->jobRemoteIWD());
 
 			// Must set this *after* calling canonicalizeJobPath!
-			this->m_pid_ns_status_filename = filename;
+			vanilla->set_pid_ns_status_filename(filename);
 
 			args.AppendArg(cmd);
 			if (!args.AppendArgsFromClassAd(JobAd, arg_errors)) {
@@ -601,36 +771,12 @@ VanillaProc::StartJob()
 			previously_setup_for_pid_namespace = true;
 		}
 	}
-	dprintf(D_FULLDEBUG, "PID namespace option: %s\n", fi.want_pid_namespace ? "true" : "false");
+	dprintf(D_FULLDEBUG, "PID namespace option: %s\n", want_pid_namespace ? "true" : "false");
 
-	if (param_boolean("NO_JOB_NETWORKING", false)) {
-		fi.want_net_namespace = true;
-	}
 #endif
 
-
-	// have OsProc start the job
-	//
-	int retval = OsProc::StartJob(&fi, fs_remap.get());
-
-#ifdef LINUX
-    m_statistics.Reconfig();
-
-	// Now that the job is started, decrease the likelihood that the starter
-	// is killed instead of the job itself.
-	if (retval)
-	{
-		setupOOMScore(0,0);
-	}
-
-	if (cgroup) {
-		int interval = param_integer("CGROUP_POLLING_INTERVAL", 5);
-		procFamilyTimerId = daemonCore->Register_Timer( 0, interval,
-				(TimerHandlercpp)&VanillaProc::pollFamilyUsage, "cgroup usage poller", this );
-	}
-#endif
-
-	return retval;
+	remaps = fs_remap.get();
+	return TRUE;
 }
 
 
@@ -652,6 +798,7 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 
 	ProcFamilyUsage reported_usage = m_checkpoint_usage;
 	reported_usage += m_current_usage;
+	reported_usage.percent_cpu = m_current_usage.percent_cpu; // fix percent_cpu, which is damaged by +=
 	ProcFamilyUsage * usage = & reported_usage;
 
         // prepare for updating "generic_stats" stats, call Tick() to update current time
@@ -660,6 +807,18 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 		// Publish the info we care about into the ad.
 	ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, (double)usage->sys_cpu_time);
 	ad->Assign(ATTR_JOB_REMOTE_USER_CPU, (double)usage->user_cpu_time);
+	if (m_proc_exited) {
+		double job_duration = timersub_double( job_exit_time, job_start_time );
+		if (job_duration > 0) {
+			// job_start_time is reset on each self-checkpoint restart, so
+			// divide only this run's cpu, not that of all runs, by it
+			ad->Assign(ATTR_CPUS_USAGE, ((double)m_current_usage.sys_cpu_time + (double)m_current_usage.user_cpu_time) / job_duration);
+		} else {
+			ad->AssignExpr(ATTR_CPUS_USAGE, "undefined");
+		}
+	} else {
+		ad->Assign(ATTR_CPUS_USAGE, usage->percent_cpu / 100.0);
+	}
 
 	ad->Assign(ATTR_IMAGE_SIZE, usage->max_image_size);
 
@@ -819,12 +978,10 @@ void VanillaProc::killFamilyIfWarranted() {
 		dprintf( D_PROCFAMILY, "About to call Kill_Family()\n" );
 		daemonCore->Kill_Family(JobPid);
 	} else {
+		// With cgroup v2, unregistering the family will still kill the
+		// job's own processes, leaving the nested sshd cgroup alone.
 		dprintf( D_PROCFAMILY, "Postponing call to Kill_Family() "
 			"(perhaps due to ssh_to_job)\n" );
-		// Tell DC not to kill this process tree on exit, As
-		// it might kill child cgroups
-		// This is a hack until we have proper nested cgroup v2s
-		daemonCore->Extend_Family_Lifetime(JobPid);
 	}
 }
 
@@ -835,12 +992,10 @@ bool VanillaProc::restartCheckpointedJob() {
 	// on cgroup systems, this kills everything in the cgroup.
 	//
 	// We call restartCheckpointedJob from the reaper, so the
-	// unregistration hasn't happened yet. We start a new job here In
-	// the reaper, but when we return, daemon core will unregister
-	// and kill all the processes in this cgroup, including the ones 
-	// we just starts.  Extend_Family_Lifetime turns off the unregistration
-
-	daemonCore->Extend_Family_Lifetime(JobPid);
+	// unregistration hasn't happened yet. We start a new job here in
+	// the reaper, in the same cgroup.  When we return, daemon core will
+	// unregister the old family, but the cgroup tracker sees that the
+	// new job now owns that cgroup and leaves it alone.
 
 	ProcFamilyUsage last_usage;
 	if( daemonCore->Get_Family_Usage( JobPid, last_usage ) == FALSE ) {
@@ -871,21 +1026,21 @@ bool VanillaProc::restartCheckpointedJob() {
 	// equivalent to reactivating a claim, so ask the startd if a claim
 	// reactivation would succeed.
 	//
-	if( param_boolean( "CHECK_REACTIVATE_AFTER_CHECKPOINT", true ) )
+	if( param_boolean( "CHECK_REACTIVATE_AFTER_CHECKPOINT", false ) )
 	{
 		DCStartd startd((const char *)nullptr);
 		if(! startd.locate()) {
 			dprintf( D_ERROR, "Unable to locate startd while attempting to determine if the checkpointed job should restart: %s\n", startd.error() );
 
-	        // Fall back to the semantics from before this check was added.
-	        goto restart_job;
+			// Fall back to the semantics from before this check was added.
+			goto restart_job;
 		}
 		std::string claimID;
 		if(! starter->getJobClaimId(claimID)) {
 			dprintf( D_ERROR, "Unable to get my job's claim ID.\n" );
 
-	        // Fall back to the semantics from before this check was added.
-	        goto restart_job;
+			// Fall back to the semantics from before this check was added.
+			goto restart_job;
 		}
 		startd.setClaimId(claimID);
 
@@ -894,9 +1049,21 @@ bool VanillaProc::restartCheckpointedJob() {
 		if(! OK) {
 			dprintf( D_ERROR, "Attempt to check if this checkpointed job should restart failed: %s\n", startd.error() );
 
-	        // Fall back to the semantics from before this check was added.
-	        goto restart_job;
+			// Fall back to the semantics from before this check was added.
+			goto restart_job;
 		}
+
+
+		// Ask the AP what it thinks, given what the EP said.
+		ClassAd context;
+		context.InsertAttr( ATTR_EP_CHECKPOINT_RESTART, claim_is_closing );
+		auto guidance = Starter::requestGuidanceCheckpointTaken(
+			starter, context
+		);
+		if( guidance ) {
+			claim_is_closing = * guidance;
+		}
+
 		if( claim_is_closing ) {
 			dprintf( D_ALWAYS, "This checkpointed job should NOT restart.\n" );
 
@@ -1005,7 +1172,7 @@ VanillaProc::outOfMemoryEvent() {
 	return 0;
 }
 
-bool
+ReapResult
 VanillaProc::JobReaper(int pid, int status)
 {
 	dprintf(D_FULLDEBUG,"Inside VanillaProc::JobReaper()\n");
@@ -1030,8 +1197,15 @@ VanillaProc::JobReaper(int pid, int status)
 	if( m_pid_ns_status_filename.length() > 0 ) {
 		status = pidNameSpaceReaper( status );
 	}
-	bool jobExited = OsProc::JobReaper( pid, status );
-	if( pid != JobPid ) { return jobExited; }
+	ReapResult result = OsProc::JobReaper( pid, status );
+	if( pid != JobPid ) { return result; }
+
+	// Check to see if the Job classad indicates a task sequence.
+	if (result == ReapResult::JobNext) {
+		if ( ! starter->PrepareNextTask(pid, status, shouldSkipFutureTasks())) {
+			result = ReapResult::JobDone;
+		}
+	}
 
 	//
 	// We have three cases to consider:
@@ -1051,12 +1225,12 @@ VanillaProc::JobReaper(int pid, int status)
 		if( exit_status == successfulCheckpointStatus ) {
 			if( isSoftKilling ) {
 				notifySuccessfulEvictionCheckpoint();
-				return true;
+				return ReapResult::JobDone;
 			}
 
 			if( restartCheckpointedJob() ) {
 				isCheckpointing = false;
-				return false;
+				return ReapResult::JobShouldReExec;
 			} else {
 				// We need to prevent (final) output transfer from happening
 				// as well as ensure that the job is requeued.  The latter
@@ -1080,18 +1254,7 @@ VanillaProc::JobReaper(int pid, int status)
 				// This job is done, but we want to avoid reporting a job
 				// exit here, because it will be misinterpreted as a job
 				// termination, and we need the job rescheduled.
-				return false;
-
-
-
-				// FIXME: but doesn't.
-
-
-
-				starter->jic->setOutputTransfer(true);
-
-				// This job is done.
-				return true;
+				return ReapResult::JobShouldReExec;
 			}
 		} else {
 			// The job exited without taking a checkpoint.  If we don't do
@@ -1124,17 +1287,17 @@ VanillaProc::JobReaper(int pid, int status)
 				WIFSIGNALED( exit_status ) ? WTERMSIG( exit_status ) : WEXITSTATUS( exit_status ) );
 			starter->jic->holdJob( holdMessage.c_str(), CONDOR_HOLD_CODE::FailedToCheckpoint, exit_status );
 			starter->Hold();
-			return true;
+			return ReapResult::JobDone;
 		}
 	} else if( wantsFileTransferOnCheckpointExit && exit_status == successfulCheckpointStatus ) {
 		dprintf( D_FULLDEBUG, "Inside VanillaProc::JobReaper() and the job self-checkpointed.\n" );
 
 		if( isSoftKilling ) {
 			notifySuccessfulEvictionCheckpoint();
-			return true;
+			return ReapResult::JobDone;
 		} else {
 			if( restartCheckpointedJob() ) {
-				return false;
+				return ReapResult::JobShouldReExec;
 			} else {
 				// We need to prevent (final) output transfer from happening
 				// as well as ensure that the job is requeued.  The latter
@@ -1158,7 +1321,7 @@ VanillaProc::JobReaper(int pid, int status)
 				// This job is done, but we want to avoid reporting a job
 				// exit here, because it will be misinterpreted as a job
 				// termination, and we need the job rescheduled.
-				return false;
+				return ReapResult::JobShouldReExec;
 			}
 		}
 	} else {
@@ -1175,7 +1338,7 @@ VanillaProc::JobReaper(int pid, int status)
 		// force that no
 		daemonCore->Unregister_subfamily(pid);
 
-		return jobExited;
+		return result;
 	}
 }
 
@@ -1354,7 +1517,10 @@ int VanillaProc::outputOpenFlags() {
 	if( wantCheckpoint || wantsFileTransferOnCheckpointExit || (!dontAppend) ) {
 		return O_WRONLY | O_CREAT | O_APPEND | O_LARGEFILE;
 	} else {
-		return this->OsProc::outputOpenFlags();
+		int flags = this->OsProc::outputOpenFlags();
+		if (taskid > 0) { flags &= ~O_TRUNC; } // only the first task should truncate
+		dprintf(D_ZKM, "outputOpenFlags() 0x%x for taskid=%d\n", flags, taskid);
+		return flags;
 	}
 }
 
@@ -1368,6 +1534,9 @@ int VanillaProc::streamingOpenFlags( bool isOutput ) {
 	if( wantCheckpoint || wantsFileTransferOnCheckpointExit || (!dontAppend) ) {
 		return isOutput ? O_CREAT | O_APPEND | O_WRONLY : O_RDONLY;
 	} else {
-		return this->OsProc::streamingOpenFlags( isOutput );
+		int flags = this->OsProc::streamingOpenFlags( isOutput );
+		if (taskid > 0) { flags &= ~O_TRUNC; } // only the first task should truncate
+		dprintf(D_ZKM, "streamingOpenFlags() 0x%x for taskid=%d\n", flags, taskid);
+		return flags;
 	}
 }

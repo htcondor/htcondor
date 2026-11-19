@@ -66,7 +66,9 @@ bool ExprTreeIsJobIdConstraint(classad::ExprTree * expr, int & cluster, int & pr
 
 // check to see that a classad expression is valid
 // if attrs is not NULL, it also adds attribute references from the expression into the current set.
-bool IsValidClassAdExpression(const char * expr, classad::References * attrs=NULL, classad::References *scopes=NULL);
+enum ExpressionKind { None=0, Literal=1, Attr=2, Tree=3, List=4, NestedAd=5 };
+ExpressionKind IsValidClassAdExpression(const char * expr, classad::References * attrs=NULL, classad::References *scopes=NULL);
+ExpressionKind getExpressionKind(classad::ExprTree * expr);
 
 typedef std::map<std::string, std::string, classad::CaseIgnLTStr> NOCASE_STRING_MAP;
 // edit the given expr changing attribute references as the mapping indicates
@@ -165,8 +167,6 @@ bool IsATargetMatch( ClassAd *my, ClassAd *target, const char * targetType );
 // evaluates the query REQUIREMENTS against the target ad
 // but does *NOT* care about TargetType
 bool IsAConstraintMatch( ClassAd *query, ClassAd *target );
-
-bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vector<ClassAd*> &matches, int threads, bool halfMatch = false);
 
 void AddClassAdXMLFileHeader(std::string &buffer);
 void AddClassAdXMLFileFooter(std::string &buffer);

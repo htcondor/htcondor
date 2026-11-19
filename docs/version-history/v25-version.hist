@@ -1,70 +1,814 @@
-*** 25.10.0 features
+*** 25.15.16 bugs
+
+- Fixed a bug where a large backlog of higher job priority jobs could
+  exhaust the *condor_schedd*'s offer budget for a negotiation cycle and
+  starve a lower priority auto cluster, even when matching slots were idle.
+  :jira:`3855`
+
+- Fixed a bug in :tool:`condor_userprio` where using both ``-allusers`` and ``-name`` 
+  options would result in no output.
+  :jira:`3965`
+  
+- Fixed a bug in the *condor_shadow* that caused a segfault and coredump when
+  the shadow had difficulty communicating with a starter.
+  :jira:`3967`
+
+- Fixed a bug in the :macro:`HOLD_IF_DISK_EXCEEDED` policy that prevented
+  it from ever evicting jobs.
+  :jira:`4090`
+
+*** 25.0.16 bugs
+
+- Fixed a bug where multiple *condor_shadow* processes could rotate the
+  :macro:`JOB_EPOCH_HISTORY` file at the same time, losing job epoch records.
+  :jira:`3977`
+
+- Fixed a bug that could cause the *condor_schedd* to exit when ``$$()``
+  macro expansion in the job ad failed.
+  :jira:`3988`
+
+- Fixed a bug that could cause *condor_userprio* to print bogus values for
+  a user's resoruce usage when they haven't used any resources.
+  :jira:`4018`
+
+- Improve the validation rules when examining an X.509 host certificate
+  during SSL authentication.
+  :jira:`4074`
+
+- HTCondor daemons now close the job event log with the job owner's identity,
+  matching the identity used to open it. Previously, the *condor_schedd* and
+  other daemons closed it as the condor user, which on Lustre caused the close
+  to fail on the metadata server and leak open file handles.
+  :jira:`4058`
+
+- Fixed a bug where :tool:`condor_watch_q` would show a self-checkpointing
+  job as stuck transferring output after a checkpoint was transferred, rather
+  than returning the job to the running state.
+  :jira:`4049`
+
+- Fixed a bug where reading a JSON or XML formatted job event log could crash
+  or read freed memory when an event contained structured submit notes or
+  execute event properties.
+  :jira:`4082`
+
+*** 25.15.15 features
+
+- In some situations, HTCondor no longer needs to transfer the same file to the same EP once for
+  each job that uses it.  This can be done automatically for (some) container images, and with the
+  help of the submitter for other immutable input files.
+
+- Scheduler and Local universe jobs no longer use the Vanilla universe default values for
+  :subcom:`request_cpus`, :subcom:`request_memory` and :subcom:`request_disk`.  Instead,
+  Scheduler and Local universe jobs have no defaults for those submit commands.
+  :jira:`3926`
+  
+- The ``chirp ulog`` is now enabled whenever the ``chirp set_job_attr_delayed`` is enabled.
+  These are enabled by default, so it is no longer necessary for the job to have :subcom:`want_io_proxy`
+  set to true.
+  :jira:`3924`
+
+- Added new submit command :subcom:`require_common_files` that forces jobs that use common input files
+  to run only only EPs that support common files transfer.
+  :jira:`3955`
+
+- Make :macro:`CHECK_REACTIVATE_AFTER_CHECKPOINT` false by default.
+  :jira:`4046`
+
+*** 25.15.15 bugs
+
+- Fixed a bug where query tools could block for up to :macro:`QUERY_TIMEOUT`
+  when :macro:`COLLECTOR_HOST` listed multiple collectors and one silently
+  dropped packets instead of refusing the connection. A new
+  :macro:`HA_COLLECTOR_PROBE_TIMEOUT` reachability check now fails over
+  much sooner.
+  :jira:`3491`
+
+- Fixed calculation of :ad-attr:`CpusUsage` in the job ClassAd so that the
+  final value is calculated using the total execution time rather than just
+  the final sampling interval.
+  :jira:`3331`
+
+- Fixed a failure to materialize jobs in the *condor_schedd* when a
+  late materialization joblist attempts to use common files or a common container.
+  :jira:`3942`
+
+- Fixed a bug in :tool:`condor_adstash` where using OpenSearch had a dependency on
+  the Elasticsearch Python library.
+  :jira:`3949`
+
+- Fixed a bug in the *condor_schedd* where each time a submit transform was applied,
+  an empty failure message with no error text was printed to the SchedLog.
+  :jira:`3957`
+
+- Fixed a bug where the KERBEROS authentication method failed if the server
+  was IPv6-only.
+  :jira:`2863`
+
+- Fixed a bug where :macro:`DISABLE_AUTHENTICATION_IP_CHECK` disabled the
+  warning but not the check.
+  :jira:`2863`
+
+- Fixed a bug where jobs would fail and requeue after completion when
+  HOOK_JOB_EXIT is used in the condor_starter.
+  :jira:`3907`
+
+- Fixed a bug in :tool:`condor_adstash` where an unknown (to
+  :tool:`condor_adstash`) field type in the index mappings would
+  cause a crash.
+  :jira:`3934`
+
+*** 25.0.15 features
+
+- For Execution Points using the Logical Manager (LVM) for disk space
+  enforcement and Security Enhanced Linux (SELinux), HTCondor now copies
+  the SELinux security context from the mount point to the newly created
+  filesystem.  This update allows tool:`condor_ssh_to_job` to work on hosts
+  using both LVM and SELinux.
+  :jira:`3337`
+
+- HTCondor tarballs now contain `Pelican 26.0.0 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-26.0.0.
+
+- HTCondor tarballs now contain `Apptainer 1.5.5 <https://github.com/apptainer/apptainer/releases/tag/v1.5.5>`_
+
+- The condor RPM package now requires at least apptainer version 1.5.5.
+
+*** 25.0.15 bugs
+
+- Fixed a bug where the *condor_defrag* daemon couldn't send drain commands
+  to EPs that didn't have an IDTOKENS signing key.
+  :jira:`3954`
+
+- Fixed a bug where :subcom:`allowed_execute_duration` had no effect on
+  scheduler universe jobs (such as :tool:`condor_dagman`) and local
+  universe jobs.
+  :jira:`3941`
+
+*** 25.14.1 features
+
+- The *condor_submit* warning about submit files with multiple ``QUEUE`` statements
+  has been changed to an error by changing the default value for 
+  :macro:`SUBMIT_PREVENT_MULTI_QUEUE` to ``True``.
+  :jira:`3878`
+  
+- The credmon can now obtain and renew OAuth2 access tokens from a
+  `Pelican <https://pelicanplatform.org/>`_ federation (such as the OSDF), so
+  that jobs can read and write federation objects with ``osdf://`` and
+  ``pelican://`` URLs.  Services are declared with
+  ``PELICAN_CREDMON_PROVIDER_NAMES`` and a set of ``<ServiceName>_PELICAN_*``
+  options; see :ref:`installing_credmon_pelican`.
+  :jira:`3784`
+
+- The ``condor_vault_storer`` credential storer has been renamed to the
+  mode-neutral ``condor_credential_storer``, since it now services Vault and
+  Pelican credentials (and can be extended to others).  The old name is still
+  installed as a symlink, so existing :macro:`SEC_CREDENTIAL_STORER`
+  configurations continue to work.
+  :jira:`3784`
+
+- Support detection and advertising of AMD GPUs on ROCM 7 systems.
+  :jira:`3880`
+
+- Container universe jobs that use the apptainer or singularity runtime
+  now detect AMD or nvidia gpus, and add --nv or --rocm appropriately
+  to the apptainer exec command line.  This should allow container
+  universe jobs on AMD GPU systems to properly access their GPUs.
+  :jira:`3887`
+
+- Add new ``self-service`` form of Annex, where the user is responsible for
+  submitting the Annex EPs to the Slurm cluster of their choice.
+  :jira:`3645`
+
+- Introducing *condor_metricd*, a new daemon that publishes HTCondor
+  metrics from the *condor_collector* to multiple monitoring backends
+  including Prometheus and Ganglia.  For Prometheus, the *condor_metricd* supports exporting
+  gauges and counters to Prometheus via file, HTTP, and/or HTTPS.
+  For full documentation, see :ref:`admin-manual/monitoring:Monitor Pool Metrics with Prometheus and Ganglia`.
+  Note: If your HTCSS configuration already uses the (now deprecated) *condor_gangliad*,
+  the same binary is also installed as *condor_gangliad* for full backwards
+  compatibility with older versions of HTCSS.
+  :jira:`3374`
+
+- :tool:`condor_adstash` obeys existing index properties and allows for
+  custom field properties, dynamic templates, index settings, and ignored
+  attributes. :tool:`condor_adstash` can also provide JSON resources (initial
+  index, index template, ILM policy) for new deployments to a search engine
+  (e.g. Elasticsearch).
+  :jira:`2909`
+
+- :tool:`condor_rm` now accepts a **-held** option that restricts the
+  removal to jobs in the held state. It may be combined with the usual
+  constraints (a cluster, a ``cluster.proc``, a user, or **-constraint**),
+  so that only the held jobs among those selected are removed.
+  :jira:`3710`
+
+- :tool:`condor_watch_q` now draws its live display on the terminal's
+  alternate screen, so quitting restores whatever was on the console
+  before it started, the same way less behaves.
+  :jira:`3854`
+
+- Added new DAGMan :dag-cmd:`TOLERANCE` command to allow users to have
+  finer control on what constitutes failure with a job list in a single
+  node and whether DAGMan should immediately remove job list upon failure
+  or wait for jobs to finish.
+  :jira:`3838`
+
+- :tool:`condor_submit_dag` now has a ``-terse`` option to only display the
+  resulting DAGMan job id on success.
+  :jira:`3890`
+
+- When storing passwords for Windows users, :tool:`condor_store_cred` can
+  now read the password from stdin.
+  :jira:`3881`
+
+- Improved the error message when :tool:`condor_q` or tool:`condor_rm` cannot
+  communicate with an overloaded *condor_schedd*.
+  :jira:`3619`
+
+- Administrator-configured Docker universe bind mounts (the
+  :macro:`DOCKER_VOLUMES` family) are now made with Docker's ``--mount``
+  option instead of the older ``--volume`` option. A volume may now be a
+  Docker-managed named volume rather than a host directory by setting
+  :macro:`DOCKER_VOLUME_DIR_xxx_TYPE` to ``volume``, and arbitrary additional
+  ``--mount`` suboptions may be supplied with the new
+  :macro:`DOCKER_VOLUME_DIR_xxx_MOUNT_OPTS`. Both the volume source and the
+  mount options are evaluated as ClassAd expressions in the context of the
+  slot and job ads, allowing per-job values such as mounting each user's own
+  subdirectory of a shared volume.
+  :jira:`3879`
+
+- The *condor_schedd* now notifies the *condor_negotiator* via a ``RESCHEDULE``
+  command that it wants expedited matchmaking when it changes from having
+  no idle jobs to having some idle jobs. As a part of this change the
+  *condor_schedd* will no longer forward ``RESCHEDULE`` commands that it receives,
+  and the default for :macro:`SUBMIT_SEND_RESCHEDULE` was changed to ``False``.
+  :jira:`3836`
+
+- If :macro:`CHECK_REACTIVATE_AFTER_CHECKPOINT` is set, the EP now tells the
+  AP about its decision and asks what to do.  In 25.x and 26.0.x, the AP will
+  always tell the EP to do what it decided to do, so this change will have no
+  visible effect.  However, this allows 26.0 EPs to react to any change(s)
+  made in 26.x APs.
+  :jira:`3906`
+
+- Added support for submitting jobs remotely to NERSC's Perlmutter HPC
+  system using their Superfacility REST API.
+  Use the grid universe **batch** type with a scheduler name of ``sfapi``.
+  :jira:`3461`
+
+- The -constraint option now works with the :tool:`condor_userprio` in 
+  all cases.
+  :jira:`3873`
+
+- Enhance :macro:`SEC_FS_ENFORCE_CHANNEL_BINDING` to verify that the
+  server's shared_port id matches.
+  :jira:`3883`
+
+- When the knob :macro:`DOCKER_TRUST_LOCAL_IMAGES` is true, allow docker images
+  without an explicit docker tag in the image name to be in the cache.
+  :jira:`3876`
+
+- For **batch** grid universe jobs submitted to a local batch system,
+  restore the old behavior of creating a temporary directory in which to
+  run the job by default (``blah_run_in_workdir=no`` in the ``blah.config`` file).
+  When using ``condor_remote_cluster`` to submit jobs to a remote batch
+  system via ssh, disable creation of the temporary directory by default
+  (set ``blah_run_in_workdir=yes`` in the remote ``blah.config`` file).
+  Also fix a couple bugs with determining which files need to be copied
+  when a temporary directory isn't being created.
+  :jira:`3882`
+
+*** 25.14.1 bugs
+
+- Fixed a bug where an idle job removed from the queue could occasionally
+  fail to write a ``job aborted`` event to its job event log. This could
+  cause :tool:`condor_dagman` to wait indefinitely for the job to finish.
+  :jira:`3875`
+
+- Fixed a bug where the submit description files written by the
+  ``htcondor2.dags`` module each contained two ``queue`` statements. A
+  ``queue`` statement given in the layer's submit description is now
+  preserved instead of being overridden.
+  :jira:`3613`
+
+- Fixed a bug where ``$$(CondorScratchDir)`` would not work for container universe
+  when file transfer was off and :macro:`SINGULARITY_TARGET_DIR` was set.
+  :jira:`3885`
+
+- Fixed the default for :macro:`MAX_CONCURRENT_UPLOADS_PER_USER` so it evaluates to 0
+  (no limit) when :macro:`MAX_CONCURRENT_UPLOADS` is not set.
+  :jira:`3664`
+
+- The Python bindings no longer assume that all ads in a legacy-style reply
+  from the negotiator contain only attributes present in the ad indexed #1.
+  :jira:`3884`
+
+- Fixed a bug where a job with streaming output or error would not be
+  able to reconnect to a restarted or rebooted schedd in some cases.
+  :jira:`3869`
+
+- Fixed a bug where the *condor_schedd* could crash if it lost a match after
+  deciding to start a transfer shadow but before managing to do so.
+  :jira:`3913`
+
+- Fixed a bug where :ad-attr:`ResourcesUsed` would grow without bounds in the
+  *condor_negotiator* and as reported by :tool:`condor_userprio`
+  :jira:`3904`
+
+- Fixed a bug which could cause the *condor_startd* to crash when using
+  the common input files feature.
+  :jira:`3911`
+
+- Fixed a bug that caused ``shadow disconnected`` events to not be written
+  to the job event log.
+  :jira:`3870`
+
+*** 25.0.14 features
+
+- Updated :tool:`condor_upgrade_check` for well known "gotchas", warnings,
+  and incompatibilities going to V26 of HTCondor.
+  :jira:`3453`
+
+*** 25.0.14 bugs
+
+- Fixed a bug where :tool:`condor_q` would crash when given both ``-batch`` and
+  ``-af`` arguments. This combination now produces an error message.
+  :jira:`3833`
+
+*** 25.13.2 features
+
+- DAGMan :dag-cmd:`PARENT/CHILD` dependencies can now be declared *WEAK*,
+  meaning a child node only requires its parent(s) to finish executing
+  rather than to succeed. See :ref:`Weak Dependencies<DAG weak dependencies>`.
+  :jira:`2690`
+
+- Improve how an AP administrator can automatically provide OAuth
+  credentials for all jobs.
+  Configuration knob :macro:`SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS` specifies
+  whether the AP is providing credentials for all jobs (default is true).
+  Configuration knob :macro:`SUBMIT_ADD_LOCAL_CREDMON_PROVIDER_NAMES`
+  specifies which credential names are being provided for all jobs
+  (default is all credentials that the AP can generate by itself).
+  Remote submitters no longer need to alter their configuration files to
+  submit to an AP that provides credentials for all jobs.
+  :jira:`3391`
+
+- When :macro:`SINGULARITY_TARGET_DIR` is true and file transfer is 
+  off, we now mount the _CONDOR_SCRATCH_DIR on /condor_scratch, as 
+  there was nowhere else to mount it.
+  :jira:`3768`
+
+- Add a helpful "how to monitor jobs" tip to stderr after
+  :tool:`condor_submit` runs.
+  :jira:`3173`
+
+- Added CCB tunneling, which lets an entire set of daemons on a restricted host
+  (for example an HPC worker node that cannot make direct outbound TCP
+  connections) send *and* receive all of their connections through a Connection
+  Broker. A daemon or tool routes its outbound connections through a broker with
+  :macro:`OUTBOUND_CCB_ADDRESS`; a broker relays them with
+  :macro:`CCB_OUTBOUND_PROXY`. The :tool:`condor_master` can run and orchestrate a
+  local inside CCB automatically with :macro:`USE_OUTBOUND_CCB`. Inbound
+  connections to a tunneled daemon route recursively through every broker in the
+  path while the end-to-end CEDAR security session is preserved, and a client
+  authenticates only to the entry broker.
+  :jira:`3828`
+
+*** 25.13.2 bugs
+
+- Fixed a bug where the *condor_credmon_oauth* would not create and/or
+  refresh credentials containing a user-supplied handle. Consequently,
+  underscores (and other special characters) are no longer allowed in
+  credential provider names by default. This behavior change can be
+  reverted by setting :macro:`CREDMON_ALLOW_SPECIAL_CHAR_NAMES` to true,
+  though this will disable the use of user-supplied handles.
+  See :ref:`provider_name_restrictions` for details.
+  :jira:`2860`
+
+- The Archive Librarian now properly reduces the database size
+  on disk during garbage collection.
+  :jira:`3826`
+
+- Fixed a bug where the archive librarian could mistake a rotated history
+  file for the still-active one after a daemon restart, if the restart
+  landed before that file was fully read. This caused the file to never be
+  marked as fully read, and if it was later removed from disk, it would be
+  incorrectly renamed with a ``.REMOVED`` suffix and lose its recorded
+  rotation date.
+  :jira:`3830`
+
+- The ClassAd functions :classad-function:`versionGT`,
+  :classad-function:`versionGE`, :classad-function:`versionLT`,
+  :classad-function:`versionLE` and :classad-function:`versionEQ` are now
+  case-insensitive, matching all other ClassAd functions.
+  :jira:`3818`
+
+- :tool:`condor_history` now selects the schedd to query the same way
+  :tool:`condor_submit` and :tool:`condor_q` do, honoring both
+  :macro:`SCHEDD_HOST` and :macro:`SCHEDD_NAME`.  Previously only
+  :macro:`SCHEDD_HOST` was consulted and :macro:`SCHEDD_NAME` was ignored. Use
+  ``-local`` to force reading the local history file regardless of
+  configuration.
+  :jira:`3839`
+
+- Fix a very rare collector crash when creating the CA certificates file
+  the first time and a view collector was also configured to run.
+  :jira:`3832`
+
+- Fix a DAGMan crash that could occur while using common input transfers
+  for jobs specified in a DAG.
+  :jira:`3835`
+
+*** 25.0.13 bugs
+
+*** 25.12.2 features
+
+- Introducing the :ref:`archive-librarian`. A new daemon that maintains an
+  SQLite3 database of indexes to historical job records located in an Access
+  Point's :macro:`HISTORY` archive.
+  :jira:`3143`
+
+- The archive librarian now stores the :ad-attr:`DAGManJobId`, :ad-attr:`JobBatchId`,
+  and :ad-attr:`JobBatchName` of job records into the library database.
+  This allows database queries at a DAG workflow level to be executed.
+  :jira:`3799`
+
+- :tool:`condor_userprio` ``-setfloor`` and ``-setfactor`` now accept a
+  ``-duration`` option to install a time-limited *lease* on the floor or
+  priority factor: the prior value is automatically restored after the
+  given number of seconds. Leases are persistent across
+  *condor_negotiator* restarts. New ``-cancelfloorlease`` and
+  ``-cancelfactorlease`` options cancel an in-effect lease. This
+  mirrors the existing ``-setceiling`` lease support.
+  :jira:`3764`
+
+- Scheduler universe jobs such as DAGMan will now go into cool down
+  for :macro:`SCHEDULER_UNIVERSE_COOL_DOWN_DURATION` seconds when the
+  *condor_schedd* fails to launch the job.
+  :jira:`3769`
+
+- The headers printed out by the :tool:`condor_top` are now multi-row
+  and should be clearer to understand.
+  :jira:`3247`
+
+- The *condor_schedd* now writes an audit log to ``$(LOG)/SchedAuditLog``
+  by default.  In previous versions of HTCondor this was disabled.
+  :jira:`3770`
+
+- :tool:`condor_ssh_to_job` now also sets the supplementary groups of the
+  shell inside the container to whatever the job had.
+  :jira:`3741`
+
+- VM universe now supports the ``user`` type networking with the **passt**
+  backend allowing outbound network connectivity on EL10 execution points.
+  :jira:`3735`
+
+- Honor the :subcom:`transfer_executable` submit command for **batch**
+  grid universe jobs.
+  :jira:`3772`
+
+- The OneDrive file transfer plugin now supports uploading files and
+  directories, and downloading entire directories recursively, in
+  addition to downloading individual files. Large files are uploaded in
+  chunks via an upload session. Thanks to Zach McGrew for this contribution.
+  :jira:`3792`
+
+- HTCondor Connection Brokering (CCB) now supports a streaming mode that
+  brokers connections between two daemons that are *both* behind a CCB,
+  without opening any incoming ports. When the requesting daemon is itself
+  CCB-routed, the CCB server has the target daemon connect back to the CCB
+  server and then relays bytes between the two connections; the end-to-end
+  security handshake is still performed directly between the two daemons, so
+  the CCB server never decrypts their traffic. Streaming mode is enabled by
+  default and controlled by the new configuration knobs
+  :macro:`CCB_SERVER_STREAMING` and :macro:`CCB_CLIENT_STREAMING`.
+  :jira:`3805`
+
+- Jobs that transfer input sandboxes now log a file transfer started 
+  event even when there list of files to be transferred is empty.
+  Note that the transfer finished event has always been logged
+  for empty file lists.  
+  :jira:`3777`
+
+- The ``htcondor ep rehome`` command directs a *condor_startd* to evict its
+  running jobs and direct-attach to a different *condor_schedd*. The new
+  ``--reboot`` option additionally reboots the execution point host once all
+  jobs have been evicted, persisting the direct-attach configuration so the
+  host comes back attached to the new *condor_schedd*. The reboot is gated
+  by :macro:`STARTD_REHOME_ALLOW_REBOOT` on the EP and uses
+  :macro:`STARTD_REBOOT_COMMAND` (default ``/sbin/reboot``) to perform the
+  reboot.
+  :jira:`3766`
+
+*** 25.12.2 bugs
+
+- Fixed a bug that could cause file descriptor leaks in *blahpd*.
+  :jira:`3786`
+
+- Improved the interaction between the *condor_schedd* and the
+  *condor_negotiator* when the :macro:`SCHEDD_INTERVAL` was set
+  to a very short value.  Previously, short values (< 10 seconds)
+  could cause very long delays in communications.
+  :jira:`3751`
+- Fixed a regression where :macro:`DC_DAEMON_LIST` would treat everything after
+  the initial ``+`` as a single entry.  It again properly handles a list of
+  daemon names after the initial ``+``. And to avoid future problems the
+  initial ``+`` is now optional; Built-in daemons can no longer be removed
+  as DC daemons using this config variable.
+  :jira:`3845`
+
+*** 25.0.12 bugs
+
+*** 25.11.1 bugs
+
+- *Security Item*: This release of HTCondor fixes a security-related bug described at
+
+  - `http://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0001 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0001>`_.
+
+  :jira:`3808`
+
+- Fixed a bug that could cause the *condor_negotiator* accountant log
+  (``Accountantnew.log``) to grow without bound.  Records for slots that
+  were no longer claimed were no longer being removed during each
+  negotiation cycle, so they accumulated indefinitely.  This bug was
+  introduced in HTCondor 25.11.0.
+  :jira:`3795`
+
+*** 25.11.0 features
+
+- The *condor_schedd* will now prevent a single user from monopolizing the input transfer
+  queue and starving other user jobs from receiving matches by preventing a user from getting
+  new matches when using more than 20% of the input transfer queue. This can be disabled
+  by configuring :macro:`MAX_CONCURRENT_UPLOADS_PER_USER` to 0.
+  :jira:`3664`
+
+- Updated :tool:`condor_watch_q` to automatically group jobs by :ad-attr:`JobBatchName`
+  correctly for jobs submitted after the tool began executing. The incorrect
+  behavior was noticeable when using :tool:`condor_watch_q` to track a DAGMan
+  execution.
+  :jira:`3656`
+
+- :tool:`condor_dag_checker` now has options to process and check the existence
+  and validity of node submit submit descriptions, Sub-DAG files, and scripts.
+  :jira:`3540`
+
+- Added the ability for the *condor_gangliad* to aggregate the derivatives (deltas) of ClassAd attributes. This is useful
+  to monitor numeric attributes that are "counters", i.e. attributes that start at zero and monotonically increase
+  throughout the lifetime of a daemon.
+  :jira:`3687`
+
+- :tool:`condor_config_val` now accepts a ``-trace`` option which prints the file, line and previous value
+  each time a value is replaced as the configuration files are read.
+  :jira:`3699`
+
+- Added new ``-duration`` option to :tool:`condor_userprio` to create a persistent
+  time-limited *lease* for ceiling values set with ``-setceiling``. The prior
+  ceiling value is automatically restored when after the lease expires or is
+  canceled with the ``-cancelceilinglease`` option.
+  :jira:`3518`
+
+- Scheduler universe jobs (i.e. *condor_dagman*) no longer have their **argv[0]** set
+  to ``condor_scheduniv_exec.<cluster>.<proc>`` preserving the executable name.
+  This allows 'multibin' programs, common in Golang and Rust, that rely on checking
+  **argv[0]** to function correctly in the scheduler universe.
+  :jira:`3711`
+
+- :tool:`condor_status` now accepts a ``-health`` option which displays machines
+  that have less than 100% health, and totals for machines by health.
+  :jira:`3714`
+  
+- The OAuth credmon web server now respects :macro:`CREDMON_WEB_PREFIX`. This is
+  useful if the credmon web server is running under a different host name.
+  :jira:`3746`
+
+- :tool:`condor_ssh_to_job` now works for docker universe or container universe jobs
+  when the path-name of the :macro:`EXECUTE` directory is longer than about 80 characters.
+  :jira:`3729`
+
+- User supplied transfer plugins can now be conditionally disabled in the
+  *condor_starter* using a new configuration variable.
+  :macro:`STARTER_DISABLE_USER_SUPPLIED_TRANSFER_PLUGINS`.
+  :jira:`3722`
+
+- Docker universe jobs that require refreshed credentials now immediately
+  go on hold after exceeding their :subcom:`request_memory` requirements
+  rather than being delayed for 20 minutes.
+  :jira:`3672`
+
+- DAGMan will no longer re-attempt placement of jobs to the *condor_schedd*
+  when submission will never work such as when an invalid job description file
+  is provided to a node. Note, this only occurs when DAGMan is in direct
+  submission mode (default).
+  :jira:`3716`
+
+- Changed the default value of :macro:`QUEUE_CLEAN_INTERVAL` to 28800
+  (8 hours).
+  :jira:`3706`
+
+- Added new ``"Cleaning"`` activity for claimed slots representing
+  the time between the *condor_starter*\'s final update and actual reaping.
+  During ``Claimed/Cleaning`` the slot will not match new work and all
+  preempting requests are recorded to be applied after the *condor_starter* is
+  reaped. The new :ad-attr:`TotalTimeClaimedCleaning` attribute accumulates
+  the time spent in this activity.
+  :jira:`3686`
+
+- Slots used by an AP to transfer and store common files now have
+  the prefix ``data`` rather than ``slot`` (e.g. ``data1_1``).  These
+  slots also set the attribute :ad-attr:`IsDataSlot` in their slot ads.
+  :jira:`3715`
+
+*** 25.11.0 bugs
+
+- Fix a recently introduced bug where a parallel universe job that cannot activate one
+  of its claims can cause the *condor_schedd* to crash.
+  :jira:`3704`
+
+- Evaluating ClassAd expressions of the form ``list_of_ads.attribute_name``
+  in :tool:`classad_eval` no longer causes a segmentation fault.
+  :jira:`3554`
+
+*** 25.0.11 bugs
+
+*** 25.10.1 features
 
 - Added ability to set DAGMan throttles via :tool:`htcondor dag throttle` and
   :meth:`htcondor2.DAGMan.throttle` while DAGMan is executing.
   :jira:`3584`
 
+- DAGMan is now born with a security session from its parent *condor_schedd*
+  allowing it to communicate without re-authentication.
+  :jira:`3298`
+
+- Scheduler universe jobs, such as *condor_dagman*, will now enter job
+  cool down when they exit with a non-zero exit code. The duration of the
+  cool down in controlled by :macro:`SCHEDULER_UNIVERSE_COOL_DOWN_DURATION`.
+  :jira:`3067`
+
+- Added new :tool:`htcondor dag resources` command, which shows
+  the resource usage for running and historical jobs.
+  :jira:`3636`
+
 - Add new submit command :subcom:`retry_request_disk`, which operates
   like :subcom:`retry_request_memory` but for the ``Disk`` resource.
   :jira:`3552`
 
-- Added new submit variable ``$(JobListId)`` as an alternate name for ``$(ClusterId)``.
-  :jira:`3586`
+- When :macro:`STARTER_NESTED_SCRATCH` is true (the default), the **.chirp.config**
+  file no longer pollutes the user's scratch directory, it is located
+  in the slot's "user" directory.  The ``_CONDOR_CHIRP_CONFIG`` environment
+  variable still points to the correct place.
+  :jira:`2949`
 
-- Make :macro:`CHECK_REACTIVATE_AFTER_CHECKPOINT` true by default.
-  :jira:`3564`
-
-- On cgroup v1 systems, match cgroup v2 behaviour of disabling virtual
+- On cgroup v1 systems, match cgroup v2 behavior of disabling virtual
   memory swap space for jobs.  This can be disabled by setting
   :macro:`DISABLE_SWAP_FOR_JOB` to false.
   :jira:`3630`
 
-- When :macro:`STARTER_NESTED_SCRATCH` is true (the default), the .chirp.config
-  file no longer pollutes the user's scratch directory, it is located
-  in the slot's "user" directory.  The _CONDOR_CHIRP_CONFIG environment
-  variable still points to the correct place.
-  :jira:`2949`
+- :tool:`condor_qusers`, :tool:`condor_status`, and :tool:`condor_who` now supports an `-aaf` option, for append
+  autoformat, which displays columns like the `-af` option does, but
+  appends them to the default output.
+  :jira:`3604,3684`
 
-- Added new submit commands :subcom:`organized_output`, :subcom:`organized_output_directory`
-  and :subcom:`organized_output_pattern` which is a simplified way to put the output
-  of the jobs in a joblist into a separate subdirectory for each job.
-  :jira:`3618`
+- Container universe jobs whose image is an url (like ``docker://``) now work
+  when file transfer is off.
+  :jira:`3638`
+
+- **batch** grid universe jobs are now run in the :ad-attr:`Iwd` or
+  :ad-attr:`RemoteIwd` directory by default. Before, they were run in a
+  temporary directory under the :ad-attr:`Iwd` or :ad-attr:`RemoteIwd`
+  directory.
+  The old behavior can be restored by setting ``blah_run_in_workdir=no``
+  in the ``blah.config`` file.
+  :jira:`2415`
+
+- Improved the *blahpd*'s efficiency in monitoring job status.
+  :jira:`3634,3640`
+
+- Improved handling of OS usernames that include the ``@`` character.
+  :jira:`3655`
+
+- Added new submit variable ``$(JobListId)`` as an alternate name for ``$(ClusterId)``.
+  :jira:`3586`
+
+- Add new verb, **claims** to the :tool:`htcondor ap claims` cli tool.
+  :jira:`3682`
+
+- Improved the error handling and log messages in the rare case that a
+  job fails after the *condor_starter* calls the ``fork()`` system call
+  but before the ``exec()`` system call.
+  :jira:`3654`
+
+- Make :macro:`CHECK_REACTIVATE_AFTER_CHECKPOINT` true by default.
+  :jira:`3564`
+
+- Change value of :macro:`USERPRIO_USE_NEGOTIATOR_MODULAR_QUERY` to true.
+  This allows the :tool:`condor_userprio` to use an interface to the negotiator
+  to fetch accounting ads in a way that allows constraint and projection.
+  This interface did not exist in pre htcondor 9.1 negotiators, and should
+  be set to false for new :tool:`condor_userprio` to work with such old
+  negotiators.
+  :jira:`3649`
 
 - Added new job ad attribute :ad-attr:`SubmitVersion`.  This string valued
   attribute is the condor version of the :tool:`condor_submit` version or
   python bindings version used to submit the job.  In the case of a remote 
-  submit, it may be different than the :ad-attr:`CondorVersion` of ad,
+  submit, it may be different than the :ad-attr:`CondorVersion[type=Schedd]` of ad,
   which represents the version of the *condor_schedd* the job was placed in.
   :jira:`3413`
 
-*** 25.10.0 bugs
+- Fixed python deprecation warning in :tool:`condor_top`, so that it
+  will run without errors on not-yet-released future version of python.
+  :jira:`3643`
+
+- The python method :meth:`htcondor2.Schedd.history` has an upper bound on the
+  size in bytes of the constraint and projection argument.  Now return an
+  clear error message when these bounds are exceeded.
+  :jira:`3644` 
+
+- Improve :tool:`condor_userprio` to return information about a specific
+  user provided on the command line whether or not the user is actively
+  running jobs and utilizing pool resources.
+  :jira:`3283`
+
+- Fixed a spurious error message in the :macro:`STARTER_LOG` about unhandled
+  job exit.
+  :jira:`3653`
+
+*** 25.10.1 bugs
+
+*** 25.0.10 features
+
+- Add Ubuntu 26.04 (Resolute Raccoon) support.
+  :jira:`3703`
 
 *** 25.0.10 bugs
 
-*** 25.8.1 features
-
-- The *condor_shadow* can now log a CSV record to the ``ShadowReconnectLog``
-  file each time it successfully reconnects to a disconnected starter or
-  gives up trying.  Each record contains timing information about when the
-  job was activated, the last known contact time, whether the reconnect
-  succeeded, the configured lease duration, and whether the starter is
-  known to be dead.  This is controlled by the new configuration knobs
-  :macro:`SHADOW_LOG_RECONNECT` (default ``True``) and
-  :macro:`SHADOW_RECONNECT_LOG`.
-  :jira:`3593`
+*** 25.8.2 features
 
 - HTCondor now correctly detects and advertises the NVIDIA driver version
   for NVIDIA GPUs which are configured to run in "MIG" mode.
   :jira:`3626`
 
-- Jobs that were submitted with spooled data files and have completed will
-  now leave the queue after a successful retrieval of their output files
-  (e.g. with :tool:`condor_transfer_data`).
-  :jira:`3508`
+- Singularity or Apptainer jobs now also pass ``--rocm`` to GPU jobs
+  to support AMD jobs, unless :macro:`SINGULARITY_ADD_ROCM_FLAG` is
+  set to false.
+  :jira:`3537`
+
+- Added a new ``-transfer`` option to :tool:`condor_rm`.  When used to remove
+  a running job, the job will transfer any output files it has produced
+  back to the submit machine before exiting.
+  :jira:`3519`
+
+- :tool:`condor_q` now supports a ``-aaf`` option
+  that works like ``-autoformat`` (``-af``) but appends the specified
+  attributes as additional columns after the standard output columns,
+  rather than replacing them.
+  :jira:`3571`
+
+- :tool:`condor_top` now supports a ``-history`` option to read the most
+  recently recorded on disk performance statistics.  Runs much faster,
+  and works even when the *condor_schedd* is slow or not running.
+  :jira:`3582`
+
+- :tool:`htcondor dag status` now also shows information about jobs
+  transferring sandboxes and in the transfer queue.
+  :jira:`3517`
+
+- :tool:`htcondor job status` and :tool:`condor_q` now indicate when a job is
+  in the cooldown state.
+  :jira:`3525`
+
+- :tool:`condor_run` no longer passes :jdl:`getenv = true` to the
+  generated submit file.  There is a new option ``-getenv`` to 
+  allow this.
+  :jira:`3549`
+
+- :tool:`condor_ssh_to_job` now work with container universe jobs where
+  the Singularity or Apptainer runtime uses the setuid flow.
+  :jira:`3308`
+
+- The negotiator now has access to the :ad-attr:`RemoteUserFloor` to avoid
+  going beneath a user's floor number of resources while preempting.
+  :jira:`3226`
+
+- The *condor_shadow* can now log a CSV record to the :macro:`SHADOW_RECONNECT_LOG`
+  file each time it successfully reconnects to a disconnected starter or
+  gives up trying.  Each record contains timing information about when the
+  job was activated, the last known contact time, whether the reconnect
+  succeeded, the configured lease duration, and whether the starter is
+  known to be dead.  This is controlled by :macro:`SHADOW_LOG_RECONNECT`
+  which defaults to ``True``.
+  :jira:`3593`
 
 - :tool:`condor_config_val` now has a -default option to shows the default
   value of a knob.
   :jira:`2683`
+
+- Jobs that were submitted with spooled data files and have completed will
+  now leave the queue after a successful retrieval of their output files
+  (e.g. with :tool:`condor_transfer_data`).
+  :jira:`3508`
 
 - Failed URL transfer where the URL was longer than about 100 bytes would
   never have the URL scheme logged in the hold message or user log.
@@ -74,34 +818,12 @@
   support python 3.12.
   :jira:`2213`
 
-- :tool:`condor_ssh_to_job` now work with container universe jobs where
-  the Singularity or Apptainer runtime uses the setuid flow.
-  :jira:`3308`
-
-- :tool:`htcondor dag status` now also shows information about jobs
-  transferring sandboxes and in the transfer queue.
-  :jira:`3517`
-
 - In the python bindings, functions arguments that used to have a default
-  of the `None` type now take a python Optional.  This is more compliant
+  of the :obj:`None` type now take a python Optional.  This is more compliant
   with PEP 484, and is more in line with what python linting tools
   expect.  There should be no changes needed for clients of the python
   bindings.
   :jira:`3553`
-
-- :tool:`condor_run` no longer passes :jdl:`getenv = true` to the
-  generated submit file.  There is a new option ``-getenv`` to 
-  allow this.
-  :jira:`3549`
-
-- Singularity or Apptainer jobs now also pass --rocm to GPU jobs
-  to support AMD jobs, unless :macro:`SINGULARITY_ADD_ROCM_FLAG` is
-  set to false.
-  :jira:`3537`
-
-- When cgroups are active, *condor_startds* now advertise
-  :ad-attr:`CgroupEnforced` to be true.
-  :jira:`3555`
 
 - Enabling/disabling AP users now requires ADMINISTRATOR authorization.
   Previously, WRITE with queue superuser authorization was required.
@@ -111,30 +833,11 @@
   two daemons is broken or disconnected.
   :jira:`3547`
 
-- :tool:`condor_top` now supports a `-history` option to read the most
-  recently recorded on disk performance statistics.  Runs much faster,
-  and works even when the *condor_schedd* is slow or not running.
-  :jira:`3582`
-
-- :tool:`condor_q` now supports a ``-aaf`` option
-  that works like ``-autoformat`` (``-af``) but appends the specified
-  attributes as additional columns after the standard output columns,
-  rather than replacing them.
-  :jira:`3571`
-
 - Updated list of default environment variables that *condor_dagman* always
   grabs from the users environment to **not** include ``XDG_RUNTIME_DIR``.
   :jira:`1913`
 
-- The negotiator now has access to the :ad-attr:`RemoteUserFloor` to avoid
-  going beneath a user's floor number of resources while preempting.
-  :jira:`3226`
-
-- :tool:`htcondor job status` and :tool:`condor_q` now indicate when a job is
-  in the cooldown state.
-  :jira:`3525`
-
-- :tool:`condor_status` `-server` now correctly labels the count of discovered Slots
+- :tool:`condor_status` ``-server`` now correctly labels the count of discovered Slots
   in the summary table.
   :jira:`3535`
 
@@ -144,17 +847,11 @@
   for all job credential types.
   :jira:`3536`
 
-- Added new `histogram` option to :tool:`htcondor eventlog` and :tool:`htcondor dag`.
+- Added new ``histogram`` option to :tool:`htcondor eventlog` and :tool:`htcondor dag`.
   :jira:`3530`
 
-- Added a new ``-transfer`` option to :tool:`condor_rm`.  When used to remove
-  a running job, the job will transfer any output files it has produced
-  back to the submit machine before exiting.
-  :jira:`3519`
-
 - The **copy_to_spool** command in :tool:`condor_submit` is no longer
-  supported.
-  This does not affect the ability to spool a job's full input sandbox.
+  supported. This does not affect the ability to spool a job's full input sandbox.
   :jira:`3545`
 
 - No longer warn about configuration knobs with dots in the names if the knob
@@ -192,9 +889,16 @@
   to version 5.3.8.
   :jira:`3576`
 
-*** 25.8.1 bugs
+*** 25.8.2 bugs
 
-- Fixed a bug that caused the *condor_starter* to log many confusing errors and not exit
+- Fixed bugs where a job would be placed on hold if there was a problem transferring
+  files via Pelican (OSDF) or HTTP.  Now in several cases where the problem was the
+  fault of HTCSS and not the fault of the job, the job will go back to idle and attempt
+  to be rematched instead of going on hold.  Several additional VacateReasonSubCodes where
+  added in support of this; see section :ref:`Vacate Reason Codes`.
+  :jira:`2952`
+
+- Fixed a bug that caused the *condor_starter* to log confusing errors and not exit
   promptly if it failed to launch a Singularity job.
   :jira:`3531`
 
@@ -204,7 +908,7 @@
 
 - Fixed a minor bug whereby the Access Point is unaware that the Execution Point relinquishes a
   match when the EP's :macro:`WANT_HOLD` is triggered.  This can result in the AP failing to
-  activate the next job in a job list due to VacateReasonCode 1033 ( :ad-attr:`ActivationRefusedUnclaimed` ).
+  activate the next job in a job list due to VacateReasonCode 1033 ``ActivationRefusedUnclaimed``.
   :jira:`3609`
 
 *** 25.0.9 bugs
@@ -256,7 +960,7 @@
 *** 25.6.1 features
 
 - DAGMan now uses the new DAG file parser introduced for :tool:`condor_dag_checker`. The old
-  parser will be deprecated in the future but can be used by setting :macro:`DAGMAN_USE_OLD_FILE_PARSER`
+  parser will be deprecated in the future but can be used by setting ``DAGMAN_USE_OLD_FILE_PARSER``
   to ``True``.
   :jira:`3304`
 

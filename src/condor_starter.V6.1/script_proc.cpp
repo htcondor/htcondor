@@ -84,7 +84,7 @@ ScriptProc::StartJob()
 		// path to the binary, and don't try to chmod it.
 	std::string exe_path = "";
 	if( tmp != NULL && !fullpath( tmp ) ) {
-		exe_path += starter->GetWorkingDir(0);
+		exe_path += starter->GetWorkingDir(WD::OUTER);
 		exe_path += DIR_DELIM_CHAR;
 	}
 
@@ -249,7 +249,6 @@ ScriptProc::StartJob()
 	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 	JobPid = daemonCore->CreateProcessNew( exe_path, args,
 		 cpArgs.priv(PRIV_USER_FINAL)
-		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 		.env(&job_env).cwd(starter->jic->jobIWD()).coreHardLimit(core_size_ptr)
 		.niceInc(nice_inc).jobOptMask(DCJOBOPT_NO_ENV_INHERIT)
 	);

@@ -37,7 +37,9 @@
 #include "generic_query.h"
 #include "dc_collector.h"
 // for std::sort
-#include <algorithm> 
+#include <algorithm>
+#include <charconv>
+#include <limits>
 #include <vector>
 
 //-----------------------------------------------------------------
@@ -51,7 +53,7 @@ enum {
    DetailFactor    = 0x0004,
    DetailGroup     = 0x0008,
    DetailResUsed   = 0x0010,
-   DetailWtResUsed = 0x0020,
+   DetailAccUsage  = 0x0020,
    DetailUseTime1  = 0x0040, // usage start time
    DetailUseTime2  = 0x0080, // usage end time
    DetailEffQuota  = 0x0100,
@@ -66,7 +68,7 @@ enum {
    DetailCeiling   = 0x20000,
    DetailFloor     = 0x40000,
    DetailPrios     = DetailPriority | DetailFactor | DetailRealPrio,
-   DetailUsage     = DetailResUsed | DetailWtResUsed,
+   DetailUsage     = DetailResUsed | DetailAccUsage,
    DetailQuota2    = DetailEffQuota | DetailCfgQuota,
    DetailQuotas    = DetailEffQuota | DetailCfgQuota | DetailTreeQuota | DetailSurplus | DetailRequested,
    DetailMost      = DetailCfgQuota | DetailSurplus | DetailPriority | DetailFactor | DetailUsage | DetailUseDeltaT | DetailRequested | DetailCeiling | DetailFloor,
@@ -83,28 +85,27 @@ enum {
 };
 
 struct LineRec {
-  std::string Name;
-  double Priority;
-  int Res;
-  double wtRes;
-  double AccUsage;
-  double Requested;
-  double Factor;
-  time_t BeginUsage;
-  time_t LastUsage;
-  std::string AcctGroup;
-  bool IsAcctGroup;
-  int   HasDetail;      // one or more of Detailxxx flags indicating the that data exists.
-  double EffectiveQuota;
-  double ConfigQuota;
-  double SubtreeQuota;
-  double Ceiling;
-  double Floor;
-  double SortKey;
-  int   Surplus;       // 0 is no, 1 = regroup (by prio), 2 = accept_surplus (by quota)
-  int   index;
-  int   GroupId;
-  double DisplayOrder;  // used to flexibly control sort order in Hier sort mode.
+	std::string Name;
+	double Priority {0};
+	double wtRes {0};
+	double AccUsage {0};
+	double Requested {0};
+	double Factor {0};
+	time_t BeginUsage {0};
+	time_t LastUsage {0};
+	std::string AcctGroup;
+	bool IsAcctGroup {false};
+	int   HasDetail {0};  // one or more of Detailxxx flags indicating the that data exists.
+	double EffectiveQuota {0};
+	double ConfigQuota {0};
+	double SubtreeQuota {0};
+	double Ceiling {-1};
+	double Floor {-1};
+	double SortKey {0};
+	int   Surplus {SurplusUnset};   // 0 is no, 1 = regroup (by prio), 2 = accept_surplus (by quota)
+	int   index {0};
+	int   GroupId {0};
+	double DisplayOrder {0};  // used to flexibly control sort order in Hier sort mode.
 };
 
 //-----------------------------------------------------------------
@@ -240,7 +241,7 @@ struct LineRecLT {
         // Order submitters by accumulated usage or priority or name depending on CL flags
         if (detail_flag & DetailPriority) {
             return a.Priority < b.Priority;
-        } else if (detail_flag & DetailUsage) {
+        } else if (detail_flag & DetailAccUsage) {
             return a.AccUsage < b.AccUsage;
         } else {
             return a.Name < b.Name;
@@ -363,6 +364,10 @@ main(int argc, const char* argv[])
   int SetPrio=0;
   int SetFloor=0;
   int SetCeiling=0;
+  int LeaseDuration=0;              // seconds; >0 when -duration supplied
+  int CancelCeilingLeaseArg=0;      // argv index of -cancelceilinglease, 0 if unused
+  int CancelFloorLeaseArg=0;        // argv index of -cancelfloorlease, 0 if unused
+  int CancelFactorLeaseArg=0;       // argv index of -cancelfactorlease, 0 if unused
   int SetAccum=0;
   int SetBegin=0;
   int SetLast=0;
@@ -404,6 +409,34 @@ main(int argc, const char* argv[])
       if (i+2>=argc) usage(argv[0]);
       SetCeiling=i;
       i+=2;
+    }
+    else if (IsArg(argv[i],"duration")) {
+      if (i+1>=argc) usage(argv[0]);
+      const std::string_view sv{argv[i+1]};
+      int v = 0;
+      auto [ptr, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), v);
+      if (ec != std::errc{} || ptr != sv.data() + sv.size() ||
+          v <= 0 || v == std::numeric_limits<int>::max()) {
+        fprintf(stderr, "%s: -duration requires a positive integer number of seconds\n", argv[0]);
+        exit(1);
+      }
+      LeaseDuration = v;
+      i+=1;
+    }
+    else if (IsArg(argv[i],"cancelceilinglease")) {
+      if (i+1>=argc) usage(argv[0]);
+      CancelCeilingLeaseArg=i;
+      i+=1;
+    }
+    else if (IsArg(argv[i],"cancelfloorlease")) {
+      if (i+1>=argc) usage(argv[0]);
+      CancelFloorLeaseArg=i;
+      i+=1;
+    }
+    else if (IsArg(argv[i],"cancelfactorlease")) {
+      if (i+1>=argc) usage(argv[0]);
+      CancelFactorLeaseArg=i;
+      i+=1;
     }
     else if (IsArg(argv[i],"setbegin")) {
       if (i+2>=argc) usage(argv[0]);
@@ -585,14 +618,20 @@ main(int argc, const char* argv[])
 		}
     }
   }
-      
+
+  // If specific users were requested, show them regardless of last usage time
+  if (!full_user_names.empty() || !short_user_names.empty()) {
+	  MinLastUsageTime = -1;
+  }
+
   //----------------------------------------------------------
 
 	  // Get info on our negotiator
   Daemon negotiator(DT_NEGOTIATOR, neg_name, pool_name);
   if (!negotiator.locate(Daemon::LOCATE_FOR_ADMIN)) {
-	  fprintf(stderr, "%s: Can't locate negotiator in %s\n", 
-              argv[0], pool_name ? pool_name : "local pool");
+	  fprintf(stderr, "%s: Can't locate negotiator '%s' in %s\n",
+              argv[0], neg_name ? neg_name : "default",
+              pool_name ? pool_name : "local pool");
 	  // If we are getting userprio info from the collector, don't exit,
 	  // as we don't need to talk to the negotiator. If we do, we'll
 	  // exit with an approriate error later.
@@ -604,7 +643,7 @@ main(int argc, const char* argv[])
   negotiatorCanDoDirect = true; // Assumes a post version 9.1.1 negotiator, which supports direct query.
  
   // knob to disable negotiator modular direct query, in case this causes problems (the results *are* a bit different)
-  if ( ! param_boolean("USERPRIO_USE_NEGOTIATOR_MODULAR_QUERY", false)) {
+  if ( ! param_boolean("USERPRIO_USE_NEGOTIATOR_MODULAR_QUERY", true)) {
 	  negotiatorCanDoDirect = false;
   }
 
@@ -639,14 +678,14 @@ main(int argc, const char* argv[])
 
   }
 
-  else if (SetFactor) { // set priority
+  else if (SetFactor) { // set priority factor
 
 	const char* tmp;
 	if( ! (tmp = strchr(argv[SetFactor+1], '@')) ) {
-		fprintf( stderr, 
+		fprintf( stderr,
 				 "%s: You must specify the full name of the submittor you wish\n",
 				 argv[0] );
-		fprintf( stderr, "\tto update the priority of (%s or %s)\n", 
+		fprintf( stderr, "\tto update the priority of (%s or %s)\n",
 				 "user@uid.domain", "user@full.host.name" );
 		exit(1);
 	}
@@ -656,6 +695,43 @@ main(int argc, const char* argv[])
 				 "1.\n");
 		exit(1);
 	}
+
+    if (LeaseDuration > 0) {
+      Sock* sock = negotiator.startCommand(MANAGE_PRIORITY_FACTOR,
+                                           Stream::reli_sock, 0);
+      if (!sock) {
+        fprintf(stderr, "failed to start MANAGE_PRIORITY_FACTOR command to negotiator\n");
+        exit(1);
+      }
+      ClassAd req;
+      req.Assign(ATTR_SUBMITTER, argv[SetFactor+1]);
+      req.Assign("Action", "set");
+      req.Assign("PriorityFactor", Factor);
+      req.Assign("Duration", LeaseDuration);
+      if (!putClassAd(sock, req) || !sock->end_of_message()) {
+        fprintf(stderr, "failed to send MANAGE_PRIORITY_FACTOR request to negotiator\n");
+        exit(1);
+      }
+      sock->decode();
+      ClassAd reply;
+      if (!getClassAd(sock, reply) || !sock->end_of_message()) {
+        fprintf(stderr, "failed to read MANAGE_PRIORITY_FACTOR reply from negotiator\n");
+        exit(1);
+      }
+      sock->close();
+      delete sock;
+      bool success = false;
+      std::string err;
+      reply.LookupBool("Success", success);
+      reply.LookupString("ErrorString", err);
+      if (!success) {
+        fprintf(stderr, "negotiator rejected priority-factor lease: %s\n",
+                err.empty() ? "unknown error" : err.c_str());
+        exit(1);
+      }
+      printf("Set priority-factor lease on %s to %f for %d seconds\n",
+             argv[SetFactor+1], Factor, LeaseDuration);
+    } else {
 
     // send request
     Sock* sock;
@@ -696,6 +772,7 @@ main(int argc, const char* argv[])
     delete sock;
 
     printf("The priority factor of %s was set to %f\n",argv[SetFactor+1],Factor);
+    }
 
   }
 
@@ -710,20 +787,20 @@ main(int argc, const char* argv[])
 	if (SetFloor) {
 		argIndex = SetFloor;
 		name = "floor";
-		command = SET_FLOOR;
+		command = (LeaseDuration > 0) ? MANAGE_FLOOR : SET_FLOOR;
 		minValue = 0;
 	} else {
 		argIndex = SetCeiling;
 		name = "ceiling";
-		command = SET_CEILING;
+		command = (LeaseDuration > 0) ? MANAGE_CEILING : SET_CEILING;
 		minValue = -1;
 	}
 	const char* tmp;
 	if( ! (tmp = strchr(argv[argIndex+1], '@')) ) {
-		fprintf( stderr, 
+		fprintf( stderr,
 				 "%s: You must specify the full name of the submittor you wish\n",
 				 argv[0] );
-		fprintf( stderr, "\tto update the %s of (%s or %s) (not %s)\n", 
+		fprintf( stderr, "\tto update the %s of (%s or %s) (not %s)\n",
 				 name, "user@uid.domain", "user@full.host.name", argv[argIndex+1] );
 		exit(1);
 	}
@@ -735,20 +812,112 @@ main(int argc, const char* argv[])
 	}
 
     // send request
-    Sock* sock;
-    if( !(sock = negotiator.startCommand(command,
-										 Stream::reli_sock, 0) ) ||
-        !sock->put(argv[argIndex+1]) ||
-        !sock->put(value) ||
-        !sock->end_of_message()) {
-      fprintf( stderr, "failed to send SET_%s command to negotiator\n", name);
+    Sock* sock = negotiator.startCommand(command, Stream::reli_sock, 0);
+    if (!sock) {
+      fprintf(stderr, "failed to send SET_%s command to negotiator\n", name);
       exit(1);
     }
 
+    if (command == MANAGE_CEILING || command == MANAGE_FLOOR) {
+      ClassAd req;
+      req.Assign(ATTR_SUBMITTER, argv[argIndex+1]);
+      req.Assign("Action", "set");
+      req.Assign(command == MANAGE_CEILING ? "Ceiling" : "Floor", (int)value);
+      req.Assign("Duration", LeaseDuration);
+      if (!putClassAd(sock, req) || !sock->end_of_message()) {
+        fprintf(stderr, "failed to send MANAGE_%s request to negotiator\n", name);
+        exit(1);
+      }
+      sock->decode();
+      ClassAd reply;
+      if (!getClassAd(sock, reply) || !sock->end_of_message()) {
+        fprintf(stderr, "failed to read MANAGE_%s reply from negotiator\n", name);
+        exit(1);
+      }
+      sock->close();
+      delete sock;
+      bool success = false;
+      std::string err;
+      reply.LookupBool("Success", success);
+      reply.LookupString("ErrorString", err);
+      if (!success) {
+        fprintf(stderr, "negotiator rejected %s lease: %s\n",
+                name, err.empty() ? "unknown error" : err.c_str());
+        exit(1);
+      }
+      printf("Set %s lease on %s to %ld for %d seconds\n",
+             name, argv[argIndex+1], value, LeaseDuration);
+    } else {
+      if (!sock->put(argv[argIndex+1]) ||
+          !sock->put(value) ||
+          !sock->end_of_message()) {
+        fprintf(stderr, "failed to send SET_%s command to negotiator\n", name);
+        exit(1);
+      }
+      sock->close();
+      delete sock;
+      printf("The %s of %s was set to %ld\n", name, argv[argIndex+1], value);
+    }
+  }
+
+  else if (CancelCeilingLeaseArg || CancelFloorLeaseArg || CancelFactorLeaseArg) {
+    int argIndex;
+    int command;
+    const char* name;
+    const char* flag;
+    if (CancelCeilingLeaseArg) {
+      argIndex = CancelCeilingLeaseArg;
+      command = MANAGE_CEILING;
+      name = "ceiling";
+      flag = "-cancelceilinglease";
+    } else if (CancelFloorLeaseArg) {
+      argIndex = CancelFloorLeaseArg;
+      command = MANAGE_FLOOR;
+      name = "floor";
+      flag = "-cancelfloorlease";
+    } else {
+      argIndex = CancelFactorLeaseArg;
+      command = MANAGE_PRIORITY_FACTOR;
+      name = "priority-factor";
+      flag = "-cancelfactorlease";
+    }
+    const char* submitter = argv[argIndex+1];
+    if (!strchr(submitter, '@')) {
+      fprintf(stderr,
+              "%s: %s requires a full submitter name (user@domain)\n",
+              argv[0], flag);
+      exit(1);
+    }
+    Sock* sock = negotiator.startCommand(command, Stream::reli_sock, 0);
+    if (!sock) {
+      fprintf(stderr, "failed to start %s lease cancel command to negotiator\n", name);
+      exit(1);
+    }
+    ClassAd req;
+    req.Assign(ATTR_SUBMITTER, submitter);
+    req.Assign("Action", "cancel");
+    if (!putClassAd(sock, req) || !sock->end_of_message()) {
+      fprintf(stderr, "failed to send %s lease cancel request to negotiator\n", name);
+      exit(1);
+    }
+    sock->decode();
+    ClassAd reply;
+    if (!getClassAd(sock, reply) || !sock->end_of_message()) {
+      fprintf(stderr, "failed to read %s lease cancel reply from negotiator\n", name);
+      exit(1);
+    }
     sock->close();
     delete sock;
-
-    printf("The %s of %s was set to %ld\n",name, argv[argIndex+1],value);
+    bool success = false;
+    std::string err;
+    reply.LookupBool("Success", success);
+    reply.LookupString("ErrorString", err);
+    if (!success) {
+      fprintf(stderr, "negotiator rejected cancel: %s\n",
+              err.empty() ? "unknown error" : err.c_str());
+      exit(1);
+    }
+    printf("Cancelled %s lease for %s\n", name, submitter);
   }
 
   else if (SetAccum) { // set accumulated usage
@@ -1015,15 +1184,17 @@ main(int argc, const char* argv[])
 	ClassAd *ad = NULL;
 	std::vector<ClassAd> accountingAds;
 
-	if (fromCollector || (negotiatorCanDoDirect && ! GroupRollup)) {
+	bool haveUserConstraint = !full_user_names.empty() || !short_user_names.empty();
+	if (fromCollector || (negotiatorCanDoDirect && ! GroupRollup) || haveUserConstraint) {
 		CondorQuery query(ACCOUNTING_AD);
 		CondorError errstack;
 		QueryResult q;
 
-		if (neg_name) {
-			std::string constraint;
-			formatstr(constraint, ATTR_NEGOTIATOR_NAME " == \"%s\"", neg_name);
-			query.addANDConstraint(constraint.c_str());
+		// the global -constraint flag
+		if (!constraint.empty()) {
+			std::string toConstrain;
+			constraint.makeQuery(toConstrain);
+			query.addANDConstraint(toConstrain.c_str());
 		}
 
 		// build a constraint for usernames
@@ -1045,7 +1216,15 @@ main(int argc, const char* argv[])
 			query.addANDConstraint(constraint.c_str());
 		}
 
+		bool queryNegotiator = !fromCollector;
 		if (fromCollector) {
+
+			if (neg_name) {
+				std::string constraint;
+				formatstr(constraint, ATTR_NEGOTIATOR_NAME " == \"%s\"", neg_name);
+				query.addANDConstraint(constraint.c_str());
+			}
+
 			CollectorList * collectors = CollectorList::create(pool_name);
 			q = collectors->query(query, accountingAds, &errstack);
 			delete collectors;
@@ -1053,7 +1232,18 @@ main(int argc, const char* argv[])
 				fprintf(stderr, "Can't query collector for ads: %s\n", errstack.getFullText().c_str());
 				exit(1);
 			}
-		} else {
+			// If the collector returned fewer results than the number of
+			// users we queried for, and the user didn't explicitly force
+			// the collector, fall back to the negotiator which has more data.
+			size_t numQueried = full_user_names.size() + (short_user_names.empty() ? 0 : 1 + std::count(short_user_names.begin(), short_user_names.end(), ','));
+			if (accountingAds.size() < numQueried && !forceFromCollector) {
+				fprintf(stderr, "Not all user(s) found in collector, querying negotiator...\n");
+				accountingAds.clear();
+				queryNegotiator = true;
+			}
+		}
+		
+		if (queryNegotiator) {
 			q = query.fetchAds(accountingAds, negotiator.addr(), &errstack);
 			if (q != Q_OK) {
 				fprintf(stderr, "Can't query negotiator for ads: %s\n", errstack.getFullText().c_str());
@@ -1175,7 +1365,7 @@ static void ProcessInfo(ClassAd* ad, std::vector<ClassAd> &accountingAds, bool G
   if (HierFlag) {
      none_last = (GlobalSurplusPolicy == SurplusRegroup);
      order = SortHierByGroupId;
-     if (DetailFlag & (DetailPriority | DetailUsage))
+     if (DetailFlag & (DetailPriority | DetailAccUsage))
         order = SortHierByDisplayOrder;
   } else if (GroupOrder) {
      order = SortGroupsFirstByIndex;
@@ -1216,33 +1406,12 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
   std::string attrIsAcctGroup;
   std::string attrFloor;
   std::string attrCeiling;
-  char  name[128], policy[32];
-  double priority = 0;
-  double Factor = 0;
-  double AccUsage = -1;
-  double ceiling = -1;
-  double floor = -1;
-  int   resUsed = 0;
-  time_t BeginUsage = 0;
-  int   LastUsage = 0;
-  double wtResUsed, requested = 0;
-  std::string AcctGroup;
-  bool IsAcctGroup;
-  double effective_quota = 0, config_quota = 0, subtree_quota = 0;
+  char  policy[32];
   bool fNeedGroupIdFixup = false;
 
   for( int i=1; i<=numElem; i++) {
-    LR[i-1].Priority=0;
-    LR[i-1].index = i;
-    LR[i-1].GroupId=0;
-    LR[i-1].SortKey = 0;
-    LR[i-1].Surplus = SurplusUnset;
-    LR[i-1].DisplayOrder = 0;
-    LR[i-1].HasDetail = 0;
-    LR[i-1].LastUsage=MinLastUsageTime;
-    LR[i-1].Requested=0.0;
-    LR[i-1].Ceiling=-1;
-    LR[i-1].Floor=-1;
+    LineRec& LRentry = LR[i-1];
+    LRentry.index = i;
 
 	char strI[32];
 
@@ -1255,144 +1424,128 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
 		ad = & accountingAds[i - 1];
 	}
 
-	snprintf(attrName, sizeof(attrName), "Name%s", strI);
-	snprintf(attrPrio, sizeof(attrPrio), "Priority%s", strI);
-	snprintf(attrResUsed, sizeof(attrResUsed), "ResourcesUsed%s", strI);
-	snprintf(attrRequested, sizeof(attrRequested), "Requested%s", strI);
-	snprintf(attrWtResUsed, sizeof(attrWtResUsed), "WeightedResourcesUsed%s", strI);
-	snprintf(attrFactor, sizeof(attrFactor), "PriorityFactor%s", strI);
-	snprintf(attrBeginUsage, sizeof(attrBeginUsage), "BeginUsageTime%s", strI);
-	snprintf(attrLastUsage, sizeof(attrLastUsage), "LastUsageTime%s", strI);
-	snprintf(attrAccUsage, sizeof(attrAccUsage), "WeightedAccumulatedUsage%s", strI);
-    formatstr(attrAcctGroup, "AccountingGroup%s", strI);
-    formatstr(attrIsAcctGroup, "IsAccountingGroup%s", strI);
-    formatstr(attrCeiling, "Ceiling%s", strI);
-    formatstr(attrFloor, "Floor%s", strI);
-
-    if( !ad->LookupString	( attrName, name, COUNTOF(name) ) 		|| 
-		!ad->LookupFloat	( attrPrio, priority ) )
-			continue;
-
-    LR[i-1].HasDetail |= DetailPriority | DetailName;
-
-    if( ad->LookupFloat( attrFactor, Factor ) ) {
-       LR[i-1].HasDetail |= DetailFactor;
-       if (Factor > 0)
-          LR[i-1].HasDetail |= DetailRealPrio;
-       }
-	if( ad->LookupFloat( attrAccUsage, AccUsage ) ) LR[i-1].HasDetail |= DetailUsage;
-	if( ad->LookupFloat( attrCeiling, ceiling ) ) LR[i-1].HasDetail |= DetailCeiling;
-	if( ad->LookupFloat( attrFloor, floor ) ) LR[i-1].HasDetail |= DetailFloor;
-	if( ad->LookupFloat( attrRequested, requested ) ) LR[i-1].HasDetail |= DetailRequested;
-	if( ad->LookupInteger( attrBeginUsage, BeginUsage ) ) LR[i-1].HasDetail |= DetailUseTime1;
-	if( ad->LookupInteger( attrLastUsage, LastUsage ) ) LR[i-1].HasDetail |= DetailUseTime2 | DetailUseDeltaT;
-	if( ad->LookupInteger( attrResUsed, resUsed ) ) LR[i-1].HasDetail |= DetailUsage;
-
-	if( !ad->LookupFloat( attrWtResUsed, wtResUsed ) ) {
-		wtResUsed = resUsed;
-	} else {
-		LR[i-1].HasDetail |= DetailWtResUsed;
+	if (accountingAds.empty() || i == 1) {
+		snprintf(attrName, sizeof(attrName), "Name%s", strI);
+		snprintf(attrPrio, sizeof(attrPrio), "Priority%s", strI);
+		snprintf(attrResUsed, sizeof(attrResUsed), "ResourcesUsed%s", strI);
+		snprintf(attrRequested, sizeof(attrRequested), "Requested%s", strI);
+		snprintf(attrWtResUsed, sizeof(attrWtResUsed), "WeightedResourcesUsed%s", strI);
+		snprintf(attrFactor, sizeof(attrFactor), "PriorityFactor%s", strI);
+		snprintf(attrBeginUsage, sizeof(attrBeginUsage), "BeginUsageTime%s", strI);
+		snprintf(attrLastUsage, sizeof(attrLastUsage), "LastUsageTime%s", strI);
+		snprintf(attrAccUsage, sizeof(attrAccUsage), "WeightedAccumulatedUsage%s", strI);
+		formatstr(attrAcctGroup, "AccountingGroup%s", strI);
+		formatstr(attrIsAcctGroup, "IsAccountingGroup%s", strI);
+		formatstr(attrCeiling, "Ceiling%s", strI);
+		formatstr(attrFloor, "Floor%s", strI);
 	}
 
-    if (!ad->LookupString(attrAcctGroup, AcctGroup)) {
-        AcctGroup = "<none>";
+	if( !ad->LookupString(attrName, LRentry.Name) ||
+	    !ad->LookupFloat(attrPrio, LRentry.Priority) ) {
+			continue;
+	}
+
+    LRentry.HasDetail |= DetailPriority | DetailName;
+
+    if( ad->LookupFloat(attrFactor, LRentry.Factor) ) {
+       LRentry.HasDetail |= DetailFactor;
+       if (LRentry.Factor > 0)
+          LRentry.HasDetail |= DetailRealPrio;
+       }
+	if( ad->LookupFloat( attrAccUsage, LRentry.AccUsage ) ) LRentry.HasDetail |= DetailAccUsage;
+	if( ad->LookupFloat( attrCeiling, LRentry.Ceiling ) ) LRentry.HasDetail |= DetailCeiling;
+	if( ad->LookupFloat( attrFloor, LRentry.Floor ) ) LRentry.HasDetail |= DetailFloor;
+	if( ad->LookupFloat( attrRequested, LRentry.Requested ) ) LRentry.HasDetail |= DetailRequested;
+	if( ad->LookupInteger( attrBeginUsage, LRentry.BeginUsage ) ) LRentry.HasDetail |= DetailUseTime1;
+	if( ad->LookupInteger( attrLastUsage, LRentry.LastUsage ) ) LRentry.HasDetail |= DetailUseTime2 | DetailUseDeltaT;
+
+	if (ad->LookupFloat(attrWtResUsed, LRentry.wtRes) || ad->LookupFloat(attrResUsed, LRentry.wtRes)) {
+		LRentry.HasDetail |= DetailResUsed;
+	}
+
+    if (!ad->LookupString(attrAcctGroup, LRentry.AcctGroup)) {
+        LRentry.AcctGroup = "<none>";
     }
-    if (!ad->LookupBool(attrIsAcctGroup, IsAcctGroup)) {
-        IsAcctGroup = false;
+    if (!ad->LookupBool(attrIsAcctGroup, LRentry.IsAcctGroup)) {
+        LRentry.IsAcctGroup = false;
     }
 
     char attr[64];
     snprintf( attr, sizeof(attr), "EffectiveQuota%s", strI );
-    if (ad->LookupFloat(attr, effective_quota)) LR[i-1].HasDetail |= DetailEffQuota;
+    if (ad->LookupFloat(attr, LRentry.EffectiveQuota)) LRentry.HasDetail |= DetailEffQuota;
     snprintf( attr, sizeof(attr), "ConfigQuota%s", strI );
-    if (ad->LookupFloat(attr, config_quota)) LR[i-1].HasDetail |= DetailCfgQuota;
+    if (ad->LookupFloat(attr, LRentry.ConfigQuota)) LRentry.HasDetail |= DetailCfgQuota;
 
-    if (IsAcctGroup) {
-        LR[i-1].GroupId = -i;
-        if (!strcmp(name,"<none>") || !strcmp(name,"."))
-           LR[i-1].GroupId = 0;
+    if (LRentry.IsAcctGroup) {
+        LRentry.GroupId = -i;
+        if (LRentry.Name == "<none>" || LRentry.Name == ".")
+           LRentry.GroupId = 0;
 
         snprintf( attr, sizeof(attr), "GroupAutoRegroup%s", strI );
         bool regroup = false;
-        if (ad->LookupBool(attr, regroup)) LR[i-1].HasDetail |= DetailSurplus;
-        LR[i-1].Surplus = regroup ? SurplusRegroup : SurplusNone;
+        if (ad->LookupBool(attr, regroup)) LRentry.HasDetail |= DetailSurplus;
+        LRentry.Surplus = regroup ? SurplusRegroup : SurplusNone;
         if (regroup)
            GlobalSurplusPolicy = SurplusRegroup;
 
         snprintf( attr, sizeof(attr), "SurplusPolicy%s", strI );
         if (ad->LookupString(attr, policy, COUNTOF(policy) )) {
-           LR[i-1].HasDetail |= DetailSurplus;
+           LRentry.HasDetail |= DetailSurplus;
            if (MATCH == strcasecmp(policy, "regroup")) {
               GlobalSurplusPolicy = SurplusRegroup;
-              LR[i-1].Surplus = SurplusRegroup;
+              LRentry.Surplus = SurplusRegroup;
            } else if (MATCH == strcasecmp(policy, "byquota")) {
               GlobalSurplusPolicy = SurplusByQuota;
-              LR[i-1].Surplus = SurplusByQuota;
+              LRentry.Surplus = SurplusByQuota;
            } else if (MATCH == strcasecmp(policy, "no")) {
-              LR[i-1].Surplus = SurplusNone;
+              LRentry.Surplus = SurplusNone;
               } else {
-              LR[i-1].Surplus = SurplusUnknown;
+              LRentry.Surplus = SurplusUnknown;
            }
         }
 
-        double sort_key = LR[i-1].SortKey;
+        double sort_key = LRentry.SortKey;
         snprintf( attr, sizeof(attr), "GroupSortKey%s", strI );
-        if (ad->LookupFloat(attr, sort_key)) LR[i-1].HasDetail |= DetailSortKey;
-        LR[i-1].SortKey = sort_key;
+        if (ad->LookupFloat(attr, sort_key)) LRentry.HasDetail |= DetailSortKey;
+        LRentry.SortKey = sort_key;
 
         snprintf( attr, sizeof(attr), "SubtreeQuota%s", strI );
-        if (ad->LookupFloat(attr, subtree_quota)) LR[i-1].HasDetail |= DetailTreeQuota;
-        if (GroupRollup && !(LR[i-1].HasDetail & DetailEffQuota)) {
-           LR[i-1].HasDetail &= ~DetailPrios;
+        if (ad->LookupFloat(attr, LRentry.SubtreeQuota)) LRentry.HasDetail |= DetailTreeQuota;
+        if (GroupRollup && !(LRentry.HasDetail & DetailEffQuota)) {
+           LRentry.HasDetail &= ~DetailPrios;
         }
 
         if (GroupPrioIsMeaningless) {
-           LR[i-1].HasDetail &= ~DetailPriority;
+           LRentry.HasDetail &= ~DetailPriority;
         }
 
     } else {
        // if this is not a group, then it's in a group, if it's in the none
        // group we can set it's group id now, but if not we need to stuff 
        // in a bogus value and set a flag to turn on groupid fixup later.
-       if (AcctGroup == "<none>" || AcctGroup == ".")
-          LR[i-1].GroupId = 0;
+       if (LRentry.AcctGroup == "<none>" || LRentry.AcctGroup == ".")
+          LRentry.GroupId = 0;
        else {
           // set to large negative number so we know we have to fix it
-          LR[i-1].GroupId = -numElem*2;
+          LRentry.GroupId = -numElem*2;
           fNeedGroupIdFixup = true;
        }
-       if (LR[i-1].HasDetail & (DetailEffQuota | DetailCfgQuota))
+       if (LRentry.HasDetail & (DetailEffQuota | DetailCfgQuota))
           UsersHaveQuotas = true;
     }
 
-    if (LR[i-1].GroupId != 0)
-       LR[i-1].HasDetail |= DetailGroup;
+    if (LRentry.GroupId != 0)
+       LRentry.HasDetail |= DetailGroup;
 
-	if (LastUsage==0) LastUsage=-1;
+    DetailAvailFlag |= LRentry.HasDetail;
 
-    DetailAvailFlag |= LR[i-1].HasDetail;
-
-    LR[i-1].Name=name;
-    LR[i-1].Priority=priority;
-    LR[i-1].Res=resUsed;
-    LR[i-1].wtRes=wtResUsed;
-    LR[i-1].Requested=requested;
-    LR[i-1].Factor=Factor;
-    LR[i-1].BeginUsage=BeginUsage;
-    LR[i-1].LastUsage=LastUsage;
-    LR[i-1].AccUsage=AccUsage;
-    LR[i-1].Ceiling=ceiling;
-    LR[i-1].Floor=floor;
-    LR[i-1].AcctGroup=AcctGroup;
-    LR[i-1].IsAcctGroup=IsAcctGroup;
-    LR[i-1].EffectiveQuota = effective_quota;
-    LR[i-1].ConfigQuota = config_quota;
-    LR[i-1].SubtreeQuota = subtree_quota;
   }
  
   // don't print colums if the negotiator didn't send us any data for them.
-  if ( ! (DetailAvailFlag & DetailUsage))
-    DetailFlag &= ~DetailUsage;
+  if ( ! (DetailAvailFlag & DetailAccUsage))
+    DetailFlag &= ~DetailAccUsage;
+  if ( ! (DetailAvailFlag & DetailResUsed))
+    DetailFlag &= ~DetailResUsed;
   if ( ! (DetailAvailFlag & DetailFactor))
     DetailFlag &= ~DetailFactor;
   if ( ! (DetailAvailFlag & DetailUseTime1))
@@ -1430,7 +1583,7 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
               LR[i].DisplayOrder = LR[i].SortKey;
            else
               LR[i].DisplayOrder = LR[i].GroupId ? LR[i].Priority : FLT_MAX;
-        } else if (DetailFlag & DetailUsage) {
+        } else if (DetailFlag & DetailAccUsage) {
            LR[i].DisplayOrder = LR[i].AccUsage / 3600.0;
         } else {
            LR[i].DisplayOrder = LR[i].GroupId ? (float)LR[i].GroupId : FLT_MAX;
@@ -1574,7 +1727,7 @@ static const struct {
    { DetailRealPrio,   8, "Real\0Priority" },
    { DetailFactor,     9, "Priority\0Factor" },
    { DetailResUsed,    6, "Wghted\0In Use" },
-   { DetailWtResUsed, 12, "Total Usage\0(wghted-hrs)" },
+   { DetailAccUsage,  12, "Total Usage\0(wghted-hrs)" },
    { DetailUseTime1,  16, "Usage\0Start Time" },
    { DetailUseTime2,  16, "Last\0Usage Time" },
    { DetailUseDeltaT, 10, "Time Since\0Last Usage" },
@@ -1605,10 +1758,6 @@ static void PrintInfo(int tmLast, LineRec* LR, int NumElem, bool HierFlag)
    printf("Last Priority Update: %s\n",format_date(tmLast));
 
    LineRec Totals;
-   Totals.Res=0;
-   Totals.wtRes=0.0;
-   Totals.BeginUsage=0;
-   Totals.AccUsage=0;
 
    int cols_max_width = 0;
    for (int ii = 0; ii < (int)COUNTOF(aCols); ++ii)
@@ -1770,7 +1919,7 @@ static void PrintInfo(int tmLast, LineRec* LR, int NumElem, bool HierFlag)
                break;
             case DetailRequested:    FormatFloat(Line+ix, aCols[ii].width, 0, LR[j].Requested);
                break;
-            case DetailWtResUsed: FormatFloat(Line+ix, aCols[ii].width, 2, LR[j].AccUsage/3600.0);
+            case DetailAccUsage:  FormatFloat(Line+ix, aCols[ii].width, 2, LR[j].AccUsage/3600.0);
                break;
             case DetailUseTime1:  FormatDateTime(Line+ix, aCols[ii].width+1, LR[j].BeginUsage, "");
                break;
@@ -1851,7 +2000,7 @@ static void PrintInfo(int tmLast, LineRec* LR, int NumElem, bool HierFlag)
             break;
          case DetailResUsed:   FormatFloat(Line+ix, aCols[ii].width, 0, Totals.wtRes);
             break;
-         case DetailWtResUsed: FormatFloat(Line+ix, aCols[ii].width, 2, Totals.AccUsage/3600.0);
+         case DetailAccUsage:  FormatFloat(Line+ix, aCols[ii].width, 2, Totals.AccUsage/3600.0);
             break;
          case DetailUseTime1:  FormatDateTime(Line+ix, aCols[ii].width+1, Totals.BeginUsage, "");
             break;
@@ -1891,6 +2040,15 @@ static void usage(const char* name) {
      "\t-setfactor <user> <val>\tSet priority factor for <user>\n"
      "\t-setfloor <user> <val>\tSet floor for <user>\n"
      "\t-setceiling <user> <val>\tSet ceiling for <user>\n"
+     "\t-setceiling <user> <val> -duration <secs>\n"
+     "\t\t\t\tSet a temporary ceiling lease on <user> for <secs> seconds\n"
+     "\t-cancelceilinglease <user>\tCancel an in-effect ceiling lease for <user>\n"
+     "\t-setfloor <user> <val> -duration <secs>\n"
+     "\t\t\t\tSet a temporary floor lease on <user> for <secs> seconds\n"
+     "\t-cancelfloorlease <user>\tCancel an in-effect floor lease for <user>\n"
+     "\t-setfactor <user> <val> -duration <secs>\n"
+     "\t\t\t\tSet a temporary priority-factor lease on <user> for <secs> seconds\n"
+     "\t-cancelfactorlease <user>\tCancel an in-effect priority-factor lease for <user>\n"
      "\t-setaccum <user> <val>\tSet Accumulated usage for <user>\n"
      "\t-setbegin <user> <val>\tset last first date for <user>\n"
      "\t-setlast <user> <val>\tset last active date for <user>\n"
@@ -1965,7 +2123,9 @@ static void PrintResList(ClassAd* ad)
             break;
 
     char* p=strrchr(name,'@');
-    *p='\0';
+	if (p) {
+		*p='\0';
+	}
     time_t Now=time(0)-StartTime;
 	printf(Fmt,name,format_date(StartTime),format_time(Now));
   }

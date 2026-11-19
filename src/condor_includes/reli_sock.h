@@ -107,6 +107,8 @@ public:
 
 	virtual int do_reverse_connect(char const *ccb_contact,bool nonblocking,CondorError * errorStack);
 
+	virtual int do_outbound_ccb_connect(char const *ccb_addr,char const *target,bool nonblocking,CondorError * errorStack,int ttl = -1);
+
 	virtual void cancel_reverse_connect();
 
 	virtual int do_shared_port_local_connect( char const *shared_port_id, bool nonblocking,char const *sharedPortIP );
@@ -138,7 +140,10 @@ public:
     ///
 	int listen();
     /// FALSE means this is an incoming connection
-	int listen(condor_protocol proto, int port);
+	/// @param loopback if true, bind only to the loopback address rather than
+	///        to whatever BIND_ALL_INTERFACES/NETWORK_INTERFACE select, so the
+	///        resulting listen socket is reachable only from this host.
+	int listen(condor_protocol proto, int port, bool loopback = false);
 	bool isListenSock() { return _state == sock_special && _special_state == relisock_listen; }
 
     ///

@@ -52,7 +52,7 @@ class ParallelProc : public VanillaProc
 		*/
 	virtual int addEnvVars();
 
-    virtual bool JobReaper( int pid, int status );
+    virtual ReapResult JobReaper( int pid, int status );
 
 		/** Parallen tasks shouldn't be suspended.  So, if we get a
 			suspend, instead of sending the task a SIGSTOP, we

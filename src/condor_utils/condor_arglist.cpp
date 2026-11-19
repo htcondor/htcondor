@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_arglist.h"
-#include "condor_string.h"
 #include "condor_attributes.h"
 
 void append_arg(char const *arg, std::string &result) {

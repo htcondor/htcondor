@@ -34,9 +34,13 @@
 #include "dagman_classad.h"
 #include "dag_priority_q.h"
 #include "dag_commands.h"
+#include "dagman_submit.h"
 #include "throttles.hpp"
+#include "edge.h"
 #include <ranges>
 #include <filesystem>
+#include <system_error>
+#include <numeric>
 
 #include <queue>
 
@@ -174,6 +178,10 @@ public:
 	// Set nodes effective priotities
 	void SetNodePriorities();
 
+	// Make Edge/DagArc connections between parent and child nodes. `meta` is the
+	// DagArc metadata (e.g. ARC_WEAK) to apply to each created children-edge arc;
+	// callers are responsible for translating dependency strength into this bitmask.
+	bool Connect(std::vector<Node*>& parents, const std::vector<Node*>& children, unsigned int meta = 0);
 	// Remove duplicate edges between nodes
 	void AdjustEdges();
 	// Prepare DAG for initial run. ONLY CALL FUNCTION ONCE!
@@ -205,7 +213,7 @@ public:
 	const char *GetStatusName() const { return DAG_STATUS_NAMES[_dagStatus]; }
 
 	// Functions to find Nodes
-	Node* FindNodeByNodeID(const NodeID_t nodeID) const;
+	Node* FindNodeByNodeID(const node_id_t nodeID) const;
 	Node* FindNodeByName(const char * nodeName) const;
 	Node* FindNodeByEventID(const CondorID condorID) const;
 	Node* FindAllNodesByName(const char* nodeName, const char *finalSkipMsg, const char *file, int line) const;
@@ -295,8 +303,8 @@ public:
 	}
 
 	inline int NumReadyServiceNodes() const {
-		auto IsReady = [](const Node* n) -> bool { return n->GetStatus() == Node::STATUS_READY; };
-		return std::count_if(_service_nodes.begin(), _service_nodes.end(), IsReady);
+		auto CountReady = [](int ready, const Node* n) { return ready + (n->GetStatus() == Node::STATUS_READY); };
+		return std::accumulate(_service_nodes.begin(), _service_nodes.end(), 0, CountReady);
 	}
 
 	inline int PreRunNodeCount() const { return _preRunNodeCount; }
@@ -366,6 +374,7 @@ public:
 
 	// Node Status file helper functions
 	void SetNodeStatusFileName(const char *statusFileName, int minUpdateTime, bool alwaysUpdate = false);
+	void SetNodeStatusFormat(const DAG::NodeStatusFmt fmt, const bool c) { _node_status_fmt = fmt; _node_status_compact = c; }
 	void DumpNodeStatus(bool held, bool removed);
 
 	// JobState log helper functions
@@ -389,6 +398,10 @@ public:
 		return desc;
 	}
 
+	// NOTE: Has to be static global across DAG instances
+	//       as long as splices exist as they do
+	static EdgeTable edge_table; // Global edge table to connect nodes
+
 	const DagmanOptions &dagOpts; // DAGMan command line options
 	const DagmanConfig &config; // DAGMan configuration values
 	const Throttles& throttles; // DAGMan configured throttles
@@ -396,17 +409,13 @@ public:
 
 	const int MAX_SIGNAL{64}; // Maximum signal number we can deal with in error handling
 
+	std::string cif{}; // First discovered CommonInputTransfer list (hopefully temporary)
+
 protected:
 	mutable std::vector<Node*> _nodes; // List of all 'normal' and SubDAG nodes
 	std::vector<Node*> _service_nodes{}; // List of Service nodes
 	std::map<std::string, std::string> InlineDescriptions{}; // Internal job submit descriptions
 private:
-	typedef enum {
-		SUBMIT_RESULT_OK,
-		SUBMIT_RESULT_FAILED,
-		SUBMIT_RESULT_NO_SUBMIT,
-	} submit_result_t;
-
 	using PinNodes = std::vector<Node *>;
 	using PinList = std::vector<PinNodes *>;
 
@@ -434,8 +443,9 @@ private:
 	void UpdateNodeCounts(Node *node, int change);
 
 	bool StartNode(Node *node, bool isRetry); // Begin executing node (PRE Script -> ready queue -> POST Script)
+	bool StartIfReady(Node *node); // Start `node` iff it's now STATUS_READY; used as a parent-completion callback
 	void RestartNode(Node *node, bool recovery); // Restart a failed node w/ retries
-	submit_result_t SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID, std::string& err); // Submit a nodes job to Schedd queue
+	SubmitResult SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID, std::string& err); // Submit a nodes job to Schedd queue
 	void TerminateNode(Node* node, bool recovery, bool bootstrap = false); // Final actions once node is completed successfully
 
 	bool RunPostScript(Node *node, bool ignore_status, int status, bool incrementRunCount = true);
@@ -480,8 +490,6 @@ private:
 
 	void DFSVisit(Node * node, int depth); // DFS visit and number nodes to detect cycle
 
-	const char *EscapeClassadString(const char* strIn);
-
 	// Private DOT file helper functions
 	void IncludeExtraDotCommands(FILE *dot_file);
 	void DumpDotFileNodes(FILE *temp_dot_file);
@@ -501,7 +509,7 @@ private:
 	std::vector<int> _graph_widths{};
 
 	std::map<std::string, Node*> _nodeNameHash{};
-	std::map<NodeID_t, Node*> _nodeIDHash{};
+	std::map<node_id_t, Node*> _nodeIDHash{};
 	std::map<int, Node*> _condorIDHash{};
 	std::map<int, Node*> _noopIDHash{};
 
@@ -521,7 +529,8 @@ private:
 	ScriptQ* _postScriptQ{nullptr};
 	ScriptQ* _holdScriptQ{nullptr};
 
-	DagmanMetrics* _metrics{nullptr};
+	DagSubmit* submitter{nullptr}; // This does not own this pointer
+	DagmanMetrics* _metrics{nullptr}; // This does not own this pointer
 	ProvisionerClassad* _provisionerClassad{nullptr}; // Provisioner node ClassAd functionality
 	// NOTE: Provisioner and Final nodes exist in _jobs vector.
 	//       These pointers are for quick access
@@ -546,6 +555,7 @@ private:
 
 	DagStatus _dagStatus{DAG_STATUS_OK};
 	DagStatus _altHaltStatus{DAG_STATUS_OK};
+	DAG::NodeStatusFmt _node_status_fmt{DAG::NodeStatusFmt::CLASSAD};
 
 	int _numNodesDone{0}; // Number of nodes that have completed execution
 	int _numNodesFailed{0}; // Number of nodes that have failed (list of jobs/PRE/POST failed)
@@ -584,6 +594,8 @@ private:
 	bool _reject{false}; // Reject this DAG
 	bool _dagIsHalted{false}; // DAG is currently halted
 	bool _dagIsAborted{false}; // DAG has been aborted. Needed because ABORT-DAG-ON w/ return 0 is DAG_STATUS_OK
+
+	bool _node_status_compact{false}; // Is node status file multiline or single line
 
 	// Information for producing dot files, which can be used to visualize
 	// DAG files. Dot is part of the graphviz package, which is available from

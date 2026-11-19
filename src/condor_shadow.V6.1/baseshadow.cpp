@@ -45,6 +45,10 @@
 #include <algorithm>
 #include "log_rotate.h"
 #include "safe_open.h"
+#include "transfer_proc.h"
+
+#include "cxfer_state.h"
+extern CXFER_STATE cxfer_type;
 
 // these are declared static in baseshadow.h; allocate space here
 BaseShadow* BaseShadow::myshadow_ptr = NULL;
@@ -163,8 +167,26 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
         // the mpi shadow, at least...and a good idea in general.
 	jobAd->Assign(ATTR_MY_ADDRESS, daemonCore->InfoCommandSinfulString());
 
+	if( cxfer_type != CXFER_STATE::INVALID ) {
+		int numShadowStarts;
+		if(! jobAd->LookupInteger( ATTR_NUM_SHADOW_STARTS, numShadowStarts )) {
+			jobAd->Assign( ATTR_NUM_SHADOW_STARTS, 1 );
+		}
+	}
+	if( cxfer_type == CXFER_STATE::STAGING ) {
+	    // Until (and unless) we can handle restarting transfer shadows
+	    // (after a schedd restart), ask that the starter not waste any
+	    // time waiting for a reconnect to happen.  Since 0 has a special
+	    // meaning, avoid it; since we're choosing a non-zero number, pick
+	    // one that will allow for reconnection after a transient network
+	    // failure, since the starter can't tell the difference.
+	    int duration = param_integer( "DATA_SLOT_MAX_DISCONNECT_DURATION", 20 );
+	    jobAd->Assign( ATTR_JOB_LEASE_DURATION, duration );
+	}
+
+
 	DebugId = display_dprintf_header;
-	
+
 	config();
 
 		// Make sure we've got enough swap space to run
@@ -215,8 +237,11 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	}
 
 		// initialize the UserPolicy object
-	shadow_user_policy.init( jobAd, this );
-
+	if(cxfer_type != CXFER_STATE::STAGING) {
+		shadow_user_policy.init( jobAd, this );
+	} else {
+		shadow_user_policy.init( NULL, this );
+	}
 		// setup an object to keep our job ad updated to the schedd's
 		// permanent job queue.  this clears all the dirty bits on our
 		// copy of the classad, so anything we touch after this will
@@ -285,8 +310,8 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 
 		classy_counted_ptr<DCStartd> startd = new DCStartd("description", NULL, startdSinful.c_str(), claimid.c_str());
 	
-		classy_counted_ptr<DCMsgCallback> cb = 
-			new DCMsgCallback((DCMsgCallback::CppFunction)&BaseShadow::startdClaimedCB,
+		std::shared_ptr<DCMsgCallback> cb =
+			std::make_shared<DCMsgCallback>((DCMsgCallback::CppFunction)&BaseShadow::startdClaimedCB,
 			this, jobAd);
 																 
 			// this can't fail, will always call the callback
@@ -668,6 +693,8 @@ BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_s
 	jobAd->Assign( ATTR_HOLD_REASON_CODE, hold_reason_code );
 	jobAd->Assign( ATTR_HOLD_REASON_SUBCODE, hold_reason_subcode );
 
+	recordActivationEndingForWastedMemory();
+
 		// try to send email (if the user wants it)
 	emailHoldEvent( reason );
 
@@ -753,6 +780,8 @@ void BaseShadow::removeJobPre( const char* reason )
 
 	// Put the reason in our job ad.
 	jobAd->Assign( ATTR_REMOVE_REASON, reason );
+
+	recordActivationEndingForWastedMemory();
 
 	emailRemoveEvent( reason );
 
@@ -910,6 +939,8 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 
 	CommitSuspensionTime(jobAd);
 
+	recordActivationEndingForWastedMemory();
+
 	// update the job ad in the queue with some important final
 	// attributes so we know what happened to the job when using
 	// condor_history...
@@ -1054,6 +1085,8 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 	jobAd->Assign(ATTR_VACATE_REASON_CODE, reason_code);
 	jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, reason_subcode);
 
+	recordActivationEndingForWastedMemory();
+
 	// update the job ad in the queue with some important final
 	// attributes so we know what happened to the job when using
 	// condor_history...
@@ -1100,6 +1133,8 @@ BaseShadow::requeueJob( const char* reason )
 
 		// Put the reason in our job ad.
 	jobAd->Assign( ATTR_REQUEUE_REASON, reason );
+
+	recordActivationEndingForWastedMemory();
 
 		// write stuff to user log:
 	logRequeueEvent( reason );
@@ -1491,7 +1526,7 @@ BaseShadow::log_except(const char *msg_str)
 	int dummy;
 	if (!job_ad->LookupInteger(ATTR_VACATE_REASON_CODE, dummy)) {
 		std::string vacate_str = "Shadow Exception: ";
-		vacate_str += msg_str;
+		if (msg_str) vacate_str += msg_str;
 		job_ad->Assign(ATTR_JOB_LAST_SHADOW_EXCEPTION, event.getMessage());
 		job_ad->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
 		job_ad->Assign(ATTR_VACATE_REASON, vacate_str);
@@ -1617,7 +1652,13 @@ BaseShadow::updateJobInQueue( update_t type )
 		// Note that we force a non-durable update for X509 updates; if the
 		// schedd crashes, we don't really care when the proxy was updated
 		// on the worker node.
-	return job_updater->updateJob( type, 0 );
+
+	// Don't waste the schedd's time with an update it can't store.
+	if(! isTransferShadowProcID(getProc())) {
+		return job_updater->updateJob( type, 0 );
+	} else {
+		return true;
+	}
 }
 
 

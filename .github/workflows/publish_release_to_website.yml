@@ -3,6 +3,9 @@ on:
   release:
     types: [released, edited]
 
+permissions:
+  contents: read
+
 jobs:
   Publish-Release-To-Website:
     runs-on: ubuntu-latest
@@ -12,7 +15,7 @@ jobs:
       publish_repo_ssh: git@github.com:htcondor/htcondor-web.git
     steps:
 
-      - name: Build the release page a put it in current directory
+      - name: Build the release page and put it in current directory
         uses: CHTC/build_release_page@master
         with:
           repository: ${{ github.repository }}

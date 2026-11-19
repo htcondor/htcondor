@@ -3,7 +3,7 @@
 DAGMan Workflows
 ================
 
-DAGMan is a HTCondor tool that allows multiple jobs to be organized in
+DAGMan is an HTCondor tool that allows multiple jobs to be organized in
 **workflows**, represented as a directed acyclic graph (DAG). A DAGMan workflow
 automatically submits jobs in a particular order, such that certain jobs need
 to complete before others start running. This allows the outputs of some jobs

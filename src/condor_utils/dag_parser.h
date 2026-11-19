@@ -20,9 +20,9 @@
 #ifndef DAG_PARSER_H
 #define DAG_PARSER_H
 
+#include "condor_common.h"
 #include <set>
 #include <string>
-#include <fstream>
 #include <filesystem>
 #include <optional>
 
@@ -38,6 +38,8 @@ public:
 		source = src;
 		line = line_no;
 		error = err;
+
+		chomp(error);
 	}
 
 	std::string str() const {
@@ -64,6 +66,10 @@ public:
 	}
 
 	std::string GetError() const { return error; }
+
+	std::string GetLocation() const {
+		return source + ":" + std::to_string(line);
+	}
 
 	// Get example syntax for failed DAG command
 	std::string syntax() const {
@@ -272,7 +278,7 @@ public:
 			int64_t pos = ftell_64b(efp);
 			fseek_64b(efp, 0, SEEK_END);
 			e.iNext = ftell_64b(efp);
-			fseek_64b(efp, pos, SEEK_SET);
+			(void)fseek_64b(efp, pos, SEEK_SET);
 			e.eof = true;
 			return e;
 		}
@@ -321,7 +327,7 @@ public:
 		if (err.empty()) {
 			auto perr = ParseError();
 			if (perr.has_value()) {
-				err = perr.value().str();
+				err = perr->str();
 			}
 		}
 		return err;
@@ -358,13 +364,14 @@ private:
 	std::string ParseNodeTypes(DagLexer& details, DAG::CMD type);
 	std::string ParseSplice(DagLexer& details);
 	std::string ParseSubmitDesc(DagLexer& details);
-	std::string ParseParentChild(DagLexer& details);
+	std::string ParseParentChild(DagLexer& details, const std::string& keyword);
 	std::string ParseScript(DagLexer& details);
 	std::string ParseRetry(DagLexer& details);
 	std::string ParseAbortDagOn(DagLexer& details);
 	std::string ParseVars(DagLexer& details);
 	std::string ParsePriority(DagLexer& details);
 	std::string ParsePreSkip(DagLexer& details);
+	std::string ParseTolerance(DagLexer& details);
 	std::string ParseSavePoint(DagLexer& details);
 	std::string ParseCategory(DagLexer& details);
 	std::string ParseMaxJobs(DagLexer& details);
@@ -401,14 +408,21 @@ private:
 		path = p;
 
 		bool setup_failure = false;
+
+		std::error_code fs_ec;
 		if (path.empty()) {
 			err = "No file path provided";
 			setup_failure = true;
-		} else if ( ! std::filesystem::exists(path)) {
-			err = "Provided file path does not exist";
+		} else if ( ! std::filesystem::exists(path, fs_ec)) {
+			// exists() clears fs_ec for a genuine "not found" and sets it
+			// only on a real lookup failure (permission/IO error). Preserve
+			// that diagnostic so an inaccessible path isn't reported as absent.
+			err = fs_ec ? "Cannot access provided file path: " + fs_ec.message()
+			            : "Provided file path does not exist";
 			setup_failure = true;
-		} else if ( ! std::filesystem::is_regular_file(path)) {
-			err = "Provided file path is not a file";
+		} else if ( ! std::filesystem::is_regular_file(path, fs_ec)) {
+			err = fs_ec ? "Cannot access provided file path: " + fs_ec.message()
+			            : "Provided file path is not a file";
 			setup_failure = true;
 		}
 

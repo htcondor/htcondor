@@ -179,6 +179,10 @@ BETTER_ENUM(CONDOR_HOLD_CODE, int,
 
 	CannotSwitchPrimaryGroup = 49,
 
+	// The job's common input files differ from those of another job
+	// in the same cluster or DAG; see COMMON_FILES_MISMATCH_SUB_CODE.
+	CommonFilesMismatch = 50,
+
 	VacateBase = 1000,
 	JobPolicyVacate = 1000,
 	SystemPolicyVacate = 1001,
@@ -217,6 +221,7 @@ BETTER_ENUM(CONDOR_HOLD_CODE, int,
 	,ActivationRefusedClaimNotFound = 1034   // claim id was not found
 	,ActivationRefusedOldClaim = 1035        // claim id existed once, but has been consumed (future)
 	,ActivationRefusedUnhealthy = 1036       // slot is unhealthy (future)
+	,StartdRehoming = 1037                   // startd is being rehomed to a different schedd
 	// NOTE!!! If you add a new hold code here, don't forget to update the Appendix in the Manual for Job ClassAds!
 )
 
@@ -269,6 +274,17 @@ BETTER_ENUM(JOB_NOT_STARTED_SUB_CODE, int,
 	OfferResourcesFailed = 6,
 
 	CatalogNameError = 7
+)
+
+// Which scope's common input files didn't match, and did they differ only
+// in the order they were listed?  Unverified means that the shadow was
+// about to map common files whose contents it could not verify.
+BETTER_ENUM(COMMON_FILES_MISMATCH_SUB_CODE, int,
+	Cluster = 1,
+	DAG = 2,
+	ClusterOrder = 3,
+	DAGOrder = 4,
+	Unverified = 5
 )
 
 // Hold reason subcode for final transfer on remove

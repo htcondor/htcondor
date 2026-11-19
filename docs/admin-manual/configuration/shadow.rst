@@ -30,8 +30,7 @@ These settings affect the *condor_shadow*.
     counters) or if it should wait and only update the job queue on the
     next periodic update. There is a trade-off between performance and
     the semantics of these attributes, which is why the behavior is
-    controlled by a configuration macro. If the *condor_shadow* do not
-    use a lazy update, and immediately ensures the changes to the job
+    controlled by a configuration macro. If the *condor_shadow* does not use a lazy update, and immediately ensures the changes to the job
     attributes are written to the job queue on disk, the semantics for
     the attributes are very solid (there's only a tiny chance that the
     counters will be out of sync with reality), but this introduces a
@@ -56,6 +55,12 @@ These settings affect the *condor_shadow*.
     reduce overhead and can allow the *condor_schedd* to achieve higher
     job completion rates. The default is 3600, one hour. The value 0
     causes *condor_shadow* to exit after running a single job.
+
+:macro-def:`DEACTIVATE_CLAIM_TIMEOUT`
+    The integer number of seconds the *condor_shadow* waits for the
+    *condor_startd* to accept and answer a request to deactivate a claim.
+    The *condor_shadow* tries three times, five seconds apart, before
+    giving up on the *condor_startd*. The default is 20.
 
 :macro-def:`SHADOW_JOB_CLEANUP_RETRY_DELAY`
     This integer specifies the number of seconds to wait between tries
@@ -102,16 +107,36 @@ These settings affect the *condor_shadow*.
 
 :macro-def:`SHADOW_LOG_RECONNECT`
     A boolean that defaults to ``True``. When ``True``, the
-    *condor_shadow* appends a CSV record to the file specified by
-    :macro:`SHADOW_RECONNECT_LOG` each time it successfully reconnects
-    to a disconnected starter, or when it gives up trying to reconnect
-    because the job lease expired. Each record contains the following
-    comma-separated fields: The cluster.proc of the job id,
-    the epoch time the job was activated, the last epoch time the 
-    shadow heard from the starter, whether the reconnect succeeded, 
-    the epoch time of the reconnect attempt, the configured lease 
-    duration in seconds, a timeout version identifier, and whether the 
-    starter process is known to be dead.
+    *condor_shadow* appends one CSV record to the file specified by
+    :macro:`SHADOW_RECONNECT_LOG` each time a disconnection from the
+    starter is resolved: either the *condor_shadow* successfully
+    reconnects, or it gives up, because the job lease expired or the
+    *condor_startd* reports that the starter is gone. A disconnection
+    that takes several reconnect attempts still produces only one
+    record. Each record contains the following comma-separated fields,
+    in order. Times are in seconds since the epoch.
+
+    #. The job id, as ``cluster.proc``.
+    #. The time the claim was activated to run this job.
+    #. The time the *condor_shadow* last heard from the starter
+       before the disconnection. If the *condor_shadow* was restarted
+       (for example, along with the *condor_schedd*), this is the
+       ``LastJobLeaseRenewal`` time recorded in the job queue, which may
+       be somewhat earlier than the actual last contact.
+    #. ``true`` if the reconnect succeeded, ``false`` if the
+       *condor_shadow* gave up.
+    #. The time the disconnection was resolved: when the reconnect
+       succeeded, or when the *condor_shadow* gave up. This is not the
+       time of the first reconnect attempt; the time the disconnection
+       was detected is recorded in the job attribute
+       :ad-attr:`JobDisconnectedDate`.
+    #. The job lease duration, in seconds (:ad-attr:`JobLeaseDuration`).
+    #. The value of :macro:`SHADOW_RECONNECT_TIMEOUT_VERSION`, or
+       ``default`` if it is not set.
+    #. ``true`` if the starter is known to be dead, otherwise ``false``.
+
+    The difference between the fifth and third fields is how long the
+    job was out of contact, which can be compared against the sixth.
 
 :macro-def:`SHADOW_RECONNECT_LOG`
     The full path and file name of the CSV file where the
@@ -132,7 +157,7 @@ These settings affect the *condor_shadow*.
     An optional string identifier that is included in each reconnect
     log record. This can be used to tag records with a version when
     experimenting with different reconnect timeout values. Defaults
-    to an empty string.
+    to an empty string, which is written to the log as ``default``.
 
 :macro-def:`ALLOW_TRANSFER_REMAP_TO_MKDIR`
     A boolean value that when ``True`` allows the *condor_shadow* to
@@ -171,17 +196,42 @@ These settings affect the *condor_shadow*.
     ``job.runs.X.Y.ads``. Where ``X`` is the jobs cluster id and ``Y`` is
     the jobs process id. For example, job 35.2 would write a job ad for each run
     to the file ``job.runs.35.2.ads``. These files can be read through :tool:`condor_history`
-    when ran with the -epochs and -directory options.
+    when run with the -epochs and -directory options.
 
     .. code-block:: console
 
         $ condor_history -epochs -directory
 
-    HTCondor does not automatically  delete these files, so unchecked the
-    directory can grow very large. Either an external entity needs to clean
+    HTCondor does not automatically  delete these files, so if unchecked, the directory can grow very large. Either an external entity needs to clean
     up or :tool:`condor_history` can use the -epochs options optional ``:d``
     extension to read and delete the files.
 
     .. code-block:: console
 
         $ condor_history -epochs:d -directory
+
+:macro-def:`SPAWN_JOB_ATTRS`
+    A comma and/or space separated list of job ClassAd attribute names that
+    the *condor_shadow* writes into the ``SPAWN`` record it appends to the job
+    epoch history when it starts a run (see
+    :ref:`admin-manual/ap-policy-configuration:job epoch history`).  The record
+    always identifies the job and the run instance; the attributes named here
+    are added to it.  The special value ``all`` writes the entire job ClassAd
+    into the record instead.  Defaults to an empty list.
+
+:macro-def:`TRANSFER_JOB_ATTRS`
+    A comma and/or space separated list of job ClassAd attribute names
+    that the *condor_shadow* copies from the job ad into a file transfer
+    job epoch history record (the ``INPUT``, ``OUTPUT``, ``CHECKPOINT``,
+    and ``COMMON`` record types written when :macro:`JOB_EPOCH_HISTORY` or
+    :macro:`JOB_EPOCH_HISTORY_DIR` is configured; see
+    :ref:`admin-manual/ap-policy-configuration:job epoch history`). An
+    attribute is only copied into the record if it is actually present on the
+    job ad. The job's ``User``, ``ProjectName``, :ad-attr:`GlobalJobId`,
+    :ad-attr:`DAGManJobId`, :ad-attr:`JobBatchId`, :ad-attr:`JobBatchName`,
+    and :ad-attr:`RemoteHost` are always copied and need not be listed. A
+    single record type can be given its own list, which replaces this one for
+    that type, by defining a knob named after the type:
+    ``INPUT_JOB_ATTRS``, ``OUTPUT_JOB_ATTRS``, ``CHECKPOINT_JOB_ATTRS`` or
+    ``COMMON_JOB_ATTRS``.
+    Defaults to ``NumShadowStarts,DAGNodeName``.

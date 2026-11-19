@@ -29,17 +29,18 @@ Synopsis
 | **htcondor** **dag** *resume* dagman-job-id
 | **htcondor** **dag** *histogram* [**-i/-\-instant** | **-c/-\-cumulative**] dagman-job-id
 | **htcondor** **dag** *throttle* [**-\-nodes** *N*] [**-\-idle** *N*] [**-\-pre** *N*] [**-\-hold** *N*] [**-\-post** *N*] [**-\-submissions** *N*] dagman-job-id
+| **htcondor** **dag** *resources* [**-history**] dagman-job-id
+
+| **htcondor** **snake** *submit* [**-\-jobdir** *directory*] [**snakefile**] [**-\- snakemake_args ...**]
 
 | **htcondor** **eventlog** *read* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog [eventlog2 [eventlog3 ...]]
 | **htcondor** **eventlog** *follow* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog
 | **htcondor** **eventlog** *histogram* [**-i/-\-instant** | **-c/-\-cumulative**] eventlog
 
-| **htcondor** **annex** *create* [*description-options*] annex-name queue\@system
-| **htcondor** **annex** *add* [*description-options*] annex-name queue\@system
+| **htcondor** **annex** *create* [*description-options*] annex-name
+| **htcondor** **annex** *add* [*description-options*] annex-name
 | **htcondor** **annex** *status* annex-name
 | **htcondor** **annex** *shutdown* annex-name
-| **htcondor** **annex** *systems*
-| **htcondor** **annex** *login* system-name
 
 | **htcondor** **credential** *list*
 | **htcondor** **credential** *add* password|kerberos|oauth2 credential-file [**-\-service** *service*] [**-\-handle** *handle*]
@@ -50,8 +51,19 @@ Synopsis
 | **htcondor** **server** *status*
 
 | **htcondor** **ap** *status* [**hostname** ...]
+| **htcondor** **ap** *claims* [**-\-name** *ap-name*]
+
+| **htcondor** **ep** *rehome* [**-\-schedd-pool** *pool*] [**-\-cancel**] [**-\-timeout** *seconds*] [**-\-reboot**] *ep-name* *schedd-name*
+| **htcondor** **ep** *status* *ep-name*
 
 | **htcondor** **cm** *status*
+
+| **htcondor** **cluster** *summarize* cluster_id
+| **htcondor** **cluster** *dashboard* cluster_id
+| **htcondor** **cluster** *histogram* [**-\-show** *cdf|histogram|both*] [**-\-percentiles** *N*] [**-\-print-list**] cluster_id
+| **htcondor** **cluster** *analytics* cluster_id
+| **htcondor** **cluster** *hold* [**-\-min-count** *N*] [**-\-top** *N*] [**-\-code** *code*] [**-\-sort-by** *count|code|percent|time*] [**-\-threshold** *similarity*] [**-\-show-job-ids**] [**-\-export-jobs** *file*] cluster_id
+| **htcondor** **cluster** *fetch* [**-\-cache-dir** *directory*] cluster_id
 
 Description
 -----------
@@ -65,7 +77,7 @@ predecessor tools.
 The first argument of the *htcondor* command (ignoring any global options) is
 the *noun* representing an object in the HTCondor system to be operated on.
 The nouns include an individual *job*, *jobset*, *eventlog*, *dag*,
-or *annex*.  Each noun is then followed by a noun-specific *verb* that
+*annex*, *snake*, or *cluster*.  Each noun is then followed by a noun-specific *verb* that
 describes the operation on that noun.
 
 One of the following optional global option may appear before the noun:
@@ -207,7 +219,7 @@ Eventlog Verbs
        **-\-csv**
           By default, *htcondor eventlog read* emits a table of information
           in human readable format.  With this option, the output is in
-          a command separated value format, suitable for injestion by a spreadsheet
+          a comma separated value format, suitable for ingestion by a spreadsheet
           or database.
 
        **-\-json**
@@ -218,7 +230,7 @@ Eventlog Verbs
           With a job ad attribute name, instead of one line per job, emit one line
           summarizing all jobs that share the same value for the attribute name
           given.  In the OSG, the GLIDEIN_SITE attribute is injected into all jobs,
-          so one can quickly get a count of all jobs running, idle and exitted
+          so one can quickly get a count of all jobs running, idle and exited
           per site by using this option.
 
  **htcondor eventlog histogram** *logfile*
@@ -234,45 +246,24 @@ Annex Verbs
 -----------
 
 An *annex* is a named set of leased resources.  If the AP's administrator
-has enabled this command, any submitter who can run jobs on one of the
-supported systems can use resources from that system to run jobs placed
-at that AP.
+has enabled this command, any submitter who can run jobs on a remote
+Slurm system can use resources from that system to run jobs placed
+at the AP.
 
-  | **htcondor annex create** [*description-options*] *annex-name* *queue@system*
-  | **htcondor annex add** [*description-options*] *annex-name* *queue@system*
+  | **htcondor annex create** [*description-options*] *annex-name*
+  | **htcondor annex add** [*description-options*] *annex-name*
 
-    Create new annex with a given *annex-name* using resources from the
-    specified *queue* at the specific *system*.  The description options
+    Create new annex with a given *annex-name*.  The description options
     are the same for creating a new annex and for adding more resources
-    to the same annex.  You will be prompted to login to the system.
+    to the same annex.  This will create a tar file and print
+    instructions for how to use it to launch EPs on the desired system.
 
     **Description Options**
 
-        **-\-nodes** *nodes*
-            Number of nodes to request.  Defaults to 1.
-        **-\-lifetime** *lifetime*
-            Annex lifetime (in seconds).  Defaults to 3600.  After this
-            length of time, the annex terminates even if jobs are running.
-        **-\-cpus** *cpus*
-            Number of CPUs to request (shared queues only).  Unset by
-            default.
-        **-\-mem_mb** *memory*
-            Memory (in MB) to request (shared queues only).  Unset by
-            default.
-        **-\-gpus** *gpu-count*
-            Number of GPUs to request (GPU queues only).  Unset by default.
-        **-\-gpu-type** *type*
-            Type of GPU to request (GPU queues only).  Unset by default.
         **-\-idle-time** *seconds*
             The number of seconds to remain idle (not running any jobs)
             before shutting down.  Default and suggested minimum is
             300 seconds.
-        **-\-login-name** *login*
-            The (SSH) login name to use for this capacity request.
-            Uses SSH's default.
-        **-\-login-host** *host*
-            The (SSH) login name to use for this capacity request.
-            The default is system-specific.
 
   **htcondor annex status** *annex-name*
 
@@ -282,14 +273,6 @@ at that AP.
 
     Shuts the named annex down, releasing its resources.
 
-  **htcondor annex systems**
-
-    Displays the list of supported systems and their queues.
-
-  **htcondor annex login** *system-name*
-
-    Open a shared SSH connection to the named system; if one doesn't exist,
-    create one (requiring you to login) and share it.
 
 Credential Verbs
 ----------------
@@ -405,6 +388,52 @@ DAG Verbs
       **-\-submissions** *N*
           Set the maximum number of job list submissions per submit interval.
 
+  **htcondor dag resources** [**-history**] **dagman-job-id**
+      Display resource usage for all jobs managed by a DAG. For each job, shows
+      the node name, job ID, status, current memory usage, requested memory,
+      number of starts, and remote host. A summary line shows the total number
+      of running jobs, idle jobs, and the average memory utilization (the ratio
+      of current memory usage to requested memory) across all jobs that have
+      defined memory usage.
+
+      **-history**
+          Show jobs from the history file instead of the active queue.
+
+Snake Verbs
+-----------
+
+.. warning::
+     Snakemake is not packaged with HTCondor and must be installed separately.
+     See the `Snakemake documentation <https://snakemake.readthedocs.io/>`_ for more information about Snakemake,
+     the `snakemake-executor-plugin-htcondor <https://github.com/htcondor/snakemake-executor-plugin-htcondor/blob/main/examples/README.md>`__
+     for integrating a Snakemake workflow with HTCondor, and the plugin's `PyPI page <https://pypi.org/project/snakemake-executor-plugin-htcondor/>`_ for installation instructions.
+
+**htcondor snake submit** [**-\-jobdir <directory>**] [**snakefile**] [**-\- snakemake_args ...**]
+
+     Submits `Snakemake <https://snakemake.readthedocs.io/>`_ itself as an HTCondor local-universe management
+     job.  That management job runs Snakemake with the
+     `snakemake-executor-plugin-htcondor <https://github.com/htcondor/snakemake-executor-plugin-htcondor>`__, which in turn submits each
+     Snakemake rule as its own HTCondor job.
+
+     **snakefile**
+        Tell which Snakemake workflow file to run. If omitted, a file named ``Snakefile`` in the
+        current directory is used. **snakefile** can be specified before or after **-\-jobdir**.
+
+     **-\-jobdir <directory>**
+        Create a directory in the current working directory with the specified name.
+        If omitted, a directory named **logs** will be created by default in the current directory to store the management job logs.
+     
+     Anything after a **-\-** separator is passed through to Snakemake unmodified, so additional Snakemake
+     options can be supplied. 
+     
+     **For examples:**
+
+     .. code-block:: console
+
+         $ htcondor snake submit /path/to/Snakefile --jobdir mylogs -- --profile htcondor_profile
+         
+         $ htcondor snake submit -- --jobs 6 --cores 4
+
 .. sidebar:: HTCondor CLI System Nouns
 
     The server, access-point, and central-manager nouns refer to different
@@ -437,6 +466,56 @@ Access Point Verbs
     Specific hostnames can be provided to target which Access Points
     to get the status of.
 
+  **htcondor ap claims** [**-\-name** *ap-name*]
+
+    Displays active claims held by an access point.  For each claim,
+    shows the slot name, current activity, the source of the claim
+    (Negotiator, DirectAttach, or OCU), and the number of job
+    activations on that claim.
+
+    **-\-name** *ap-name*
+        Name or address of the access point to query.  If not specified,
+        the local access point is queried.
+
+Execution Point Verbs
+---------------------
+
+  **htcondor ep rehome** [**-\-schedd-pool** *pool*] [**-\-cancel**] [**-\-timeout** *seconds*] [**-\-reboot**] *ep-name* *schedd-name*
+
+    Directs the *condor_startd* on *ep-name* to evict all running jobs and
+    direct-attach to the *condor_schedd* identified by *schedd-name*. The
+    direct-attach configuration is persisted via the runtime persistent
+    config so it survives a restart of the *condor_startd*.
+
+    **-\-schedd-pool** *pool*
+        Collector pool to use when locating *schedd-name*. Defaults to
+        :macro:`COLLECTOR_HOST`.
+
+    **-\-cancel**
+        Cancel a prior rehome by unsetting
+        :macro:`STARTD_DIRECT_ATTACH_SCHEDD_NAME` from the persistent
+        config. No jobs are evicted.
+
+    **-\-timeout** *seconds*
+        Timeout in seconds for the rehome operation. ``0`` (the default)
+        means no timeout.
+
+    **-\-reboot**
+        After evicting all running jobs, reboot the execution point host.
+        The persisted direct-attach configuration causes the host to
+        re-attach to *schedd-name* when it comes back up. This option is
+        only honored if :macro:`STARTD_REHOME_ALLOW_REBOOT` is set to an
+        expression that evaluates to ``True`` on every slot of the EP;
+        otherwise the request is refused and no jobs are evicted. The
+        reboot itself is performed by :macro:`STARTD_REBOOT_COMMAND`
+        (default ``/sbin/reboot``).
+
+  **htcondor ep status** *ep-name*
+
+    Lists every slot on the execution point *ep-name* together with its
+    slot type, state, activity, CPUs, and memory, followed by the total
+    slot count.
+
 Central Manager Verbs
 ---------------------
 
@@ -444,6 +523,72 @@ Central Manager Verbs
 
     Returns the health status of all Central Managers the current host
     communicates with.
+
+Cluster Verbs
+-------------
+
+  **htcondor cluster summarize** *cluster_id*
+
+    Fetches (if not already cached) and analyzes all job data for a
+    cluster, then prints a consolidated health report covering resource
+    efficiency, held jobs, fast/short jobs, and runtime consistency, along
+    with the follow-up **htcondor cluster** command to run for details on
+    each issue found.
+
+  **htcondor cluster dashboard** *cluster_id*
+
+    Displays an ASCII bar chart of job counts by status (Idle, Running,
+    Held, Completed, etc.) for a cluster.
+
+  **htcondor cluster histogram** *cluster_id* [**-\-show** *cdf|histogram|both*] [**-\-percentiles** *N*] [**-\-print-list**]
+
+    Plots the runtime distribution of a cluster's completed jobs, as a
+    cumulative distribution function (CDF), a percentile histogram, or
+    both.
+
+    **-\-show** *cdf|histogram|both*
+        Which graph(s) to display. Defaults to ``both``.
+    **-\-percentiles** *N*
+        Number of percentile bins to use for the histogram. Defaults to ``10``.
+    **-\-print-list**
+        Also print the job IDs of jobs with a runtime under 10 minutes.
+
+  **htcondor cluster analytics** *cluster_id*
+
+    Produces a resource-utilization report comparing requested and used
+    CPU, memory, and disk across a cluster's jobs.
+
+  **htcondor cluster hold** *cluster_id* [**-\-min-count** *N*] [**-\-top** *N*] [**-\-code** *code*] [**-\-sort-by** *count|code|percent|time*] [**-\-threshold** *similarity*] [**-\-show-job-ids**] [**-\-export-jobs** *file*]
+
+    Classifies a cluster's held jobs by hold reason, grouping similar hold
+    messages together, and prints a table of the resulting buckets.
+
+    **-\-min-count** *N*
+        Only show buckets with at least *N* jobs. Defaults to ``1``.
+    **-\-top** *N*
+        Show only the top *N* most common buckets.
+    **-\-code** *code*
+        Filter to jobs with the given ``HoldReasonCode``.
+    **-\-sort-by** *count|code|percent|time*
+        Sort buckets by count, code, percent, or time. Defaults to ``count``.
+    **-\-threshold** *similarity*
+        Similarity threshold, between ``0.0`` and ``1.0``, used when
+        grouping hold reason messages together. Defaults to ``0.7``.
+    **-\-show-job-ids**
+        Include each bucket's ProcIds in the output table.
+    **-\-export-jobs** *file*
+        Export the held job IDs to a CSV file at *file*, for use with bulk
+        operations such as *condor_release*.
+
+  **htcondor cluster fetch** *cluster_id* [**-\-cache-dir** *directory*]
+
+    Fetches raw job data (from the current queue and job history) for a
+    cluster and caches it as a CSV file for use by the other **cluster**
+    verbs.
+
+    **-\-cache-dir** *directory*
+        Directory in which to save the cached CSV file. Defaults to the
+        current working directory.
 
 Examples
 --------

@@ -1744,13 +1744,14 @@ job_registry_merge_pending_nonpriv_updates(job_registry_handle *rha,
     if (cfp != NULL)
      {
       sprintf(cfp,"%s/%s",rha->npudir,de->d_name);
-      if (stat(cfp, &cfp_st) < 0)   { free(cfp); continue; }
-      if (!S_ISREG(cfp_st.st_mode)) { free(cfp); continue; }
       cfd = fopen(cfp, "r");
       if (cfd == NULL) {
 		  free(cfp);
 		  continue;
 	  }
+      /* fstat the open descriptor (not the path) to avoid a TOCTOU race */
+      if (fstat(fileno(cfd), &cfp_st) < 0)   { fclose(cfd); free(cfp); continue; }
+      if (!S_ISREG(cfp_st.st_mode)) { fclose(cfd); free(cfp); continue; }
 
       frret = job_registry_probe_next_record(cfd, &en);
       if (frret == 0)
@@ -1759,9 +1760,11 @@ job_registry_merge_pending_nonpriv_updates(job_registry_handle *rha,
         /* process of being written */
         fclose(cfd);
         /* Get rid of the file only if it was last modified "long" time ago */
-        if ((time(0) - cfp_st.st_mtime) > 
-            JOB_REGISTRY_CORRUPTED_NPU_FILES_MAX_LIFETIME) 
-          unlink(cfp);
+        /* Use unlinkat against the open directory fd (not the path) to */
+        /* avoid a TOCTOU race on the npudir prefix. */
+        if ((time(0) - cfp_st.st_mtime) >
+            JOB_REGISTRY_CORRUPTED_NPU_FILES_MAX_LIFETIME)
+          unlinkat(dirfd(npd), de->d_name, 0);
         free(cfp);
         continue;
        }
@@ -1810,7 +1813,9 @@ job_registry_merge_pending_nonpriv_updates(job_registry_handle *rha,
        {
         /* With no entry uniqueness check, failing to unlink the */
         /* NPU file becomes a consistency error we have to avoid. */
-        if (unlink(cfp) < 0)
+        /* Use unlinkat against the open directory fd (not the path) to */
+        /* avoid a TOCTOU race on the npudir prefix. */
+        if (unlinkat(dirfd(npd), de->d_name, 0) < 0)
          {
           int result;
           free(cfp);

@@ -67,28 +67,6 @@ Timeslice CollectorDaemon::view_sock_timeslice;
 vector<CollectorDaemon::vc_entry> CollectorDaemon::vc_list;
 ConstraintHolder CollectorDaemon::vc_projection;
 
-#if 0
-ClassAd* CollectorDaemon::__query__;
-int CollectorDaemon::__numAds__;
-int CollectorDaemon::__resultLimit__;
-int CollectorDaemon::__failed__;
-List<CollectorRecord>* CollectorDaemon::__ClassAdResultList__;
-std::string CollectorDaemon::__adType__;
-ExprTree *CollectorDaemon::__filter__;
-
-TrackTotals* CollectorDaemon::normalTotals = NULL;
-int CollectorDaemon::submittorRunningJobs;
-int CollectorDaemon::submittorIdleJobs;
-int CollectorDaemon::submittorNumAds;
-
-CollectorUniverseStats CollectorDaemon::ustatsAccum;
-
-int CollectorDaemon::machinesTotal;
-int CollectorDaemon::machinesUnclaimed;
-int CollectorDaemon::machinesClaimed;
-int CollectorDaemon::machinesOwner;
-int CollectorDaemon::startdNumAds;
-#endif
 CollectorUniverseStats CollectorDaemon::ustatsMonthly;
 
 ClassAd* CollectorDaemon::ad = NULL;
@@ -492,20 +470,6 @@ ExprTree * CollectorDaemon::get_query_filter(ClassAd* query, const std::string &
 		}
 		if (checks_absent) {
 			skip_absent = false;
-		} else {
-		#if 0 // this is now handled first class in the query scan callback
-			std::string modified_filter;
-			if (constraint) {
-				formatstr(modified_filter, "(%s) && (%s =!= True)",
-					ExprTreeToString(constraint),ATTR_ABSENT);
-			} else {
-				modified_filter = ATTR_ABSENT;
-				modified_filter += " =!= True";
-			}
-			query->AssignExpr(attr,modified_filter.c_str());
-			constraint = query->LookupExpr(attr);
-			dprintf(D_FULLDEBUG,"Query after modification: *%s*\n",modified_filter.c_str());
-		#endif
 		}
 	}
 	return constraint;
@@ -1782,72 +1746,6 @@ int CollectorDaemon::collect_op::query_scanFunc (CollectorRecord *record)
     return rc;
 }
 
-#if 0
-
-void CollectorDaemon::process_query_public (AdTypes whichAds,
-	ClassAd *query,
-	List<CollectorRecord>* results)
-{
-	// set up for hashtable scan
-	__query__ = query;
-	__numAds__ = 0;
-	__failed__ = 0;
-	__ClassAdResultList__ = results;
-	// An empty adType means don't check the MyType of the ads.
-	// This means either the command indicates we're only checking one
-	// type of ad, or the query's TargetType is "Any" (match all ad types).
-	__adType__ = "";
-	if ( whichAds == GENERIC_AD || whichAds == ANY_AD ) {
-		query->LookupString( ATTR_TARGET_TYPE, __adType__ );
-		if ( strcasecmp( __adType__.c_str(), "any" ) == 0 ) {
-			__adType__ = "";
-		}
-	}
-
-	__filter__ = query->LookupExpr( ATTR_REQUIREMENTS );
-	if ( __filter__ == NULL ) {
-		dprintf (D_ALWAYS, "Query missing %s\n", ATTR_REQUIREMENTS );
-		return;
-	}
-
-	__resultLimit__ = INT_MAX; // no limit
-	if ( ! query->LookupInteger(ATTR_LIMIT_RESULTS, __resultLimit__) || __resultLimit__ <= 0) {
-		__resultLimit__ = INT_MAX; // no limit
-	}
-
-	// If ABSENT_REQUIREMENTS is defined, rewrite filter to filter-out absent ads 
-	// if ATTR_ABSENT is not alrady referenced in the query.
-	if ( filterAbsentAds ) {	// filterAbsentAds is true if ABSENT_REQUIREMENTS defined
-		classad::References machine_refs;  // machine attrs referenced by requirements
-		bool checks_absent = false;
-
-		GetReferences(ATTR_REQUIREMENTS,*query,NULL,&machine_refs);
-		checks_absent = machine_refs.count( ATTR_ABSENT );
-		if (!checks_absent) {
-			std::string modified_filter;
-			formatstr(modified_filter, "(%s) && (%s =!= True)",
-				ExprTreeToString(__filter__),ATTR_ABSENT);
-			query->AssignExpr(ATTR_REQUIREMENTS,modified_filter.c_str());
-			__filter__ = query->LookupExpr(ATTR_REQUIREMENTS);
-			if ( __filter__ == NULL ) {
-				dprintf (D_ALWAYS, "Failed to parse modified filter: %s\n", 
-					modified_filter.c_str());
-				return;
-			}
-			dprintf(D_FULLDEBUG,"Query after modification: *%s*\n",modified_filter.c_str());
-		}
-	}
-
-	if (!collector.walkHashTable (whichAds, query_scanFunc))
-	{
-		dprintf (D_ALWAYS, "Error sending query response\n");
-	}
-
-	dprintf (D_ALWAYS, "(Sending %d ads in response to query)\n", __numAds__);
-}
-#endif
-
-//
 // Setting ATTR_LAST_HEARD_FROM to 0 causes the housekeeper to invalidate
 // the ad.  Since we don't want that -- we just want the ad to expire --
 // set the time to the next-smallest legal value, instead.  Expiring
@@ -1944,6 +1842,7 @@ void CollectorDaemon::collect_op::process_invalidation (AdTypes whichAds, ClassA
 	}
 	if ( ! hTable) {
 		dprintf(D_ALWAYS, "Invalidate failed - %s has no table\n", target_type.c_str());
+		__mytype__ = nullptr; // just in case
 		return;
 	}
 
@@ -1994,6 +1893,7 @@ void CollectorDaemon::collect_op::process_invalidation (AdTypes whichAds, ClassA
 			}
 		}
 	}
+	__mytype__ = nullptr; // just in case
 
 	if (hTablePvt) {
 		dprintf (D_ALWAYS, "(Invalidated %d ads) + %d private ads\n", __numAds__, num_pvt );
@@ -2009,65 +1909,6 @@ void CollectorDaemon::collect_op::process_invalidation (AdTypes whichAds, ClassA
 	}
 }	
 
-
-#if 1
-#else
-
-int CollectorDaemon::reportStartdScanFunc( CollectorRecord *record )
-{
-	return normalTotals->update( record->m_publicAd );
-}
-
-int CollectorDaemon::reportSubmittorScanFunc( CollectorRecord *record )
-{
-	++submittorNumAds;
-
-	int tmp1, tmp2;
-	if( !record->m_publicAd->LookupInteger( ATTR_RUNNING_JOBS , tmp1 ) ||
-		!record->m_publicAd->LookupInteger( ATTR_IDLE_JOBS, tmp2 ) )
-			return 0;
-	submittorRunningJobs += tmp1;
-	submittorIdleJobs	 += tmp2;
-
-	return 1;
-}
-
-int CollectorDaemon::reportMiniStartdScanFunc( CollectorRecord *record )
-{
-    char buf[80];
-	int iRet = 0;
-
-	++startdNumAds;
-
-	if ( record->m_publicAd->LookupString( ATTR_STATE, buf, sizeof(buf) ) )
-	{
-		machinesTotal++;
-		switch ( buf[0] )
-		{
-			case 'C':
-				machinesClaimed++;
-				break;
-			case 'U':
-				machinesUnclaimed++;
-				break;
-			case 'O':
-				machinesOwner++;
-				break;
-		}
-
-		// Count the number of jobs in each universe
-		int universe;
-		if ( record->m_publicAd->LookupInteger( ATTR_JOB_UNIVERSE, universe ) )
-		{
-			ustatsAccum.accumulate( universe );
-		}
-		iRet = 1;
-	}
-
-    return iRet;
-}
-
-#endif
 
 void CollectorDaemon::Config()
 {

@@ -636,7 +636,12 @@ X509* X509Credential::Delegate(X509_REQ* request, const DelegationRestrictions& 
   PROXY_CERT_INFO_EXTENSION proxy_info;
   PROXY_POLICY proxy_policy;
   const EVP_MD *digest = EVP_sha256();
+#if OPENSSL_VERSION_NUMBER < 0x30000000L || defined(LIBRESSL_VERSION_NUMBER)
   X509_NAME *subject = NULL;
+#else
+  const X509_NAME *subject = NULL;
+#endif
+  X509_NAME *dup_subject = NULL;
   char need_ext[] = "critical,digitalSignature,keyEncipherment";
   std::string proxy_cn;
   time_t validity_start_adjustment = 300; //  5 minute grace period for unsync clocks
@@ -797,12 +802,12 @@ X509* X509Credential::Delegate(X509_REQ* request, const DelegationRestrictions& 
 
   subject=X509_get_subject_name((X509*)cert_);
   if(!subject) goto err;
-  subject=X509_NAME_dup(subject);
-  if(!subject) goto err;
-  if(!X509_set_issuer_name(cert,subject)) goto err;
-  if(!X509_NAME_add_entry_by_NID(subject,NID_commonName,MBSTRING_ASC,(unsigned char *)const_cast<char *>(proxy_cn.c_str()),proxy_cn.length(),-1,0)) goto err;
-  if(!X509_set_subject_name(cert,subject)) goto err;
-  X509_NAME_free(subject); subject=NULL;
+  dup_subject=X509_NAME_dup(subject);
+  if(!dup_subject) goto err;
+  if(!X509_set_issuer_name(cert,dup_subject)) goto err;
+  if(!X509_NAME_add_entry_by_NID(dup_subject,NID_commonName,MBSTRING_ASC,(unsigned char *)const_cast<char *>(proxy_cn.c_str()),proxy_cn.length(),-1,0)) goto err;
+  if(!X509_set_subject_name(cert,dup_subject)) goto err;
+  X509_NAME_free(dup_subject); dup_subject=NULL;
   // This was changed from the original to expect only unix epoch time values.
   if(!(restrictions_["validityStart"].empty())) {
     validity_start=atoll(restrictions_["validityStart"].c_str());
@@ -815,11 +820,23 @@ X509* X509Credential::Delegate(X509_REQ* request, const DelegationRestrictions& 
   };
   validity_start -= validity_start_adjustment;
   //Set "notBefore"
-  if( X509_cmp_time(X509_getm_notBefore((X509*)cert_), &validity_start) < 0) {
+  { // scoped so the gotos to err below don't cross these initializations
+#if defined(LIBRESSL_VERSION_NUMBER)
+  // LibreSSL (e.g. macOS) lacks ASN1_TIME_cmp_time_t; X509_cmp_time is
+  // not deprecated there.  Returns -1 for before-or-equal, 1 after, 0 error.
+  bool nb_not_after_start = X509_cmp_time(X509_getm_notBefore((X509*)cert_), &validity_start) < 0;
+#else
+  // X509_cmp_time is deprecated in OpenSSL 4.0.
+  // ASN1_TIME_cmp_time_t returns -1/0/1 for before/equal/after, -2 on error
+  int nb_cmp = ASN1_TIME_cmp_time_t(X509_getm_notBefore((X509*)cert_), validity_start);
+  bool nb_not_after_start = (nb_cmp == -1 || nb_cmp == 0);
+#endif
+  if (nb_not_after_start) {
     X509_time_adj(X509_getm_notBefore(cert), 0L, &validity_start);
   }
   else {
     X509_set1_notBefore(cert, X509_getm_notBefore((X509*)cert_));
+  }
   }
   //Set "not After"
   if(validity_end == (time_t)(-1)) {
@@ -868,7 +885,7 @@ err:
   if(sno) ASN1_INTEGER_free(sno);
   //if(ex) X509_EXTENSION_free(ex);
   if(obj) ASN1_OBJECT_free(obj);
-  if(subject) X509_NAME_free(subject);
+  if(dup_subject) X509_NAME_free(dup_subject);
   if(policy_string) ASN1_OCTET_STRING_free(policy_string);
   return cert;
 }

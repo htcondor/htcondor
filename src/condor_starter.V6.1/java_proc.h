@@ -37,7 +37,7 @@ public:
 	virtual ~JavaProc();
 
 	virtual int  StartJob();
-	virtual bool JobReaper( int pid, int status );
+	virtual ReapResult JobReaper( int pid, int status );
 	virtual bool PublishUpdateAd( ClassAd *ad );
 	virtual char const *getArgv0();
 

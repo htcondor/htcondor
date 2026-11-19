@@ -18,11 +18,11 @@
 
 ##########################################################################
 # Set project
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.22)
 project(CONDOR LANGUAGES C CXX)
 
-# Exactly c++ 20 for all platforms
-set(CMAKE_CXX_STANDARD 20) # when changing this, also change classad CMake
+# Exactly c++ 23 for all platforms
+set(CMAKE_CXX_STANDARD 23) # when changing this, also change classad CMake
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -50,7 +50,7 @@ set(TEST_PACKAGE "condor_tests")
 #   Condor and other systems parse this number. Keep it simple:
 #   Number.Number.Number. Do nothing else.  If you need to add
 #   more information, PRE_RELEASE is usually the right location.
-set(VERSION "25.10.0")
+set(VERSION "26.2.0")
 
 # Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
 #   This should be "PRE-RELEASE-UWCS" most of the time, "DAILY" for
@@ -59,8 +59,8 @@ set(VERSION "25.10.0")
 #   perhaps because you are working on a feature branch and need to
 #   ship test binaries to a user, change this to identify your work.
 #   Avoid whitespace.
-set(PRE_RELEASE "PRE-RELEASE-UWCS")
-#set(PRE_RELEASE "RC")
+#set(PRE_RELEASE "PRE-RELEASE-UWCS")
+set(PRE_RELEASE "RC")
 #set(PRE_RELEASE OFF)
 
 # If set via the cmake command line, FORCE_PRE_RELEASE allows for
@@ -68,9 +68,9 @@ set(PRE_RELEASE "PRE-RELEASE-UWCS")
 #   cmake ... -DFORCE_PRE_RELEASE:STRING=PRE-RELEASE-NMI
 if( FORCE_PRE_RELEASE )
   set(PRE_RELEASE ${FORCE_PRE_RELEASE})
-endif( FORCE_PRE_RELEASE )
+endif()
 
-set(PACKAGE_BUGREPORT "http://htcondor-wiki.cs.wisc.edu/index.cgi/tktnew")
+set(PACKAGE_BUGREPORT "htcondor-users@g-groups.wisc.edu")
 set(PACKAGE_NAME ${PACKAGE} )
 set(TEST_PACKAGE_NAME ${TEST_PACKAGE} )
 set(PACKAGE_VERSION ${VERSION} )
@@ -89,7 +89,10 @@ option(_DEBUG "Debug statements and set default build config" OFF)
 
 ###########################################
 # start cmake module inclusion
-list(APPEND CMAKE_MODULE_PATH ${CONDOR_SOURCE_DIR}/build/cmake/macros;${CONDOR_SOURCE_DIR}/build/cmake/modules;${CONDOR_SOURCE_DIR}/build/cmake)
+list(APPEND CMAKE_MODULE_PATH
+	${CONDOR_SOURCE_DIR}/build/cmake/macros
+	${CONDOR_SOURCE_DIR}/build/cmake
+)
 
 include (dprint) # set debug module 1st to all spewing in other modules if needed
 include (AppendVar)
@@ -126,7 +129,7 @@ include (TarGz) # Must be after include(CondorPackageConfig)
 
 if ( WINDOWS )
 	set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-endif ( WINDOWS )
+endif()
 ##########################################################################
 # we only include the single sub to allow make at two levels.
 # root - includes externals
@@ -156,13 +159,15 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man")
 
 		add_custom_target ( docs ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man/man1/condor_on.1 )
 
-		install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man/ DESTINATION ${C_MAN} )
+		install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man/ DESTINATION ${C_MAN}
+		FILE_PERMISSIONS ${CONDOR_FILE_PERMS} DIRECTORY_PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 	endif()
 
 else()
 	message(STATUS "NOTE: Will install prebuilt man-pages")
 	#Use trailing slash; otherwise, it will be C_MAN/man
-	install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man/ DESTINATION ${C_MAN} )
+	install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man/ DESTINATION ${C_MAN}
+		FILE_PERMISSIONS ${CONDOR_FILE_PERMS} DIRECTORY_PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 endif()
 
 ##########################################################################

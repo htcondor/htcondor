@@ -297,7 +297,6 @@ AbstractReplicatorStateMachine::download( const char* daemonSinfulString )
 	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 	int transfererPid = daemonCore->CreateProcessNew(m_transfererPath.c_str(), processArguments,
 		 cpArgs.priv(privilege)
-		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 		.reaperID(m_downloadReaperId)
 	);
 
@@ -351,7 +350,6 @@ AbstractReplicatorStateMachine::downloadNew( const char* daemonSinfulString )
 	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 	int transfererPid = daemonCore->CreateProcessNew(m_transfererPath.c_str(), processArguments,
 		 cpArgs.priv(privilege)
-		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 		.reaperID(m_downloadReaperId)
 	);
 
@@ -408,7 +406,6 @@ AbstractReplicatorStateMachine::upload( const char* daemonSinfulString )
 	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 	int transfererPid = daemonCore->CreateProcessNew(m_transfererPath.c_str(), processArguments,
 		 cpArgs.priv(privilege)
-		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 		.reaperID(m_uploadReaperId)
 	);
 
@@ -474,7 +471,6 @@ AbstractReplicatorStateMachine::uploadNew( Stream *stream )
 	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 	int transfererPid = daemonCore->CreateProcessNew(m_transfererPath.c_str(), processArguments,
 		 cpArgs.priv(privilege)
-		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 		.reaperID(m_uploadReaperId)
 		.socketInheritList(inherit_list)
 	);

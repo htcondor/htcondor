@@ -23,6 +23,8 @@
 
 #include "proc_family_interface.h"
 #include <string>
+#include <optional>
+#include <map>
 
 // Ths class manages sets of Linux processes with cgroups.
 // This is efficient, so we do it in the caller's process,
@@ -64,7 +66,6 @@ public:
 
 	bool register_subfamily(pid_t pid, pid_t /*ppid*/, int /*snapshot_interval*/) {
 		family_root_pid = pid;
-		start_time = time(nullptr);
 		return true;
 	}
 
@@ -91,11 +92,6 @@ public:
 
 	bool kill_family(pid_t);
 
-	// Tell cgroups that when we later unregister this family,
-	// not to completely kill it off, as that will also take out
-	// the sshd below it.
-	bool extend_family_lifetime(pid_t);
-	
 	// Note this isn't called in the starter, as DaemonCore calls
 	// it after calling the Reaper, and the starter exits in the
 	// job reaper
@@ -133,19 +129,25 @@ private:
 	bool cgroupify_myself(const std::string &cgroup_name);
 	bool install_bpf_gpu_filter(const std::string &cgroup_name);
 
-	time_t start_time;
 	pid_t family_root_pid;
 	uint64_t cgroup_memory_limit;
 	uint64_t cgroup_memory_limit_low;
 	uint64_t cgroup_memory_and_swap_limit;
+	std::optional<uint64_t> cgroup_zswap_max;
 
 	// The goal is to create a new cgroup per job.  Sometimes we can't
 	// do this, because a previous job has an unkillable job in it. Today
 	// we soldier on in the existing cgroup, but the means that the previous job's
 	// cpu counters exist an are non-zero at job start.  So ... keep track of 
 	// these, so we can subtract them from the current values.
-	uint64_t starting_user_usec = 0;
-	uint64_t starting_sys_usec  = 0;
+	// Keyed by cgroup name, as the job and sshd each have their own.
+	// Recorded in the parent, as register_subfamily only runs in the child.
+	struct CpuBaseline {
+		uint64_t user_usec = 0;
+		uint64_t sys_usec  = 0;
+		time_t   start_time = 0;
+	};
+	std::map<std::string, CpuBaseline> baselines;
 
 	std::vector<dev_t> cgroup_hide_devices;
 	int cgroup_cpu_shares;

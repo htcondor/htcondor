@@ -81,7 +81,15 @@ test_components() {
 
     // This will trigger the registration checks above, but only after
     // we return into the event loop, which will happen in test_00().
-    ASSERT(kill( getpid(), SIGUSR2 ) == 0);
+    //
+    // Use daemonCore->Send_Signal() rather than raw kill(2): Send_Signal
+    // calls Signal_Myself, which sets sigEntry.is_pending synchronously.
+    // A raw kill() leaves the signal queued in the kernel until Driver
+    // unblocks signals after callSignalHandlers/Timeout, which races
+    // with the 1s wibble timer below -- if the timer fires first the
+    // coroutine resumes inline and queues another SIGUSR2; Linux
+    // coalesces non-RT signals so iter N's handlers are then lost.
+    ASSERT(daemonCore->Send_Signal( getpid(), SIGUSR2 ));
 
     wibble.deadline( sock, 1 );
     std::ignore = co_await(wibble);
@@ -90,7 +98,7 @@ test_components() {
 
     // Then test partial cancellation...
     daemonCore->Cancel_Signal( SIGUSR2, signalID0 );
-    ASSERT(kill( getpid(), SIGUSR2 ) == 0);
+    ASSERT(daemonCore->Send_Signal( getpid(), SIGUSR2 ));
 
     wibble.deadline( sock, 1 );
     std::ignore = co_await(wibble);
@@ -106,7 +114,7 @@ test_components() {
         handler2, "registration check 2", destroyer
     );
     ASSERT(signalID0 == signalID2);
-    ASSERT(kill( getpid(), SIGUSR2 ) == 0);
+    ASSERT(daemonCore->Send_Signal( getpid(), SIGUSR2 ));
 
     wibble.deadline( sock, 1 );
     std::ignore = co_await(wibble);
@@ -115,7 +123,7 @@ test_components() {
 
     // Repeate for the second slot, just in case.
     daemonCore->Cancel_Signal( SIGUSR2, signalID1 );
-    ASSERT(kill( getpid(), SIGUSR2 ) == 0);
+    ASSERT(daemonCore->Send_Signal( getpid(), SIGUSR2 ));
 
     wibble.deadline( sock, 1 );
     std::ignore = co_await(wibble);
@@ -131,7 +139,7 @@ test_components() {
         handler3, "registration check 3", destroyer
     );
     ASSERT(signalID1 == signalID3);
-    ASSERT(kill( getpid(), SIGUSR2 ) == 0);
+    ASSERT(daemonCore->Send_Signal( getpid(), SIGUSR2 ));
 
     wibble.deadline( sock, 1 );
     std::ignore = co_await(wibble);

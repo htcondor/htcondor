@@ -100,16 +100,25 @@ bool hostname_match(const char *match_pattern, const char *hostname)
     // Split the strings by '.' character, iterate through each sub-component.
     run1 = nullptr;
     run2 = nullptr;
+    bool first_entry = true;
     for (tok1 = strtok_r(match_copy, ".", &run1), tok2 = strtok_r(host_copy, ".", &run2);
          tok1 && tok2;
          tok1 = strtok_r(NULL, ".", &run1), tok2 = strtok_r(NULL, ".", &run2))
     {
         // Match non-wildcard bits
         while (*tok1 && *tok2 && *tok1 == *tok2) {
-            if (*tok2 == '*')
+            if (*tok2 == '*') {
                return false;
-            if (*tok1 == '*')
-                break;
+            }
+            if (*tok1 == '*'){
+                // A wildcard in the pattern can only appear in the first
+                // entry (i.e. before the first dot).
+                if (first_entry) {
+                    break;
+                } else {
+                    return false;
+                }
+            }
             tok1++;
             tok2++;
         }
@@ -131,6 +140,7 @@ bool hostname_match(const char *match_pattern, const char *hostname)
         else if (*tok1 || *tok2) {
             return false;
         }
+        first_entry = false;
     }
     return !tok1 && !tok2;
 }
@@ -1007,11 +1017,32 @@ Condor_Auth_SSL::authenticate_server_scitoken(CondorError *errstack, bool non_bl
 				uint32_t token_length = 0;
 				m_auth_state->m_ssl_status = SSL_peek_ptr(m_auth_state->m_ssl,
 					static_cast<void*>(&token_length), sizeof(token_length));
-				if (m_auth_state->m_ssl_status >= 1) {
-					m_auth_state->m_token_length = ntohl(token_length);
+				if (m_auth_state->m_ssl_status == sizeof(token_length)) {
+					// The length is sent by an as-yet-unauthenticated peer, so
+					// validate it before we use it to size or index a buffer.
+					// Reject zero and anything implausibly large (a SciToken is
+					// at most a few KB).  Note ntohl() yields a uint32_t.
+					// value with the high bit set would otherwise become a
+					// negative int32_t and slip past the >0 check below, leaving
+					// token_contents empty while the indexing at the bottom of
+					// the loop reads far out of bounds.
+					uint32_t net_token_length = ntohl(token_length);
+					if (net_token_length == 0 || net_token_length > AUTH_SSL_BUF_SIZE) {
+						dprintf(D_SECURITY, "Received SciToken with invalid "
+							"length %u: quitting.\n", net_token_length);
+						m_auth_state->m_done = 1;
+						m_auth_state->m_server_status = AUTH_SSL_QUITTING;
+						break;
+					}
+					m_auth_state->m_token_length = net_token_length;
 					dprintf(D_SECURITY|D_FULLDEBUG, "Peeked at the sent token; "
-						"%u bytes long; SSL status %d.\n",
+						"%d bytes long; SSL status %d.\n",
 						m_auth_state->m_token_length, m_auth_state->m_ssl_status);
+				} else if (m_auth_state->m_ssl_status >= 1) {
+					dprintf(D_SECURITY, "Received incomplete SciToken length, quitting.\n");
+					m_auth_state->m_done = 1;
+					m_auth_state->m_server_status = AUTH_SSL_QUITTING;
+					break;
 				}
 			}
 			if (m_auth_state->m_token_length == 0) {
@@ -1552,7 +1583,7 @@ Condor_Auth_SSL :: receive_message( bool non_blocking, int &status, int &len, ch
     mySock_ ->decode( );
     if( !(mySock_ ->code( status ))
         || !(mySock_ ->code( len ))
-        || !(len <= AUTH_SSL_BUF_SIZE)
+        || !(len >= 0 && len <= AUTH_SSL_BUF_SIZE)
         || !(len == (mySock_ ->get_bytes( buf, len )))
         || !(mySock_ ->end_of_message( )) ) {
         ouch( "Error communicating with peer.\n" );
@@ -1678,6 +1709,7 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 {
 	X509      *cert;
 	std::string fqdn;
+	bool saw_san_dns_name = false;
 	bool success = false;
 	ouch("post_connection_check.\n");
 
@@ -1792,8 +1824,10 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 			memcpy(san_fqdn, ASN1_STRING_get0_data(cstr), san_fqdn_len);
 #endif
 			san_fqdn[san_fqdn_len] = '\0';
-			if (strlen(san_fqdn) != static_cast<size_t>(san_fqdn_len)) // Avoid embedded null's.
+			if (strlen(san_fqdn) != static_cast<size_t>(san_fqdn_len)) { // Avoid embedded null's.
 				continue;
+			}
+			saw_san_dns_name = true;
 			if (hostname_match(san_fqdn, fqdn.c_str())) {
 				dprintf(D_SECURITY, "SSL host check: host alias %s matches certificate SAN %s.\n",
 					fqdn.c_str(), san_fqdn);
@@ -1813,17 +1847,32 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 	}
 
 skip_san:
-	{
-		char cn_fqdn[256];
-		X509_NAME *subj = nullptr;
-		if (!success && (subj = X509_get_subject_name(cert)) &&
-			X509_NAME_get_text_by_NID(subj, NID_commonName, cn_fqdn, 256) > 0)
+	// If we saw any SAN DNS entries, then we ignore the CN for hostname
+	// verification.
+	if (!saw_san_dns_name) {
+		std::string cn_fqdn;
+		if (!success) {
+			auto *subj = X509_get_subject_name(cert);
+			int idx = subj ? X509_NAME_get_index_by_NID(subj, NID_commonName, -1) : -1;
+			auto *entry = (idx >= 0) ? X509_NAME_get_entry(subj, idx) : nullptr;
+			auto *data = entry ? X509_NAME_ENTRY_get_data(entry) : nullptr;
+			unsigned char *utf8 = nullptr;
+			int len = data ? ASN1_STRING_to_UTF8(&utf8, data) : -1;
+			if (len > 0) {
+				cn_fqdn.assign(reinterpret_cast<char *>(utf8), len);
+				// Reject a CN with an embedded NUL
+				if (cn_fqdn.find('\0') != std::string::npos) {
+					cn_fqdn.clear();
+				}
+			}
+			OPENSSL_free(utf8);
+		}
+		if (!success && !cn_fqdn.empty())
 		{
-		        cn_fqdn[255] = '\0';
-			dprintf(D_SECURITY|D_FULLDEBUG, "Common Name: '%s'; host: '%s'\n", cn_fqdn, fqdn.c_str());
-			if (strcasecmp(cn_fqdn, fqdn.c_str()) != 0) {
+			dprintf(D_SECURITY|D_FULLDEBUG, "Common Name: '%s'; host: '%s'\n", cn_fqdn.c_str(), fqdn.c_str());
+			if (strcasecmp(cn_fqdn.c_str(), fqdn.c_str()) != 0) {
 				dprintf(D_SECURITY, "Certificate common name (CN), %s, does not match host %s.\n",
-					cn_fqdn, fqdn.c_str());
+					cn_fqdn.c_str(), fqdn.c_str());
 				goto err_occured;
 			} else {
 				success = true;
@@ -2366,8 +2415,6 @@ Condor_Auth_SSL::ContinueScitokensPlugins(std::string& result, CondorError* errs
 		int pid = daemonCore->CreateProcessNew(args.GetArg(0), args,
 					cpArgs.priv(PRIV_CONDOR_FINAL)
 						.reaperID(m_pluginReaperId)
-						.wantCommandPort(FALSE)
-						.wantUDPCommandPort(FALSE)
 						.env(&m_pluginState->m_env)
 						.familyInfo(&fi)
 						.std(std_fds));

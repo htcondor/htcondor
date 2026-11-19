@@ -208,22 +208,8 @@ VMProc::StartJob()
 	// with the ProcD in its call to DaemonCore::Create_Process
 
 	FamilyInfo fi;
-
-	// take snapshots at no more than 15 seconds in between, by default
-	fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 15);
-
-	m_dedicated_account = starter->jic->getExecuteAccountIsDedicated();
-
-	if (m_dedicated_account) {
-		// using login-based family tracking
-		fi.login = m_dedicated_account;
-			// The following message is documented in the manual as the
-			// way to tell whether the dedicated execution account
-			// configuration is being used.
-		dprintf(D_ALWAYS,
-		        "Tracking process family by login \"%s\"\n",
-		        fi.login);
-	}
+	int64_t mem_limit=0;
+	starter->SetupProcessTracking(fi, this, mem_limit);
 
 	// Find vmgahp server location
 	char* vmgahpfile = param( "VM_GAHP_SERVER" );
@@ -359,7 +345,7 @@ VMProc::StartJob()
 	if ( strcasecmp( m_vm_type.c_str(), CONDOR_VM_UNIVERSE_KVM ) == MATCH ||
 		 strcasecmp( m_vm_type.c_str(), CONDOR_VM_UNIVERSE_XEN ) == MATCH ) {
 		priv_state oldpriv = set_user_priv();
-		if ( chmod( starter->GetWorkingDir(0), 0755 ) == -1 ) {
+		if ( chmod( starter->GetWorkingDir(WD::OUTER), 0755 ) == -1 ) {
 			set_priv( oldpriv );
 			dprintf( D_ALWAYS, "Failed to chmod execute directory for Xen/KVM job: %s\n", strerror( errno ) );
 			return false;
@@ -373,7 +359,7 @@ VMProc::StartJob()
 		 strcasecmp( m_vm_type.c_str(), CONDOR_VM_UNIVERSE_XEN ) == MATCH ) {
 		ASSERT( create_name_for_VM( JobAd, vm_name ) );
 	} else {
-		vm_name = starter->GetWorkingDir(0);
+		vm_name = starter->GetWorkingDir(WD::OUTER);
 	}
 	recovery_ad.Assign( "JobVMId", vm_name );
 	starter->WriteRecoveryFile( &recovery_ad );
@@ -391,7 +377,7 @@ VMProc::StartJob()
 	ASSERT(m_vmgahp);
 
 	m_vmgahp->start_err_msg = "";
-	if( m_vmgahp->startUp(&job_env, starter->GetWorkingDir(0), nice_inc,
+	if( m_vmgahp->startUp(&job_env, starter->GetWorkingDir(WD::OUTER), nice_inc,
 				&fi) == false ) {
 		JobPid = -1;
 		err_msg = "Failed to start vm-gahp server";
@@ -411,6 +397,7 @@ VMProc::StartJob()
 	// Set JobPid and num_pids in user_proc.h and os_proc.h
 	JobPid = m_vmgahp->getVMGahpServerPid();
 	num_pids++;
+	starter->ReportProcessTracking(fi, this);
 
 	VMGahpRequest *new_req = new VMGahpRequest(m_vmgahp);
 	ASSERT(new_req);
@@ -428,7 +415,7 @@ VMProc::StartJob()
 				break;
 			case 1:
 			default:
-				p_result = new_req->vmStart( m_vm_type.c_str(), starter->GetWorkingDir(0) );
+				p_result = new_req->vmStart( m_vm_type.c_str(), starter->GetWorkingDir(WD::OUTER) );
 				break;
 			case 2:
 				p_result = VMGAHP_REQ_COMMAND_TIMED_OUT;
@@ -444,7 +431,7 @@ VMProc::StartJob()
 				break;
 		}
 	} else {
-		p_result = new_req->vmStart( m_vm_type.c_str(), starter->GetWorkingDir(0) );
+		p_result = new_req->vmStart( m_vm_type.c_str(), starter->GetWorkingDir(WD::OUTER) );
 	}
 
 
@@ -957,7 +944,7 @@ VMProc::CheckStatus( int /* timerID */ )
 	return;
 }
 
-bool
+ReapResult
 VMProc::JobReaper(int pid, int status)
 {
 	dprintf(D_FULLDEBUG,"Inside VMProc::JobReaper()\n");

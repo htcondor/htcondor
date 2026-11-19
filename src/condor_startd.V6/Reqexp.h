@@ -36,6 +36,7 @@ public:
 	auto_free_ptr origstart{nullptr};       // START from config
 	auto_free_ptr wrl_from_config{nullptr}; // WithinResourceLimits if set by param, but not otherwise
 	ConstraintHolder drainingStartExpr;
+	std::vector<std::string> normal_clauses; // attribute names && in the NORMAL Requirements expression
 	reqexp_state	rstate{NORMAL_REQ};
 
 	~Reqexp() {

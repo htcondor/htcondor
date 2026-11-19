@@ -228,6 +228,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 		return FALSE;
 	}
 
+	bool trying_alt = false;
 	std::string pipe_name;
 	SharedPortEndpoint::GetDaemonSocketDir(pipe_name);
 	formatstr_cat(pipe_name, "%c%s", DIR_DELIM_CHAR, shared_port_id);
@@ -277,6 +278,12 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 				return FALSE;
 			}
 			dprintf(D_FULLDEBUG, "SharedPortClient: wait for pipe id '%s' %s succeeded.\n", shared_port_id, requested_by);
+		}
+		else if (GetLastError() == ERROR_FILE_NOT_FOUND && !trying_alt)
+		{
+			trying_alt = true;
+			SharedPortEndpoint::GetAltDaemonSocketDir(pipe_name);
+			formatstr_cat(pipe_name, "%c%s", DIR_DELIM_CHAR, shared_port_id);
 		}
 		else
 		{
