@@ -2381,12 +2381,12 @@ void Dag::DumpDotFile(void) {
 
 			fprintf(temp_dot_file, "}\n");
 			fclose(temp_dot_file);
-			// Note:  we do tolerant_unlink because renaming over an
-			// existing file fails on Windows.
-			dagmanUtils.tolerant_unlink(current_dot_file_name);
-			if (rename(temp_dot_file_name.c_str(), current_dot_file_name.c_str()) != 0) {
-				debug_printf(DEBUG_NORMAL, "Warning: can't rename temporary dot file (%s) to permanent file (%s): %s\n",
-				             temp_dot_file_name.c_str(), current_dot_file_name.c_str(), strerror(errno));
+			// rotate_file() replaces the old file in a single step on every
+			// platform (see DumpNodeStatus()), so a reader never finds the
+			// dot file missing. It logs the OS error itself on failure.
+			if (rotate_file(temp_dot_file_name.c_str(), current_dot_file_name.c_str()) != 0) {
+				debug_printf(DEBUG_NORMAL, "Warning: can't rename temporary dot file (%s) to permanent file (%s)\n",
+				             temp_dot_file_name.c_str(), current_dot_file_name.c_str());
 				check_warning_strictness(DAG_STRICT_1);
 			}
 		}
