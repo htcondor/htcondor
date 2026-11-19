@@ -10305,7 +10305,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	//
 	std::string auth_hole_id;
 	if (msg->startd_fqu() && *msg->startd_fqu()) {
-		formatstr(auth_hole_id, "%s/%s", msg->startd_fqu(), msg->startd_ip_addr());
+		auth_hole_id = msg->startd_fqu();
 	} else {
 		auth_hole_id = msg->startd_ip_addr();
 	}
