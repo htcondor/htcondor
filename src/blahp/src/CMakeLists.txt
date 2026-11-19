@@ -214,7 +214,6 @@ set(blah_scripts
     scripts/lsf_status.sh scripts/lsf_submit.sh scripts/lsf_hold.sh
     scripts/lsf_resume.sh scripts/condor_cancel.sh scripts/condor_status.sh
     scripts/condor_submit.sh scripts/condor_hold.sh scripts/condor_resume.sh
-    scripts/runcmd.pl.template
     scripts/slurm_cancel.sh scripts/slurm_resume.sh scripts/slurm_status.sh
     scripts/slurm_hold.sh scripts/slurm_submit.sh
     scripts/nqs_cancel.sh scripts/nqs_resume.sh scripts/nqs_status.sh
