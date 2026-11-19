@@ -106,13 +106,14 @@ void GenericGahpClient::setErrorString( const std::string & newErrorString ) {
 
 GahpServer *GahpServer::FindOrCreateGahpServer(const char *id,
 											   const char *path,
-											   const ArgList *args)
+											   const ArgList *args,
+											   const Env* env)
 {
 	GahpServer *server = NULL;
 
 	auto it = GahpServersById.find(id);
 	if (it == GahpServersById.end()) {
-		server = new GahpServer( id, path, args );
+		server = new GahpServer(id, path, args, env);
 		ASSERT(server);
 		GahpServersById[id] = server;
 	} else {
@@ -122,7 +123,7 @@ GahpServer *GahpServer::FindOrCreateGahpServer(const char *id,
 	return server;
 }
 
-GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
+GahpServer::GahpServer(const char *id, const char *path, const ArgList *args, const Env* env)
 	: m_setCondorInherit(false)
 {
 	m_gahp_pid = -1;
@@ -152,6 +153,9 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 	binary_path = path ? strdup(path) : nullptr;
 	if ( args != NULL ) {
 		binary_args.AppendArgsFromArgList( *args );
+	}
+	if (env) {
+		binary_env.MergeFrom(*env);
 	}
 	proxy_check_tid = TIMER_UNSET;
 	master_proxy = NULL;
@@ -360,26 +364,12 @@ GahpServer::Reaper(int pid,int status)
 	return 0; // ????
 }
 
-GahpClient::GahpClient( const char * id, const char * path, const ArgList * args )
-	: GenericGahpClient( id, path, args ) { }
+GahpClient::GahpClient( const char * id, const char * path, const ArgList * args, const Env* env )
+	: GenericGahpClient(id, path, args, env) { }
 
-GenericGahpClient::GenericGahpClient(const char *id, const char *path, const ArgList *args)
+GenericGahpClient::GenericGahpClient(const char *id, const char *path, const ArgList *args, const Env* env)
 {
-	server = GahpServer::FindOrCreateGahpServer(id,path,args);
-	m_timeout = 0;
-	m_mode = normal;
-	pending_command = NULL;
-	pending_args = NULL;
-	pending_reqid = 0;
-	pending_result = NULL;
-	pending_timeout = 0;
-	pending_timeout_tid = -1;
-	pending_submitted_to_gahp = 0;
-	pending_proxy = NULL;
-	user_timerid = -1;
-	normal_proxy = NULL;
-	deleg_proxy = NULL;
-	error_string = "";
+	server = GahpServer::FindOrCreateGahpServer(id, path, args, env);
 
 	server->AddGahpClient();
 }
@@ -698,6 +688,8 @@ GahpServer::Startup(bool force)
 	Env newenv;
 	char *tmp_char;
 	int job_opt_mask = 0;
+
+	newenv.MergeFrom(binary_env);
 
 		// Check if we already have spawned a GAHP server.
 	if (m_gahp_startup_failed && force) {

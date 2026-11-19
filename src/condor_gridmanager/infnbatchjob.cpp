@@ -142,9 +142,12 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	: BaseJob( classad )
 {
 	std::string buff;
+	std::string gahp_name;
+	std::string xfer_gahp_name;
 	std::string error_string = "";
 	char *gahp_path = NULL;
 	ArgList gahp_args;
+	Env gahp_env;
 	std::string args_str;
 
 	gahpAd = NULL;
@@ -260,12 +263,21 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		}
 	}
 
-	buff = batchType;
+	gahp_name = batchType;
 	if ( gahp_args.Count() > 0 ) {
-		formatstr_cat( buff, "/%s", args_str.c_str() );
+		formatstr_cat(gahp_name, " %s", args_str.c_str());
 		gahp_args.AppendArg( "blahpd" );
 	}
-	gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
+	if (jobAd->LookupString(ATTR_IRI_SERVICE, buff)) {
+		buff = join(split(buff), ",");
+		formatstr_cat(gahp_name, "#%s", buff.c_str());
+		gahp_env.SetEnv("BLAHPD_IRI_SERVICE", buff.c_str());
+	}
+	if (jobAd->LookupString(ATTR_IRI_CREDENTIAL, buff)) {
+		formatstr_cat(gahp_name, "#%s", buff.c_str());
+		gahp_env.SetEnv("BLAHPD_IRI_CREDENTIAL", buff.c_str());
+	}
+	gahp = new GahpClient(gahp_name.c_str(), gahp_path, &gahp_args, &gahp_env);
 	free( gahp_path );
 
 	gahp->setNotificationTimerId( evaluateStateTid );
@@ -279,10 +291,10 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 			goto error_exit;
 		}
 
-		formatstr( buff, "xfer/%s/%s", batchType, args_str.c_str() );
+		formatstr(xfer_gahp_name, "xfer/%s", gahp_name.c_str());
 		gahp_args.RemoveArg( gahp_args.Count() - 1 );
 		gahp_args.AppendArg( "condor_ft-gahp" );
-		m_xfer_gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
+		m_xfer_gahp = new GahpClient(xfer_gahp_name.c_str(), gahp_path, &gahp_args);
 		free( gahp_path );
 
 		m_xfer_gahp->SetCondorInherit(true);
@@ -294,7 +306,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	}
 
 	myResource = INFNBatchResource::FindOrCreateResource( batchType,
-		gahp_args.GetArg(0), args_str.c_str() );
+		gahp_args.GetArg(0), gahp_name.c_str(), xfer_gahp_name.c_str() );
 	myResource->RegisterJob( this );
 	if ( remoteJobId ) {
 		myResource->AlreadySubmitted( this );
@@ -1562,7 +1574,13 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		}
 	}
 
-	submit_ad->Assign( "JobDirectory", BlahpJobDir() );
+	expr = "";
+	jobAd->LookupString(ATTR_IRI_DIRECTORY, expr);
+	if ( !expr.empty() ) {
+		submit_ad->Assign("JobDirectory", expr);
+	} else {
+		submit_ad->Assign( "JobDirectory", BlahpJobDir() );
+	}
 
 		// CRUFT: In the current glite code, jobs have a grid-type of 'blah'
 		//   and the blahp looks at the attribute "gridtype" for 'pbs' or

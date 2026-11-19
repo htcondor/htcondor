@@ -64,10 +64,11 @@ class GahpServer : public Service {
  public:
 	static GahpServer *FindOrCreateGahpServer(const char *id,
 											  const char *path,
-											  const ArgList *args = NULL);
+											  const ArgList *args = NULL,
+											  const Env* env = nullptr);
 	static std::map <std::string, GahpServer *> GahpServersById;
 
-	GahpServer(const char *id, const char *path, const ArgList *args = NULL);
+	GahpServer(const char *id, const char *path, const ArgList *args = NULL, const Env* env = nullptr);
 	~GahpServer();
 
 	bool Startup(bool force=false);
@@ -214,6 +215,7 @@ class GahpServer : public Service {
 	bool skip_next_r;
 	char *binary_path;
 	ArgList binary_args;
+	Env binary_env;
 	char *my_id;
 	int m_ssh_forward_port;
 
@@ -232,7 +234,8 @@ class GenericGahpClient : public Service {
 	public:
 		GenericGahpClient(	const char * id,
 							const char * path = NULL,
-							const ArgList * args = NULL );
+							const ArgList * args = NULL,
+							const Env* env = nullptr );
 		virtual ~GenericGahpClient();
 
 		bool Startup(bool force=false);
@@ -304,22 +307,22 @@ class GenericGahpClient : public Service {
 		int reset_user_timer( int tid );
 		void reset_user_timer_alarm(int timerID);
 
-		unsigned int m_timeout;
-		mode m_mode;
-		char * pending_command;
-		char * pending_args;
-		int pending_reqid;
-		Gahp_Args * pending_result;
-		time_t pending_timeout;
-		int pending_timeout_tid;
-		time_t pending_submitted_to_gahp;
-		int user_timerid;
-		GahpProxyInfo * normal_proxy;
-		GahpProxyInfo * deleg_proxy;
-		GahpProxyInfo * pending_proxy;
+		unsigned int m_timeout{0};
+		mode m_mode{normal};
+		char * pending_command{nullptr};
+		char * pending_args{nullptr};
+		int pending_reqid{0};
+		Gahp_Args * pending_result{nullptr};
+		time_t pending_timeout{0};
+		int pending_timeout_tid{-1};
+		time_t pending_submitted_to_gahp{0};
+		int user_timerid{-1};
+		GahpProxyInfo * normal_proxy{nullptr};
+		GahpProxyInfo * deleg_proxy{nullptr};
+		GahpProxyInfo * pending_proxy{nullptr};
 		std::string error_string;
 
-		GahpServer * server;
+		GahpServer * server{nullptr};
 };
 
 
@@ -336,7 +339,8 @@ class GahpClient : public GenericGahpClient {
 			/// Constructor
 		GahpClient(const char *id,
 				   const char *path=NULL,
-				   const ArgList *args=NULL);
+				   const ArgList *args=NULL,
+				   const Env* env = nullptr);
 			/// Destructor
 		~GahpClient();
 		

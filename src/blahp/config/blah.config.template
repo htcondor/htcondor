@@ -5,7 +5,7 @@
 ##Blah common variables
 
 #Supported batch systems (e.g. pbs,lsf)
-supported_lrms=pbs,lsf,sge,slurm,condor,nqs,kubernetes,flux,sfapi
+supported_lrms=pbs,lsf,sge,slurm,condor,nqs,kubernetes,flux,sfapi,iri
 
 #DGAS logfile 
 BLAHPD_ACCOUNTING_INFO_LOG=
@@ -57,10 +57,19 @@ blah_run_in_workdir=no
 #The directory to use for temporary files during job submission
 #blah_temp_dir=/tmp
 
-#A directory to save each generated submit file in, for debugging.
-#Warning: This creates a new file for each job; you will have to
+#A directory to save scripts log messages, for debugging.
+#Warning: these files are not log-rotated; you will have to
 #clean up the files yourself.
-#blah_debug_save_submit_info=/tmp
+#blah_debug=${HOME}/blah_debug
+
+#Should the log messages enabled by blah_debug include sensitive data,
+#such as access tokens. The default is 'no'.
+#blah_debug_show_sensitive=no
+
+#A directory to save each generated submit file in, for debugging.
+#Warning: This creates a new set of files for each job; you will have to
+#clean up the files yourself.
+#blah_debug_save_submit_info=${HOME}/blah_debug
 
 #The following configuration attributes allow for additional
 #submit command attributes to be set in the local shell callout
@@ -356,6 +365,16 @@ sge_pe_policy=*
 # If this variable is unset, assume the package can be found without
 # activating a virtual environment.
 sfapi_venv=${HOME}/superfacility-env
+
+#IRI
+
+# Path to a Python virtual environment that includes package sfapi_client
+# You can create it with these commands:
+#   python3 -m venv ~/iri-env
+#   ~/iri-env/bin/pip install authlib
+# If this variable is unset, assume the package can be found without
+# activating a virtual environment.
+iri_venv=${HOME}/iri-env
 
 ##
 #####BNotifier subsection

@@ -27,35 +27,30 @@
 std::map <std::string, INFNBatchResource *>
     INFNBatchResource::ResourcesByName;
 
-std::string & INFNBatchResource::HashName( const char * batch_type,
-		const char * gahp_args )
+std::string & INFNBatchResource::HashName( const char * /*batch_type*/,
+		const char * blahp_name )
 {
 	static std::string hash_name;
-	formatstr( hash_name, "batch %s", batch_type );
-	if ( gahp_args && gahp_args[0] ) {
-		formatstr_cat( hash_name, " %s", gahp_args );
-	}
+	formatstr(hash_name, "batch %s", blahp_name);
 	return hash_name;
 }
 
 
 INFNBatchResource* INFNBatchResource::FindOrCreateResource(const char * batch_type, 
 	const char * resource_name,
-	const char * gahp_args )
+	const char * blahp_name,
+	const char * xfer_gahp_name)
 {
 	INFNBatchResource *resource = NULL;
 
 	if ( resource_name == NULL ) {
 		resource_name = "";
 	}
-    if ( gahp_args == NULL ) {
-		gahp_args = "";
-    }
 
-	std::string &key = HashName( batch_type, gahp_args );
+	std::string &key = HashName(batch_type, blahp_name);
 	auto itr = ResourcesByName.find( key );
 	if ( itr == ResourcesByName.end() ) {
-		resource = new INFNBatchResource( batch_type, resource_name, gahp_args );
+		resource = new INFNBatchResource(batch_type, resource_name, blahp_name, xfer_gahp_name);
 		ASSERT(resource);
 		resource->Reconfig();
 		ResourcesByName[key] = resource;
@@ -69,14 +64,14 @@ INFNBatchResource* INFNBatchResource::FindOrCreateResource(const char * batch_ty
 
 
 INFNBatchResource::INFNBatchResource( const char *batch_type, 
-	const char *resource_name, const char *gahp_args )
+        const char *resource_name, const char* blahp_name, const char* xfer_gahp_name )
 	: BaseResource( resource_name ),
 	  m_xfer_gahp( NULL ),
 	  m_gahpCanRefreshProxy( false ),
 	  m_gahpRefreshProxyChecked( false )
 {
 	m_batchType = batch_type;
-	m_gahpArgs = gahp_args;
+	m_blahpName = blahp_name;
 	m_gahpIsRemote = false;
 
 	m_remoteHostname = resource_name;
@@ -87,20 +82,14 @@ INFNBatchResource::INFNBatchResource( const char *batch_type,
 	
 	gahp = NULL;
 
-	std::string gahp_name = batch_type;
-	if ( *gahp_args ) {
-		formatstr_cat( gahp_name, "/%s", gahp_args );
-		m_gahpIsRemote = true;
-	}
-
-	gahp = new GahpClient( gahp_name.c_str() );
+	gahp = new GahpClient(blahp_name);
 	gahp->setNotificationTimerId( pingTimerId );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( INFNBatchJob::gahpCallTimeout );
 
-	if ( m_gahpIsRemote ) {
-		gahp_name.insert( 0, "xfer/" );
-		m_xfer_gahp = new GahpClient( gahp_name.c_str() );
+	if (xfer_gahp_name && xfer_gahp_name[0]) {
+		m_gahpIsRemote = true;
+		m_xfer_gahp = new GahpClient(xfer_gahp_name);
 		m_xfer_gahp->setNotificationTimerId( pingTimerId );
 		m_xfer_gahp->setMode( GahpClient::normal );
 		m_xfer_gahp->setTimeout( INFNBatchJob::gahpCallTimeout );
@@ -113,8 +102,8 @@ INFNBatchResource::INFNBatchResource( const char *batch_type,
 
 INFNBatchResource::~INFNBatchResource()
 {
-	ResourcesByName.erase( HashName( m_batchType.c_str(), m_gahpArgs.c_str() ) );
-	if ( gahp ) delete gahp;
+	ResourcesByName.erase(HashName(m_batchType.c_str(), m_blahpName.c_str()));
+	delete gahp;
 	delete m_xfer_gahp;
 }
 
@@ -132,7 +121,7 @@ const char *INFNBatchResource::ResourceType()
 
 const char *INFNBatchResource::GetHashName()
 {
-	return HashName( m_batchType.c_str(), m_gahpArgs.c_str() ).c_str();
+	return HashName(m_batchType.c_str(), m_blahpName.c_str()).c_str();
 }
 
 void INFNBatchResource::PublishResourceAd( ClassAd *resource_ad )
