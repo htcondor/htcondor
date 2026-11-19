@@ -155,16 +155,13 @@ if(WITH_FULL_BLAHP)
 	target_link_libraries(BUpdaterPBS -lpthread -lm)
 	target_link_libraries(BUpdaterPBS libbfunctions libblahp)
 
-	add_executable(BUpdaterSGE BUpdaterSGE.c)
-	target_link_libraries(BUpdaterSGE libbfunctions libblahp)
-
 	add_executable(blparser_master blparser_master.c)
 	target_link_libraries(blparser_master libblahp)
 	target_link_libraries(blparser_master ${ClassAd_LIBRARY})
 
 	install(TARGETS 
 		BLClient BLParserLSF BLParserPBS BUpdaterCondor BNotifier 
-		BUpdaterLSF BUpdaterPBS BUpdaterSGE
+		BUpdaterLSF BUpdaterPBS
 		blparser_master
 		RUNTIME DESTINATION ${LIBEXEC_DIR})
 endif()
@@ -217,9 +214,7 @@ set(blah_scripts
     scripts/lsf_status.sh scripts/lsf_submit.sh scripts/lsf_hold.sh
     scripts/lsf_resume.sh scripts/condor_cancel.sh scripts/condor_status.sh
     scripts/condor_submit.sh scripts/condor_hold.sh scripts/condor_resume.sh
-    scripts/sge_cancel.sh scripts/sge_helper scripts/sge_resume.sh 
-    scripts/sge_submit.sh scripts/sge_filestaging scripts/sge_hold.sh 
-    scripts/sge_status.sh scripts/runcmd.pl.template
+    scripts/runcmd.pl.template
     scripts/slurm_cancel.sh scripts/slurm_resume.sh scripts/slurm_status.sh
     scripts/slurm_hold.sh scripts/slurm_submit.sh
     scripts/nqs_cancel.sh scripts/nqs_resume.sh scripts/nqs_status.sh
@@ -232,7 +227,7 @@ set(blah_scripts
     scripts/lsf_status.py
     scripts/condor_ping.sh scripts/kubernetes_ping.sh
     scripts/lsf_ping.sh scripts/nqs_ping.sh scripts/pbs_ping.sh
-    scripts/sge_ping.sh scripts/slurm_ping.sh
+    scripts/slurm_ping.sh
 	scripts/flux_cancel.sh scripts/flux_hold.sh
 	scripts/flux_ping.sh scripts/flux_resume.sh scripts/flux_status.sh
 	scripts/flux_submit.sh scripts/flux_utils.sh
@@ -252,7 +247,6 @@ set(local_attr_scripts
     condor_local_submit_attributes.sh
     pbs_local_submit_attributes.sh
     lsf_local_submit_attributes.sh
-    sge_local_submit_attributes.sh
     sfapi_local_submit_attributes.sh
     slurm_local_submit_attributes.sh
     nqs_local_submit_attributes.sh

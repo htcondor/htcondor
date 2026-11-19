@@ -5,7 +5,7 @@
 ##Blah common variables
 
 #Supported batch systems (e.g. pbs,lsf)
-supported_lrms=pbs,lsf,sge,slurm,condor,nqs,kubernetes,flux,sfapi
+supported_lrms=pbs,lsf,slurm,condor,nqs,kubernetes,flux,sfapi
 
 #DGAS logfile 
 BLAHPD_ACCOUNTING_INFO_LOG=
@@ -324,18 +324,6 @@ condor_expand_home_env=no
 
 #If condor_history should be used or not to the final state info about the jobs.
 bupdater_use_condor_history=
-
-##SGE
-
-#Path where SGE executables are located (default is to use PATH)
-#sge_binpath=
-
-sge_cellname=$SGE_CELL
-
-sge_rootpath=$SGE_ROOT
-
-#set the SGE parallel environment policy
-sge_pe_policy=*
 
 ##SLURM
 

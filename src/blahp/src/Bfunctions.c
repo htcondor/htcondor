@@ -694,9 +694,6 @@ int check_config_file(char *logdev){
 	char *lsf_path=NULL;
 	char *condor_path=NULL;
 	char *pbs_spool=NULL;
-	char *sge_root=NULL;
-	char *sge_cell=NULL;
-	char *sge_path=NULL;
 	char *ldebuglogname=NULL;
 	FILE *ldebuglogfile=NULL;
 	int  ldebug=0;
@@ -909,95 +906,6 @@ int check_config_file(char *logdev){
 		free(condor_path);
 	
 	}
-        if(strstr(supplrms,"sge")){
-
-/* Check if sge_root,sge_cell and sge_helper exists  and that the programs that use it are executables */
-
-                lret = config_get("sge_binpath",lcha);
-                if (lret == NULL){
-                        do_log(ldebuglogfile, ldebug, 1, "%s: key sge_binpath not found\n",argv0);
-                        sysfatal("sge_binpath not defined. Exiting");
-                } else {
-                        sge_path=strdup(lret->value);
-                        if(sge_path == NULL){
-                                sysfatal("strdup failed for sge_path in check_config_file: %r");
-                        }
-                }
-
-	        s=make_message("%s/qstat",sge_path);
-                if(access(s,X_OK)){
-                        do_log(ldebuglogfile, ldebug, 1, "%s: %s is not accessible or %s is not executable\n",argv0,sge_path,s);
-                        sysfatal("%s is not accessible or %s is not executable: %r",sge_path,s);
-                }
-                free(s);
-                s=make_message("%s/qacct",sge_path);
-                if(access(s,X_OK)){
-                        do_log(ldebuglogfile, ldebug, 1, "%s: %s is not accessible or %s is not executable\n",argv0,sge_path,s);
-                        sysfatal("%s is not accessible or %s is not executable: %r",sge_path,s);
-                }
-                free(s);
-
-                free(sge_path);
-
-/* Check if sge_cellname exists and is accessible */
-
-                lret = config_get("sge_cellname",lcha);
-                if (lret == NULL){
-                        do_log(ldebuglogfile, ldebug, 1, "%s: key sge_cellname not found\n",argv0);
-                        sysfatal("sge_cellname not defined. Exiting");
-                } else {
-                        sge_cell=strdup(lret->value);
-                        if(sge_cell == NULL){
-                                sysfatal("strdup failed for sge_cell in check_config_file: %r");
-                        }
-                }
-
-                free(sge_cell);
-
-/* Check if sge_rootpath exists and is accessible */
-
-                lret = config_get("sge_rootpath",lcha);
-                if (lret == NULL){
-                        do_log(ldebuglogfile, ldebug, 1, "%s: key sge_rootpath not found\n",argv0);
-                        sysfatal("sge_rootpath not defined. Exiting");
-                } else {
-                        sge_root=strdup(lret->value);
-                        if(sge_root == NULL){
-                                sysfatal("strdup failed for sge_root in check_config_file: %r");
-                        }
-                }
-
-                s=make_message("%s",sge_root);
-                rc=stat(s,&sbuf);
-                if(rc) {
-                        do_log(ldebuglogfile, ldebug, 1, "%s: dir %s does not exist\n",argv0,s);
-                        sysfatal("dir %s does not exist: %r",s);
-                }
-                if(! S_ISDIR(sbuf.st_mode)){
-                        do_log(ldebuglogfile, ldebug, 1, "%s: %s is not a dir\n",argv0,s);
-                        sysfatal("%s is not a dir: %r",s);
-                }
-                if(access(s,X_OK)){
-                        do_log(ldebuglogfile, ldebug, 1, "%s: dir %s is not accessible\n",argv0,s);
-                        sysfatal("dir %s is not accessible: %r",s);
-                }
-                free(s);
-
-                free(sge_root);
-		/*rc=stat(s,&sbuf);
-                if(rc) {
-                        do_log(ldebuglogfile, ldebug, 1, "%s: dir %s does not exist\n",argv0,s);
-                        sysfatal("dir %s does not exist: %r",s);
-                }
-                if(! S_ISDIR(sbuf.st_mode)){
-                        do_log(ldebuglogfile, ldebug, 1, "%s: %s is not a dir\n",argv0,s);
-                        sysfatal("%s is not a dir: %r",s);
-                }
-                if(access(s,X_OK)){
-                        do_log(ldebuglogfile, ldebug, 1, "%s: dir %s is not accessible\n",argv0,s);
-                        sysfatal("dir %s is not accessible: %r",s);
-                }*/
-        }
 	
 	free(supplrms);
 	free(ldebuglogname);
