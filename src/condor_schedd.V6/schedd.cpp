@@ -570,7 +570,6 @@ match_rec::~match_rec()
 		user = nullptr;
 	}
 	if (pool) { free(pool); pool = nullptr; }
-	delete auth_hole_id; auth_hole_id = nullptr;
 
 		// If we are shuting down, the daemonCore instance will be null
 		// and any use of it will cause a core dump.  At best.
@@ -10300,36 +10299,6 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		slots.push_back(match);
 	}
 
-	// now that we've completed authentication (if enabled),
-	// punch holes in our security layer to authorize this startd for READ operations
-	//
-	std::string auth_hole_id;
-	if (msg->startd_fqu() && *msg->startd_fqu()) {
-		formatstr(auth_hole_id, "%s/%s", msg->startd_fqu(), msg->startd_ip_addr());
-	} else {
-		auth_hole_id = msg->startd_ip_addr();
-	}
-	IpVerify* ipv = daemonCore->getSecMan()->getIpVerify();
-	for (match_rec* slot : slots) {
-		// if match doesn't already have a hole punched, do that now
-		if ( ! slot->auth_hole_id) {
-			if ( ! ipv->PunchHole(READ, auth_hole_id)) {
-				dprintf(D_ALWAYS,
-					"WARNING: IpVerify::PunchHole error for %s: "
-					"job %d.%d may fail to execute\n",
-					auth_hole_id.c_str(),
-					slot->jid.cluster,
-					slot->jid.proc);
-
-				break; // no point in trying the other slots, they will just fail also
-
-			} else {
-				// store a pointer to the hole id so we know to remove it
-				slot->auth_hole_id = new std::string(auth_hole_id);
-			}
-		}
-	}
-
 	// If the startd returned any "leftover" partitionable slot resources,
 	// we want to create a match record for it (so we can subsequently find
 	// a job to run on it). 
@@ -10605,13 +10574,12 @@ Scheduler::makeReconnectRecords( const PROC_ID & job, const ClassAd* match_ad )
 {
 	int cluster = job.cluster;
 	int proc = job.proc;
-	char* pool = NULL;
+	std::string pool;
 	std::string user;
 	std::string claim_id;
 	std::string publicId; // in case we need to print the claim id.
-	char* startd_addr = NULL;
-	char* startd_name = NULL;
-	char* startd_principal = NULL;
+	std::string startd_addr;
+	std::string startd_name;
 
 	// NOTE: match_ad could be deallocated when this function returns,
 	// so if we need to keep it around, we must make our own copy of it.
@@ -10640,7 +10608,7 @@ Scheduler::makeReconnectRecords( const PROC_ID & job, const ClassAd* match_ad )
 		scheduler.stats.JobsRestartReconnectsFailed += 1;
 		return;
 	}
-	if( GetAttributeStringNew(cluster, proc, ATTR_REMOTE_HOST, &startd_name) < 0 ) {
+	if( GetAttributeString(cluster, proc, ATTR_REMOTE_HOST, startd_name) < 0 ) {
 			//
 			// No attribute. Clean up and return
 			//
@@ -10651,33 +10619,24 @@ Scheduler::makeReconnectRecords( const PROC_ID & job, const ClassAd* match_ad )
 		scheduler.stats.JobsRestartReconnectsFailed += 1;
 		return;
 	}
-	if( GetAttributeStringNew(cluster, proc, ATTR_STARTD_IP_ADDR, &startd_addr) < 0 ) {
-			// We only expect to get here when reading a job queue created
-			// by a version of Condor older than 7.1.3, because we no longer
-			// rely on the claim id to tell us how to connect to the startd.
-		dprintf( D_ALWAYS, "WARNING: %s not in job queue for %d.%d, "
-				 "so using claimid.\n", ATTR_STARTD_IP_ADDR, cluster, proc );
-		ClaimIdParserLite id_parser(claim_id);
-		startd_addr = strviewdup(id_parser.startdSinfulAddr());
-		SetAttributeString(cluster, proc, ATTR_STARTD_IP_ADDR, startd_addr);
+	if( GetAttributeString(cluster, proc, ATTR_STARTD_IP_ADDR, startd_addr) < 0 ) {
+			//
+			// No attribute. Clean up and return
+			//
+		dprintf( D_ALWAYS, "WARNING: %s no longer in job queue for %d.%d\n",
+				ATTR_STARTD_IP_ADDR, cluster, proc );
+		mark_job_stopped( job );
+		scheduler.stats.JobsRestartReconnectsAttempting -= 1;
+		scheduler.stats.JobsRestartReconnectsFailed += 1;
+		return;
 	}
 	
 	int universe = -1;
 	GetAttributeInt( cluster, proc, ATTR_JOB_UNIVERSE, &universe );
 	ASSERT(universe != -1);
 
-
-	if( GetAttributeStringNew(cluster, proc, ATTR_REMOTE_POOL,
-							  &pool) < 0 ) {
-		pool = NULL;
-	}
-
-	if( 0 > GetAttributeStringNew(cluster,
-	                              proc,
-	                              ATTR_STARTD_PRINCIPAL,
-	                              &startd_principal)) {
-		startd_principal = NULL;
-	}
+	// Leave as an empty string if the attribute is undefined
+	GetAttributeString(cluster, proc, ATTR_REMOTE_POOL, pool);
 
 	JobQueueJob* job_ad = GetJobAd(cluster, proc);
 	// Already checked above, but let's be sure
@@ -10686,10 +10645,6 @@ Scheduler::makeReconnectRecords( const PROC_ID & job, const ClassAd* match_ad )
 		mark_job_stopped( job );
 		scheduler.stats.JobsRestartReconnectsAttempting -= 1;
 		scheduler.stats.JobsRestartReconnectsFailed += 1;
-		if (startd_addr) free(startd_addr);
-		if (startd_name) free(startd_name);
-		if (startd_principal) free(startd_principal);
-		if (pool) free(pool);
 		return;
 	}
 
@@ -10716,44 +10671,13 @@ Scheduler::makeReconnectRecords( const PROC_ID & job, const ClassAd* match_ad )
 				 "(%s: %s)\n", cluster, proc, attr_JobUser.c_str(), user.c_str() );
 		publicId = ClaimIdParserLite(claim_id).publicClaimId();
 		dprintf( D_FULLDEBUG, "ClaimId: %s\n", publicId.c_str() );
-		if( pool ) {
-			dprintf( D_FULLDEBUG, "Pool: %s (via flocking)\n", pool );
+		if (!pool.empty()) {
+			dprintf(D_FULLDEBUG, "Pool: %s (via flocking)\n", pool.c_str());
 		}
 	}
 		// note: AddMrec will makes its own copy of match_ad
-	match_rec *mrec = AddMrec( claim_id.c_str(), startd_addr, job, match_ad,
-							   user.c_str(), pool );
-
-		// authorize this startd for READ access
-	if (startd_principal != NULL) {
-		mrec->auth_hole_id = new std::string(startd_principal);
-		ASSERT(mrec->auth_hole_id != NULL);
-		free(startd_principal);
-		IpVerify* ipv = daemonCore->getIpVerify();
-		if (!ipv->PunchHole(READ, *mrec->auth_hole_id)) {
-			dprintf(D_ALWAYS,
-			        "WARNING: IpVerify::PunchHole error for %s: "
-			            "job %d.%d may fail to execute\n",
-			        mrec->auth_hole_id->c_str(),
-			        mrec->jid.cluster,
-			        mrec->jid.proc);
-			delete mrec->auth_hole_id;
-			mrec->auth_hole_id = NULL;
-		}
-	}
-
-	if( pool ) {
-		free( pool );
-		pool = NULL;
-	}
-	if( startd_addr ) {
-		free( startd_addr );
-		startd_addr = NULL;
-	}
-	if( startd_name ) {
-		free( startd_name );
-		startd_name = NULL;
-	}
+	match_rec *mrec = AddMrec(claim_id.c_str(), startd_addr.c_str(), job, match_ad,
+	                          user.c_str(), pool.c_str());
 
 		// this should never be NULL, particularly after the checks
 		// above, but just to be extra safe, check here, too.
@@ -13784,14 +13708,6 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 				SetAttributeString(cluster, proc, ATTR_REMOTE_POOL, mrec->pool);
 			} else {
 				new_rec->matchInfo->InsertAttr( ATTR_REMOTE_POOL, mrec->pool );
-			}
-		}
-
-		if ( mrec->auth_hole_id ) {
-			if(! transfer_proc) {
-				SetAttributeString(cluster, proc, ATTR_STARTD_PRINCIPAL, mrec->auth_hole_id->c_str());
-			} else {
-				new_rec->matchInfo->InsertAttr( ATTR_STARTD_PRINCIPAL, mrec->auth_hole_id->c_str() );
 			}
 		}
 	}
@@ -17329,9 +17245,11 @@ Scheduler::Init()
 		IpVerify* ipv = daemonCore->getIpVerify();
 		if ( new_match_password ) {
 			ipv->PunchHole( CLIENT_PERM, EXECUTE_SIDE_MATCHSESSION_FQU );
+			ipv->PunchHole( READ, EXECUTE_SIDE_MATCHSESSION_FQU );
 			ipv->PunchHole( NEGOTIATOR, NEGOTIATOR_SIDE_MATCHSESSION_FQU );
 		} else {
 			ipv->FillHole( CLIENT_PERM, EXECUTE_SIDE_MATCHSESSION_FQU );
+			ipv->FillHole( READ, EXECUTE_SIDE_MATCHSESSION_FQU );
 			ipv->FillHole( NEGOTIATOR, NEGOTIATOR_SIDE_MATCHSESSION_FQU );
 		}
 		m_matchPasswordEnabled = new_match_password;
@@ -18388,18 +18306,6 @@ Scheduler::unlinkMrec(match_rec* match)
 		PROC_ID prompting_jid = match->shadowRec->job_id;
 		prompting_jid.proc = transferToPromptingProcID(prompting_jid.proc);
 		release_block_condition(prompting_jid, CommonTransfer, "transfer-shadow match deleted");
-	}
-
-		// fill any authorization hole we made for this match
-	if (match->auth_hole_id != NULL) {
-		IpVerify* ipv = daemonCore->getSecMan()->getIpVerify();
-		if (!ipv->FillHole(READ, *match->auth_hole_id)) {
-			dprintf(D_ALWAYS,
-			        "WARNING: IpVerify::FillHole error for %s\n",
-			        match->auth_hole_id->c_str());
-		}
-		delete match->auth_hole_id;
-		match->auth_hole_id = NULL;
 	}
 
 	// Remove this match from the associated shadowRec.
