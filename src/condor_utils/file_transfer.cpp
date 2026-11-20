@@ -1438,7 +1438,7 @@ FileTransfer::DetermineWhichFilesToSend() {
 	// won't specify a checkpoint list.
 	if( uploadCheckpointFiles ) {
 		if( ftcb.hasCheckpointFiles() ) {
-			CheckpointFiles = split(ftcb.getCheckpointFiles());
+			CheckpointFiles = split(ftcb.getCheckpointFiles(), ",");
 
 			// This should Just Work(TM), but I haven't tested it yet and
 			// I don't know that anybody will every actually use it.
@@ -8412,7 +8412,7 @@ bool
 FileTransfer::ExpandInputFileList( char const *input_list, char const *iwd, std::string &expanded_list, std::string &error_msg )
 {
 	bool result = true;
-	for (auto& path: StringTokenIterator(input_list)) {
+	for (const auto& path: StringTokenIterator(input_list, ",")) {
 		bool needs_expansion = false;
 
 		size_t pathlen = path.length();
