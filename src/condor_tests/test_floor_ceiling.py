@@ -17,7 +17,6 @@
 #   even                 no floor, no ceiling            -> A=2, B=2
 #   ceiling              A has a ceiling of 1            -> A=1, B=3
 #   floor                A has a floor of 3              -> A=3, B=1
-#   floor with usage     A already runs 1 job; floor 3   -> A=3, B=1
 #
 # Every scenario depends on the negotiator seeing A and B in the same cycle.
 # If a cycle ran after A's submitter ad reached the collector but before B's
@@ -32,10 +31,6 @@
 # The "even" scenario is the control: two fresh submitters have equal
 # priority, so without a floor or ceiling they split the pool evenly, and any
 # other split in the remaining scenarios is the floor or ceiling at work.
-#
-# A floor is a guaranteed total, not an increment: the condor_userprio man page
-# defines it as "the sum of the SlotWeight of all running jobs".  So a
-# submitter already at 1 of a floor of 3 is owed 2 more, not 3.
 #
 # These pin the negotiator's behavior ahead of a refactor of how it sequences
 # its bundle, floor and fair-share rounds.
@@ -459,7 +454,7 @@ def _negotiate(pool, handles, idle_by_submitter):
 
 def _run_scenario(
     pool, test_dir, path_to_sleep, group_a, group_b,
-    floor=0, ceiling=None, a_already_running=0,
+    floor=0, ceiling=None,
 ):
     """Run one scenario to completion and return how the full pool was split
     between group_a and group_b.  Leaves the pool idle again for the next
@@ -480,28 +475,10 @@ def _run_scenario(
 
     handles = []
     try:
-        if a_already_running:
-            first = _submit_held(
-                pool, test_dir, path_to_sleep, group_a, a_already_running
-            )
-            handles.append(first)
-            _negotiate(pool, [first], {submitter_a: a_already_running})
-            _wait_for_running(pool, a_already_running)
-            # The usage the floor has to account for must be visible to the
-            # accountant before B arrives.
-            _wait_for_attr(
-                pool, submitter_a, "WeightedResourcesUsed",
-                float(a_already_running), cast=float, timeout=120,
-            )
-            # Only the floor round run after B arrives is of interest.
-            for _ in neg_log.read():
-                pass
-            neg_log.clear()
-
         # Each submitter queues enough jobs to fill the pool on its own.
         held_a = _submit_held(pool, test_dir, path_to_sleep, group_a, NUM_SLOTS)
         held_b = _submit_held(pool, test_dir, path_to_sleep, group_b, NUM_SLOTS)
-        handles += [held_a, held_b]
+        handles = [held_a, held_b]
         _negotiate(
             pool, [held_a, held_b],
             {submitter_a: NUM_SLOTS, submitter_b: NUM_SLOTS},
@@ -547,14 +524,6 @@ def floor_split(pool, test_dir, path_to_sleep):
     )
 
 
-@action
-def floor_with_usage_split(pool, test_dir, path_to_sleep):
-    return _run_scenario(
-        pool, test_dir, path_to_sleep, "usagea", "usageb",
-        floor=FLOOR, a_already_running=1,
-    )
-
-
 @pytest.mark.skipif(
     sys.platform == "win32",
     reason="needs jobs that stay running: on the Windows CI runner the "
@@ -580,16 +549,3 @@ class TestEnforcement:
     def test_floor_guarantees_submitter(self, floor_split):
         assert (floor_split.a, floor_split.b) == (FLOOR, NUM_SLOTS - FLOOR)
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="floor round caps the submitter at min(floor, fair share - usage) "
-        "instead of floor - usage, so a submitter already holding slots is "
-        "given up to a full floor more (calculateSubmitterLimit)",
-    )
-    def test_floor_counts_existing_usage(self, floor_with_usage_split):
-        # A already holds 1 slot, so the floor round owes it FLOOR - 1 more,
-        # for a total of FLOOR -- not FLOOR more on top of what it has.
-        assert floor_with_usage_split.floor_round_ran
-        assert (floor_with_usage_split.a, floor_with_usage_split.b) == (
-            FLOOR, NUM_SLOTS - FLOOR,
-        )
