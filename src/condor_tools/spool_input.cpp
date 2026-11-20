@@ -86,7 +86,7 @@ int getInheritedSocks(Stream* socks[], size_t cMaxSocks, pid_t & ppid)
 	const char *envName = ENV_CONDOR_INHERIT;
 	const char *inherit = GetEnv(envName);
 
-	dprintf(D_FULLDEBUG, "condor_history: getInheritedSocks from %s is '%s'\n", envName, inherit ? inherit : "NULL");
+	dprintf(D_FULLDEBUG, "condor_spool_input: getInheritedSocks from %s is '%s'\n", envName, inherit ? inherit : "NULL");
 
 	if ( ! inherit || ! inherit[0]) {
 		socks[0] = NULL;
