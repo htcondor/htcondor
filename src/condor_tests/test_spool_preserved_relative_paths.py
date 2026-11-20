@@ -9,6 +9,7 @@ from ornithology import (
 )
 
 from pathlib import Path
+import platform
 
 import logging
 logger = logging.getLogger(__name__)
@@ -73,13 +74,28 @@ class TestSpoolPreservedRelativePaths:
         # At submit, directories with a trailing slash are expanded; then,
         # after spooling, the schedd rewrites each entry to its basename.
         # Neither step may split on the spaces in the file names.
-        assert ads[0]["SUBMIT_TransferInput"].split(",") == [
-            "input_1", "inputs/inputs_2", "input with space",
-            "dir with space/file with space",
-        ]
-        assert ads[0]["TransferInput"].split(",") == [
-            "input_1", "inputs_2", "input with space", "file with space",
-        ]
+        submit_list = ads[0]["SUBMIT_TransferInput"].split(",")
+        spool_list = ads[0]["TransferInput"].split(",")
+        if platform.system() == "Windows":
+            # On Windows, submit only treats a trailing backslash as a
+            # directory to expand, so "inputs/" is passed through as-is
+            # and expanded later, when spooled.  Ignore that entry.
+            submit_list = [f for f in submit_list if not f.startswith("inputs")]
+            spool_list = [f for f in spool_list if not f.startswith("inputs")]
+            assert submit_list == [
+                "input_1", "input with space", "dir with space/file with space",
+            ]
+            assert spool_list == [
+                "input_1", "input with space", "file with space",
+            ]
+        else:
+            assert submit_list == [
+                "input_1", "inputs/inputs_2", "input with space",
+                "dir with space/file with space",
+            ]
+            assert spool_list == [
+                "input_1", "inputs_2", "input with space", "file with space",
+            ]
 
     def test_job_completion(self, the_job_handle, the_spool_dir):
         assert the_job_handle.wait(
