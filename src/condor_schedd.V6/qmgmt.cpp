@@ -8916,7 +8916,7 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 		std::vector<std::string> old_paths;
 		std::string new_paths;
 		if ( AttrIsList[attrIndex] ) {
-			old_paths = split(buf);
+			old_paths = split(buf, ",");
 		} else {
 			old_paths.emplace_back(buf);
 		}
