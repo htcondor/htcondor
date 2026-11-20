@@ -1264,7 +1264,7 @@ std::vector<std::string> *ArcJob::buildStageInList(bool with_urls)
 
 	jobAd->LookupString( ATTR_TRANSFER_INPUT_FILES, buf );
 	stage_list = new std::vector<std::string>;
-	*stage_list = split(buf);
+	*stage_list = split(buf, ",");
 
 	jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer );
 	if ( transfer ) {
@@ -1309,7 +1309,7 @@ std::vector<std::string> *ArcJob::buildStageOutList()
 
 	jobAd->LookupString( ATTR_TRANSFER_OUTPUT_FILES, buf );
 	stage_list = new std::vector<std::string>;
-	*stage_list = split(buf);
+	*stage_list = split(buf, ",");
 
 	jobAd->LookupBool( ATTR_TRANSFER_OUTPUT, transfer );
 	if ( transfer && jobAd->LookupString( ATTR_JOB_OUTPUT, buf ) == 1) {
