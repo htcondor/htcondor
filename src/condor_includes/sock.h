@@ -725,4 +725,8 @@ private:
 
 void dprintf ( int flags, const Sock & sock, const char *fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
 
+// the FormerSock is so we can dprintf using a sock identifier after the sock is gone.
+struct FormerSock { long long ident; FormerSock(long long id) : ident(id) {} };
+void dprintf ( int flags, const FormerSock & former_sock, const char *fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
+
 #endif /* SOCK_H */
