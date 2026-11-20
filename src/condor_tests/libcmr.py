@@ -117,13 +117,21 @@ def sum_check_matching_usage(handle, resource):
     assert len(terminated_events) == len(ads)
     assert len(ads) == len(handle)
 
+    # The starter only computes <resource>sAverageUsage after it has seen
+    # two monitor samples with distinct timestamps.  On a slow machine a
+    # short job may see only one, in which case neither the job ad nor the
+    # terminate event has a usage value.  That's still a match, so compare
+    # missing-vs-missing rather than requiring the attribute.
     jobid_to_usage_via_event = {
-        JobID.from_job_event(event): event[f"{resource}sUsage"]
+        JobID.from_job_event(event): event.get(f"{resource}sUsage")
         for event in sorted(terminated_events, key=lambda e: e.proc)
     }
 
     jobid_to_usage_via_ad = {
-        JobID.from_job_ad(ad): round(ad[f"{resource}sAverageUsage"], 2)
+        JobID.from_job_ad(ad): (
+            round(ad[f"{resource}sAverageUsage"], 2)
+            if f"{resource}sAverageUsage" in ad else None
+        )
         for ad in sorted(ads, key=lambda ad: ad["ProcID"])
     }
 
