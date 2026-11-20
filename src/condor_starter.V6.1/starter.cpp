@@ -1079,7 +1079,7 @@ Starter::peek(int /*cmd*/, Stream *sock)
 		bool found = false;
 		if (jobad->EvaluateAttrString(ATTR_TRANSFER_OUTPUT_FILES, job_transfer_list))
 		{
-			for (const auto& job_iter: StringTokenIterator(job_transfer_list))
+			for (const auto& job_iter: StringTokenIterator(job_transfer_list, ","))
 			{
 				if (strcmp(iter->c_str(), job_iter.c_str()) == 0)
 				{
