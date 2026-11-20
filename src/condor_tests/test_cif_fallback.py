@@ -109,6 +109,11 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
 
     (user_dir / "input3.txt").write_text("input line 3\n" );
 
+    # Catalog entries are comma-separated; names may contain spaces
+    # (HTCONDOR-4103).  In fall-back mode the shadow adds catalog entries
+    # to the job's input file list.
+    (user_dir / "input six.txt").write_text("input six\n")
+
     # Make sure that credential propogation works, too.
     credential_path = user_dir / "the-credential"
     credential_path.write_text("fake credential information")
@@ -123,7 +128,7 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
     job_description = {
         "universe":                 "vanilla",
 
-        "shell":                    "cat ${_CONDOR_CREDS}/the-credential.use 1>&2; cat d/input1.txt d/input4.txt d/e/input2.txt d/f/input5.txt input3.txt; sleep 5",
+        "shell":                    "cat ${_CONDOR_CREDS}/the-credential.use 1>&2; cat d/input1.txt d/input4.txt d/e/input2.txt d/f/input5.txt input3.txt input*six.txt; sleep 5",
         "transfer_executable":      False,
         "should_transfer_files":    True,
 
@@ -135,7 +140,7 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
         "request_memory":           1,
 
         "MY.CommonInputCatalogs":      '"my_common_files"',
-        "MY._x_catalog_my_common_files":    '"d, null://create-epoch-entry"',
+        "MY._x_catalog_my_common_files":    '"d, input six.txt, null://create-epoch-entry"',
 
         "transfer_input_files":     "input3.txt",
         "use_oauth_services":       "the-credential",
@@ -636,7 +641,7 @@ class TestCIF:
 
     def test_one_cif_job(self, the_lock_dir, the_condor, completed_cif_job):
         output_is_as_expected(
-            completed_cif_job, "input A\nII input\ninput line 3\n"
+            completed_cif_job, "input A\nII input\ninput line 3\ninput six\n"
         )
         shadow_log_is_as_expected(the_condor, 0, 0, 0)
         lock_dir_is_clean(the_lock_dir)

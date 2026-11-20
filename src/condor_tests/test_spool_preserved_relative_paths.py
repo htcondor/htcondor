@@ -25,7 +25,11 @@ def the_inputs():
     Path("input_1").touch()
     Path("inputs").mkdir()
     Path("inputs/inputs_2").touch()
-    return "input_1, inputs/"
+    # File lists are comma-separated; names may contain spaces (HTCONDOR-4103).
+    Path("input with space").touch()
+    Path("dir with space").mkdir()
+    Path("dir with space/file with space").touch()
+    return "input_1, inputs/, input with space, dir with space/file with space"
 
 @action
 def the_job_handle(the_condor, path_to_sleep, test_dir, the_inputs):
@@ -58,6 +62,24 @@ def the_spool_dir(the_condor):
 
 
 class TestSpoolPreservedRelativePaths:
+
+    def test_spooled_input_list(self, the_condor, the_job_handle):
+        schedd = the_condor.get_local_schedd()
+        ads = schedd.query(
+            constraint=f"ClusterID == {the_job_handle.clusterid}",
+            projection=["TransferInput", "SUBMIT_TransferInput"],
+        )
+        assert len(ads) == 1
+        # At submit, directories with a trailing slash are expanded; then,
+        # after spooling, the schedd rewrites each entry to its basename.
+        # Neither step may split on the spaces in the file names.
+        assert ads[0]["SUBMIT_TransferInput"].split(",") == [
+            "input_1", "inputs/inputs_2", "input with space",
+            "dir with space/file with space",
+        ]
+        assert ads[0]["TransferInput"].split(",") == [
+            "input_1", "inputs_2", "input with space", "file with space",
+        ]
 
     def test_job_completion(self, the_job_handle, the_spool_dir):
         assert the_job_handle.wait(
