@@ -1,276 +1,256 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env python3
+
 ###########################################################################
-# DESY HTCondor Config                                                    #
-# set_batchtok_cmd <username> <period in sec> {tokenfile} {prolong|renew} #
-# Thomas.Finnern@desy.de
-# Version 1.3
+# set_batchtok_cmd <username> <period in sec> {tokenfile} {prolong|renew}
+#
+# Maintain a user's Kerberos ticket (and AFS token) for condor_credmon_krb.
+# Depending on the ticket's remaining lifetime and the requested mode it
+# marks the ticket as expired, renews it with "kinit -R", or obtains a new
+# one with condor_aklog.
+#
+# Originally written in Perl by Thomas Finnern (DESY), version 1.3.
+# Uses only the Python standard library.
 ###########################################################################
 
-use strict;
-use File::Temp;
-use Time::Local;
-use constant { true => 1, false => 0 };
+import datetime
+import os
+import re
+import subprocess
+import sys
+import time
 
-#$ENV{'PATH'} = '/usr/bin:/bin:/usr/local/bin';
-# klist on sld5 must come from kerberos, not heimdal
-# $ENV{'PATH'} = '/usr/kerberos/bin:/opt/products/bin:/usr/bin:/bin:/usr/local/bin:/usr/heimdal/bin/:/usr/sue/bin';
-$ENV{'LC_TIME'} = 'en_US'; # proper date format for parsing klist and ticket times
+MAX_RETRIES = 5
 
+ONE_HOUR = 60 * 60
+ONE_WEEK = 60 * 60 * 24 * 7
 
-my $procid = $$;
-my $retval = 0;
+# klist must print dates in a format parse_date() understands
+os.environ["LC_TIME"] = "en_US"
+os.environ.pop("LC_ALL", None)
 
-# ================== config
-# enable debugging - $debugfile is filled with useful information 
-my $debug = 1;
-
-my $condor_log = `condor_config_val LOG`;
-chomp($condor_log);
-my $debugfile = "$condor_log/set_token_cmd.log";
-
-my $condor_sbin = `condor_config_val SBIN`;
-chomp($condor_sbin);
-my $condor_aklog = "$condor_sbin/condor_aklog";
-
-# if hundreds of job are submitted at a time it can be difficult to get a
-# ticket, because kstart is overloaded. Therefore bogdan delayed each
-# set_token_cmd-call for a random amount of seconds
-my $maxdelay = 30; # seconds
-my $maxretries = 5; # max number of retries
-
-my $hostname = `hostname`;
-chop $hostname;
-# ================== config end
-
-my $DFILE;
-if ($debug) {
-	open ($DFILE,">>$debugfile") or $debug = 0;
-	dmessage(">>>>>>>>>>");
-}
-dmessage("===========================");
-dmessage("set_batchtok_cmd called at: ", scalar localtime," with arguments: ", join(" ",@ARGV));
-
-# Check if you are in condor/sge or manually
-my $shepherding = false;
-my $batchsystem = "";
-my $envfile = $ENV{'_CONDOR_JOB_AD'};
-if ($envfile && -f $envfile) {
-	dmessage("Environment Found $envfile");
-	$shepherding = true;
-} else {
-	$shepherding = false;
-}
-if (-f $condor_aklog) {
-	$batchsystem = "htc";
-} elsif (-d "/usr/sge/") {
-	$batchsystem = "sge";
-}
-dmessage("Environment: Shepherding=\"$shepherding\", Batch System=\"$batchsystem\"");
-	
-# evaluate parameters
-my $username = $ARGV[0];
-my $period = $ARGV[1];
-my $krb5ccname = defined $ARGV[2] ? "$ARGV[2]" :  "";
-my $tmode = defined $ARGV[3] ? "$ARGV[3]" :  "";
-my ($prolong, $renew ) = false;
-if ($tmode eq "prolong") {
-	$prolong = true;
-	$renew = false;
-} elsif ($tmode eq "renew") {
-	$prolong = false;
-	$renew = true;
-} elsif ($batchsystem eq "sge") {
-	$tmode = "renew";
-	$prolong = false;
-	$renew = true;
-} else {
-	$tmode = "none";
-	$prolong = false;
-	$renew = false;
-}
-
-my ($ticket) = "";
-if ($krb5ccname =~ /^FILE:(.*)$/) {
-	$ticket = $1;
-	$ENV{'KRB5CCNAME'} = "$krb5ccname";
-} elsif ( -f $krb5ccname ) {
-	$ticket = $krb5ccname;
-	$krb5ccname = "FILE:$ticket";
-	$ENV{'KRB5CCNAME'} = "$krb5ccname";
-} elsif ( $ENV{'KRB5CCNAME'} =~ /^FILE:(.*)$/) {
-	$ticket = $1;
-	$krb5ccname = "FILE:$ticket"
-} else {
-	#$ticket = "/tmp/krb5cc_${pwuid}_p.$$";
-	$ticket = "/tmp/krb5cc_${username}_p.$$";
-	$ENV{'KRB5CCNAME'} = "FILE:$ticket";
-}
-
-unless ($username && $period) {
-	print STDERR "parameter constellation is not as expected.\n";
-	$retval = 1;
-	goto cleanup;
-}
-
-dmessage("Mode: $tmode for $ticket");
-
-my $TokenType = "kerberos5";
-
-# Check Ticket:
-my $timeflag = 0;
-my ($screate) = 0;
-my ($svalid) = 0;
-my ($sexpire) = 0;
-my ($snow) = time();
-if (-f $ticket ) {
-	#open(my $T, '-|', "klist $ticket");
-	#open(T, "klist $ticket |");
-	#while (my $line = <$T>) {
-	#while (<T>) {
-	my $lines = `klist $ticket`;
-	foreach my $line (split /\n/, $lines) {
-		#my ($line) = $_;
-		#print "XXX:$line";
-		if ($line =~ /^.*FILE:(.*)$/ ) {
-			#print "Using file \"$1\"\n";
-			$timeflag = 0;
-		} elsif ($line =~ /^Default principal: (.*)\@(.*)$/ ) {
-			#print "for User \"$1\" (Domain $2) (Required: \"$username\")\n";
-			$timeflag = 0;
-		} elsif ($line =~ /^Valid(.*)$/ ) {
-			$timeflag = 1;
-		} elsif ($timeflag eq 1) {
-			my ($dcreate, $tcreate, $dexpire, $texpire, $dummy1) = split(/[ ]+/, $line);
-			#print "Times $line\n";
-			$screate = parsedate($dcreate, $tcreate) - $snow;
-			$sexpire = parsedate($dexpire, $texpire) - $snow;
-			#printf "Ticket: Created before %+ 7.2f hours (%s, %s)\n", $screate / 3600, "$dcreate", "$tcreate";
-			#printf "Ticket: Expires     in %+ 7.2f hours (%s, %s)\n", $sexpire / 3600, "$dexpire", "$texpire";
-			$timeflag = 2;
-		} elsif ($timeflag eq 2) {
-			my ($dummy2, $dummy3, $dvalid, $tvalid, $dummy4) = split(/[ ]+/, $line);
-			#print "Renew $line\n";
-			chomp($tvalid);
-			$svalid = parsedate($dvalid, $tvalid) - $snow;
-			#$svalid = 0 if (!$svalid);
-			#printf "Ticket: Valid      for %+ 7.2f hours (%s, %s)\n", $svalid / 3600, "$dvalid", "$tvalid";
-			$timeflag = 3;
-			last;
-#		} else {
-#			print "Undefined $timeflag\n";
-		}
-	}
-	#close($T);
-	#close(T);
-}
+PROCID = os.getpid()
+log_file = None
 
 
-# Actions:
-my ($onescale) = 1;
-my ($onehour) = 60 * 60 * $onescale;
-my ($oneday) = 60 * 60 * 24 * $onescale;
-my ($oneweek) = 60 * 60 * 24 * 7 * $onescale;
-my ($myjob) = "undefined";
-
-# if !$renew and valid cert and expired
-if (!$renew && $timeflag eq 3 && $sexpire <= 0) {
-	$myjob = "mark_expired";
-	if ($ticket =~ /^(.*)\..*$/) {
-		dmessage("Ticket for $username is invalid for ", $svalid / 60, " minutes. Marking $1.mark");
-		system("touch $1.mark");
-	} else {
-		dmessage("Ticket for $username is invalid for ", $svalid / 60, " minutes. Marking $ticket.mark");
-		system("touch $ticket.mark");
-	}
-	goto cleanup;
-# if !$prolong|$renew or invalid or less than a week to become invalid
-} elsif (!$prolong && (($renew || $timeflag ne 3 ) || ( $svalid <= $oneweek || $sexpire <= 0))) {
-	dmessage("Creating Ticket for $username (Valid for ", $svalid / 60 / 60, " hours)");
-	$myjob = "create";
-# Prolong if created more than an hour before 
-} elsif ($screate <= -$onehour) {
-	dmessage("Prolonging Ticket for $username after ", $screate / 60, " minutes");
-	$myjob = "prolong";
-	system("kinit -R");
-	runaklog("Prolong");
-	$retval = $?;
-	goto cleanup;
-# Noop if create less than an hour before
-} elsif ($screate > -$onehour) {
-	dmessage("Next Ticket Renewal for $username in ", $onehour + $screate, " seconds");
-	$myjob = "keep";
-	runaklog("Keep");
-	#$retval = 1;
-	goto cleanup;
-# else ticket stays valid
-} else {
-	dmessage("Ticket for $username is valid for ", $svalid / 60, " minutes");
-	$myjob = "valid";
-	goto cleanup;
-}
+def config_val(name):
+    try:
+        result = subprocess.run(["condor_config_val", name],
+                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                universal_newlines=True, check=False)
+    except OSError:
+        return ""
+    return result.stdout.strip() if result.returncode == 0 else ""
 
 
-#$ENV{'PGPPATH'}='/var/lib/condor/util/pgp_batch';
-#$ENV{'PGPPASS'}="rtb\@desy.de";
-for (my $retry = $maxretries; $retry != 0; $retry--) {
-	my ($tokentest);
-	runaklog("Create");
-	#system("klist");
-	#$tokentest = `tokens | grep afs | grep Expires`;
-	$tokentest = `klist | grep krbtgt/`;
-	#system ("echo Test;klist") if $debug;
-	if ($tokentest) {
-		dmessage("ARC: Testing: SetToken Ok");
-		last;
-	} else {
-		dmessage("ARC: Testing: SetToken Problem");
-		next if $retry;
-		$retval = 99;
-		goto cleanup;
-	}
-}
-
-cleanup:
-# deleting the temporary CC is done by the object-destruction automatically, if $keepkrbccfile == 0
-
-dmessage ("My Job was $myjob for $username");
-
-close($DFILE) if $debug;
-
-exit $retval;
-
-sub dmessage
-{
-	print $DFILE "$procid:", join("",@_), "\n" if $debug;
-}
-sub message
-{
-	print join("",@_),"\n" if $debug;
-}
-
-sub runaklog {
-	#if ($batchsystem eq "htc" && $shepherding) {
-	if ($batchsystem eq "htc") {
-		dmessage(join("",@_).": Running $condor_aklog");
-		system($condor_aklog);
-	} else {
-		dmessage(join("",@_).": Running aklog");
-		system("aklog");
-	}
-}
-
-sub parsedate {
-  my($s) = "$_[0] $_[1]";
-  my($year, $month, $day, $hour, $minute, $second);
-
-  if($s =~ m{^\s*(\d{1,2})\W*0*(\d{1,2})\W*0*(\d{1,4})\W*(\d{0,2})\W*(\d{0,2})\W*(\d{0,2})}x) {
-    $year = $3;  $month = $1;   $day = $2;
-    $hour = defined $4 ? $4 : 0;  $minute = defined $5 ? $5 : 0;  $second = defined $6 ? $6 : 0;
-    #$hour //= 0;  $minute //= 0;  $second //= 0;  # defaults.
-    $year = ($year<100 ? ($year<70 ? 2000+$year : 1900+$year) : $year);
-    return timelocal($second,$minute,$hour,$day,$month-1,$year);
-  }
-  return -1;
-}
+def open_log(log_dir):
+    """Open the debug log for appending, refusing to follow a symlink."""
+    if not log_dir:
+        return None
+    path = os.path.join(log_dir, "set_token_cmd.log")
+    try:
+        fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW, 0o644)
+        return os.fdopen(fd, "a")
+    except OSError:
+        return None
 
 
+def fmt(value):
+    """Format a number the way Perl prints it."""
+    if isinstance(value, float):
+        return f"{value:.15g}"
+    return str(value)
+
+
+def dmessage(*parts):
+    if log_file:
+        log_file.write(f"{PROCID}:{''.join(fmt(p) for p in parts)}\n")
+        log_file.flush()
+
+
+def touch(path):
+    """Create path (or update its mtime), refusing to follow a symlink."""
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    try:
+        os.utime(fd)
+    finally:
+        os.close(fd)
+
+
+def run(argv):
+    """Run a command, returning its exit status (255 if it could not run)."""
+    try:
+        return subprocess.call(argv)
+    except OSError:
+        return 255
+
+
+def parse_date(date, tod):
+    """Convert klist's "MM/DD/YYYY HH:MM:SS" to seconds since the epoch in
+    local time.  Returns -1 if it doesn't look like a date, and raises
+    ValueError if the fields are out of range."""
+    s = "%s %s" % (date or "", tod or "")
+    m = re.match(r'\s*(\d{1,2})\W*0*(\d{1,2})\W*0*(\d{1,4})\W*(\d{0,2})\W*(\d{0,2})\W*(\d{0,2})', s)
+    if not m:
+        return -1
+    month, day, year = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    hour, minute, second = (int(g) if g else 0 for g in m.group(4, 5, 6))
+    if year < 100:
+        year += 2000 if year < 70 else 1900
+    when = datetime.datetime(year, month, day, hour, minute, second)
+    return int(time.mktime(when.timetuple()))
+
+
+def ticket_times(ticket, now):
+    """Parse "klist <ticket>".  Returns (state, created, expires, renewable),
+    the times relative to now in seconds; state is 3 only if all three
+    times were found."""
+    try:
+        lines = subprocess.run(["klist", ticket], stdout=subprocess.PIPE,
+                               universal_newlines=True, check=False).stdout.split("\n")
+    except OSError:
+        lines = []
+
+    state = 0
+    created = expires = renewable = 0
+    for line in lines:
+        if re.match(r'.*FILE:', line) or re.match(r'Default principal: .*@', line):
+            state = 0
+        elif line.startswith("Valid"):
+            state = 1
+        elif state == 1:
+            # "11/18/2026 10:00:00  11/19/2026 10:00:00  krbtgt/REALM@REALM"
+            fields = re.split(r' +', line) + [None] * 4
+            created = parse_date(fields[0], fields[1]) - now
+            expires = parse_date(fields[2], fields[3]) - now
+            state = 2
+        elif state == 2:
+            # "	renew until 11/25/2026 10:00:00"
+            fields = re.split(r' +', line) + [None] * 4
+            renewable = parse_date(fields[2], fields[3]) - now
+            state = 3
+            break
+    return state, created, expires, renewable
+
+
+def main(argv):
+    global log_file
+
+    condor_aklog = config_val("SBIN") + "/condor_aklog"
+    log_file = open_log(config_val("LOG"))
+
+    dmessage(">>>>>>>>>>")
+    dmessage("===========================")
+    dmessage("set_batchtok_cmd called at: ", time.ctime(), " with arguments: ", " ".join(argv))
+
+    # Are we running under a job, or by hand?
+    job_ad = os.environ.get("_CONDOR_JOB_AD")
+    shepherding = bool(job_ad) and os.path.isfile(job_ad)
+    if shepherding:
+        dmessage("Environment Found ", job_ad)
+    if os.path.isfile(condor_aklog):
+        batch_system = "htc"
+    elif os.path.isdir("/usr/sge/"):
+        batch_system = "sge"
+    else:
+        batch_system = ""
+    dmessage('Environment: Shepherding="%d", Batch System="%s"' % (shepherding, batch_system))
+
+    def run_aklog(what):
+        if batch_system == "htc":
+            dmessage(what, ": Running ", condor_aklog)
+            return run([condor_aklog])
+        dmessage(what, ": Running aklog")
+        return run(["aklog"])
+
+    username = argv[0] if len(argv) > 0 else ""
+    period = argv[1] if len(argv) > 1 else ""
+    krb5ccname = argv[2] if len(argv) > 2 else ""
+    tmode = argv[3] if len(argv) > 3 else ""
+
+    if tmode == "prolong":
+        prolong, renew = True, False
+    elif tmode == "renew" or batch_system == "sge":
+        tmode = "renew"
+        prolong, renew = False, True
+    else:
+        tmode = "none"
+        prolong, renew = False, False
+
+    env_ccname = os.environ.get("KRB5CCNAME", "")
+    if krb5ccname.startswith("FILE:"):
+        ticket = krb5ccname[len("FILE:"):]
+        os.environ["KRB5CCNAME"] = krb5ccname
+    elif os.path.isfile(krb5ccname):
+        ticket = krb5ccname
+        os.environ["KRB5CCNAME"] = "FILE:" + ticket
+    elif env_ccname.startswith("FILE:"):
+        ticket = env_ccname[len("FILE:"):]
+    else:
+        ticket = "/tmp/krb5cc_%s_p.%d" % (username, PROCID)
+        os.environ["KRB5CCNAME"] = "FILE:" + ticket
+
+    my_job = "undefined"
+    retval = 0
+
+    # Perl treated "0" as false, so an argument of "0" is as good as missing
+    if username in ("", "0") or period in ("", "0"):
+        print("parameter constellation is not as expected.", file=sys.stderr)
+        dmessage("My Job was ", my_job, " for ", username)
+        return 1
+
+    dmessage("Mode: ", tmode, " for ", ticket)
+
+    state, created, expires, renewable = 0, 0, 0, 0
+    if os.path.isfile(ticket):
+        state, created, expires, renewable = ticket_times(ticket, int(time.time()))
+
+    if not renew and state == 3 and expires <= 0:
+        # Expired: mark it so condor_credmon_krb removes the credential
+        my_job = "mark_expired"
+        m = re.match(r'(.*)\..*$', ticket)
+        mark = (m.group(1) if m else ticket) + ".mark"
+        dmessage("Ticket for ", username, " is invalid for ", renewable / 60, " minutes. Marking ", mark)
+        try:
+            touch(mark)
+        except OSError as e:
+            dmessage("Failed to create ", mark, ": ", e.strerror)
+            retval = 1
+    elif not prolong and (renew or state != 3 or renewable <= ONE_WEEK or expires <= 0):
+        my_job = "create"
+        dmessage("Creating Ticket for ", username, " (Valid for ", renewable / 60 / 60, " hours)")
+        for _ in range(MAX_RETRIES):
+            run_aklog("Create")
+            try:
+                klist = subprocess.run(["klist"], stdout=subprocess.PIPE,
+                                       universal_newlines=True, check=False).stdout
+            except OSError:
+                klist = ""
+            if "krbtgt/" in klist:
+                dmessage("ARC: Testing: SetToken Ok")
+                break
+            dmessage("ARC: Testing: SetToken Problem")
+        else:
+            retval = 99
+    elif created <= -ONE_HOUR:
+        # Created more than an hour ago: renew it
+        my_job = "prolong"
+        dmessage("Prolonging Ticket for ", username, " after ", created / 60, " minutes")
+        run(["kinit", "-R"])
+        retval = run_aklog("Prolong")
+    else:
+        # Created less than an hour ago: nothing to renew yet
+        my_job = "keep"
+        dmessage("Next Ticket Renewal for ", username, " in ", ONE_HOUR + created, " seconds")
+        run_aklog("Keep")
+
+    dmessage("My Job was ", my_job, " for ", username)
+    return retval
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except ValueError as e:
+        # A date from klist was out of range; do nothing rather than guess
+        print("set_batchtok_cmd: %s" % e, file=sys.stderr)
+        sys.exit(255)
