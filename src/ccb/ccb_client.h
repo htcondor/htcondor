@@ -114,6 +114,12 @@ class CCBClient: public Service, public ClassyCountedPtr {
 	// nested id as a single CCBID.
 	static bool SplitCCBContact( char const *ccb_contact, std::string &ccb_address, std::string &ccbid, const std::string & peer, CondorError *error, bool peel_innermost = true );
 
+	// True if ccb_contact is a nested (tunneled) contact.
+	// We must differentiate these to avoid contacting a tunnel in non-streaming mode.
+	static bool ContactIsNested( char const *ccb_contact );
+	// True if any of this client's contacts is nested.
+	bool anyContactIsNested() const;
+
 	// Streaming/proxy mode (CCB_STREAMING): used when this client is itself
 	// behind a CCB (i.e. our own return address is CCB-routed), so the target
 	// cannot reverse-connect to us directly.  Instead we ask the broker to
