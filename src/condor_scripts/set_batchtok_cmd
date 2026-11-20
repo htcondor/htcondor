@@ -57,7 +57,7 @@ def open_log(log_dir):
 def fmt(value):
     """Format a number the way Perl prints it."""
     if isinstance(value, float):
-        return "%.15g" % value
+        return f"{value:.15g}"
     return str(value)
 
 
