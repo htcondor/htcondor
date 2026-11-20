@@ -303,11 +303,6 @@ class match_rec
 
 	std::shared_ptr<DCMsgCallback> claim_requester;
 
-		// if we created a dynamic hole in the DAEMON auth level
-		// to support flocking, this will be set to the id of the
-		// punched hole
-	std::string*	auth_hole_id{nullptr};
-
 		// Set the mrec status to the given value (also updates
 		// entered_current_status)
 	void	setStatus( int stat );
