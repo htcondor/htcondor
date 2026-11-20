@@ -63,7 +63,7 @@ def fmt(value):
 
 def dmessage(*parts):
     if log_file:
-        log_file.write("%d:%s\n" % (PROCID, "".join(fmt(p) for p in parts)))
+        log_file.write(f"{PROCID}:{''.join(fmt(p) for p in parts)}\n")
         log_file.flush()
 
 
