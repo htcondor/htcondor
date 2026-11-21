@@ -19,6 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include <algorithm>
 #include <condor_daemon_core.h>
 #include "ccb_server.h"
 #include "ccb_listener.h"
@@ -135,6 +136,43 @@ CCBServer::CCBIDFromString(CCBID &ccbid,char const *ccbid_str)
 	return true;
 }
 
+bool
+CCBServer::ParseCCBContact( char const *ccb_contact, std::string &address,
+							std::vector<std::string> &ids )
+{
+		// A contact is composed as "<address>#<id>" (CCBIDToContactString), nested
+		// once per broker, so the ids are a suffix of '#'-separated decimal runs.
+		// The address is NOT simply "everything before the first (or last) '#'":
+		// '#' is unescaped in a sinful parameter value, so an address may contain
+		// one of its own.  Peel from the right while the trailing token parses as
+		// a CCBID and stop at the first one that does not; what is left is the
+		// address, '#' and all.
+	address.clear();
+	ids.clear();
+	if( !ccb_contact ) {
+		return false;
+	}
+	std::string rest( ccb_contact );
+	while( true ) {
+		size_t hash = rest.rfind('#');
+		if( hash == std::string::npos ) {
+			break;
+		}
+		CCBID parsed;
+		if( !CCBIDFromString( parsed, rest.c_str() + hash + 1 ) ) {
+			break;
+		}
+		ids.push_back( rest.substr( hash + 1 ) );
+		rest.erase( hash );
+	}
+	if( ids.empty() ) {
+		return false;
+	}
+	std::reverse( ids.begin(), ids.end() );
+	address = rest;
+	return true;
+}
+
 static char const *
 CCBIDToString(CCBID ccbid,std::string &ccbid_str)
 {
@@ -146,12 +184,13 @@ static bool
 CCBIDFromContactString(CCBID &ccbid,char const *ccb_contact)
 {
 	// Format is "<address>#CCBID"; for a tunneled (nested) contact the address is
-	// itself a contact, so split on the LAST '#' to get this daemon's own id.
-	ccb_contact = strrchr(ccb_contact,'#');
-	if( !ccb_contact ) {
+	// itself a contact, so this daemon's own id is the innermost (last) one.
+	std::string address;
+	std::vector<std::string> ids;
+	if( !CCBServer::ParseCCBContact(ccb_contact,address,ids) ) {
 		return false;
 	}
-	return CCBServer::CCBIDFromString(ccbid,ccb_contact+1);
+	return CCBServer::CCBIDFromString(ccbid,ids.back().c_str());
 }
 
 void
@@ -561,17 +600,21 @@ CCBServer::OnUpstreamRegistered()
 	m_upstream_ccb->GetCCBContactString( contacts );
 	std::string tunnel_list;
 	for( const auto &contact : StringTokenIterator( contacts, " " ) ) {
-		std::string c = contact;
-		size_t hash = c.rfind('#');
-		if( hash == std::string::npos ) {
+		std::string broker;                           // "<next_hop>" (maybe nested)
+		std::vector<std::string> contact_ids;
+		if( !ParseCCBContact( contact.c_str(), broker, contact_ids ) ) {
 			continue;   // this listener has no ccbid yet
 		}
-		std::string broker = c.substr(0, hash);       // "<next_hop>" (maybe nested)
-		std::string ids    = c.substr(hash + 1);      // "inside_id"
+		std::string ids = contact_ids.back();         // "inside_id"
+			// Any outer hops stay part of the broker chain, as before.
+		for( size_t i = 0; i + 1 < contact_ids.size(); ++i ) {
+			broker += "#";
+			broker += contact_ids[i];
+		}
 		Sinful bsin( broker.c_str() );
 		if( !bsin.valid() ) {
 			dprintf(D_ALWAYS,"CCB: next-hop contact %s is not a valid Sinful; skipping "
-					"that tunnel path.\n", c.c_str());
+					"that tunnel path.\n", contact.c_str());
 			continue;
 		}
 		if( !tunnel_list.empty() ) {

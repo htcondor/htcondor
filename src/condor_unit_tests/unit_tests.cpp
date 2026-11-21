@@ -59,6 +59,7 @@ bool OTEST_Old_Classads(void);
 bool OTEST_Env(void);
 bool OTEST_FileLock(void);
 bool OTEST_ArgList(void);
+bool OTEST_CCBContact(void);
 bool OTEST_Iso_Dates(void);
 bool OTEST_UserPolicy(void);
 bool OTEST_Directory(void);
@@ -104,6 +105,7 @@ const static struct {
 	map(OTEST_Env),
 	map(OTEST_FileLock),
 	map(OTEST_ArgList),
+	map(OTEST_CCBContact),
 	map(OTEST_Iso_Dates),
 	map(OTEST_UserPolicy),
 	map(OTEST_Directory),

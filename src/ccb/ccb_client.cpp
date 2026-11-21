@@ -26,6 +26,7 @@
 #include "selector.h"
 #include "CondorError.h"
 #include "ccb_client.h"
+#include "ccb_server.h"   // CCBServer::ParseCCBContact, the contact-format parser
 
 #include <algorithm>
 #include <memory>
@@ -485,17 +486,17 @@ CCBClient::ProxyConnect_nonblocking( char const *ccbid, char const *my_ccb_retur
 	// and ccbid is the innermost id (idN); peel the chain into the ordered id
 	// list [id0, ..., idN] and the flat entry address.
 	m_proxy_ids.clear();
-	m_proxy_ids.push_back( ccbid );
 	std::string addr = m_cur_ccb_address;
-	while( addr.find('#') != std::string::npos ) {
-		std::string inner_addr, inner_id;
-		if( !SplitCCBContact( addr.c_str(), inner_addr, inner_id, m_target_peer_description, NULL ) ) {
-			return false;
-		}
-		m_proxy_ids.push_back( inner_id );
-		addr = inner_addr;
+	std::string entry_addr;
+	std::vector<std::string> chain_ids;
+	if( CCBServer::ParseCCBContact( addr.c_str(), entry_addr, chain_ids ) ) {
+			// Outer hops, already outermost-first.
+		m_proxy_ids = chain_ids;
+		addr = entry_addr;
 	}
-	std::reverse( m_proxy_ids.begin(), m_proxy_ids.end() );
+		// A flat broker address carries no outer hop; either way the innermost id
+		// goes last.
+	m_proxy_ids.push_back( ccbid );
 	m_proxy_entry = addr;
 	m_proxy_return = my_ccb_return;
 
@@ -1190,8 +1191,9 @@ bool CCBClient::SplitCCBContact( char const *ccb_contact, std::string &ccb_addre
 	// serialization instead wants the flat entry address with the whole nested id
 	// as a single CCBID, so it splits on the FIRST '#'.  A flat single-hop contact
 	// has exactly one '#', so the two are identical for the common case.
-	char const *ptr = peel_innermost ? strrchr(ccb_contact,'#') : strchr(ccb_contact,'#');
-	if( !ptr ) {
+	std::string address;
+	std::vector<std::string> ids;
+	if( !CCBServer::ParseCCBContact(ccb_contact,address,ids) ) {
 		std::string errmsg;
 		formatstr(errmsg, "Bad CCB contact '%s' when connecting to %s.",
 					   ccb_contact, peer.c_str());
@@ -1204,20 +1206,37 @@ bool CCBClient::SplitCCBContact( char const *ccb_contact, std::string &ccb_addre
 		}
 		return false;
 	}
-	ccb_address.assign(ccb_contact, ptr-ccb_contact);
-	ccbid = ptr+1;
+	if( peel_innermost ) {
+			// Innermost id is ours; every outer hop stays with the address.
+		ccb_address = address;
+		for( size_t i = 0; i + 1 < ids.size(); ++i ) {
+			ccb_address += "#";
+			ccb_address += ids[i];
+		}
+		ccbid = ids.back();
+	}
+	else {
+			// Flat entry address, whole id chain as one CCBID.
+		ccb_address = address;
+		ccbid = ids[0];
+		for( size_t i = 1; i < ids.size(); ++i ) {
+			ccbid += "#";
+			ccbid += ids[i];
+		}
+	}
 	return true;
 }
 
 bool CCBClient::ContactIsNested( char const *ccb_contact )
 {
-		// Peel the innermost id (split on the LAST '#', as the recursive connect
-		// path does); if what remains still holds a '#', this is a multi-hub tunnel.
-	char const *last = ccb_contact ? strrchr(ccb_contact,'#') : nullptr;
-	if( !last ) {
+		// More than one hop id means the broker named by this contact is itself
+		// reachable only through another broker.
+	std::string address;
+	std::vector<std::string> ids;
+	if( !CCBServer::ParseCCBContact(ccb_contact,address,ids) ) {
 		return false;
 	}
-	return memchr(ccb_contact, '#', (size_t)(last - ccb_contact)) != nullptr;
+	return ids.size() > 1;
 }
 
 bool CCBClient::anyContactIsNested() const
