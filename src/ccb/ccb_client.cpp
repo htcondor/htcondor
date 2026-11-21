@@ -26,7 +26,9 @@
 #include "selector.h"
 #include "CondorError.h"
 #include "ccb_client.h"
+#include "ccb_server.h"   // CCBServer::ParseCCBContact, the contact-format parser
 
+#include <algorithm>
 #include <memory>
 #include <random>
 #include <map>
@@ -484,17 +486,17 @@ CCBClient::ProxyConnect_nonblocking( char const *ccbid, char const *my_ccb_retur
 	// and ccbid is the innermost id (idN); peel the chain into the ordered id
 	// list [id0, ..., idN] and the flat entry address.
 	m_proxy_ids.clear();
-	m_proxy_ids.push_back( ccbid );
 	std::string addr = m_cur_ccb_address;
-	while( addr.find('#') != std::string::npos ) {
-		std::string inner_addr, inner_id;
-		if( !SplitCCBContact( addr.c_str(), inner_addr, inner_id, m_target_peer_description, NULL ) ) {
-			return false;
-		}
-		m_proxy_ids.push_back( inner_id );
-		addr = inner_addr;
+	std::string entry_addr;
+	std::vector<std::string> chain_ids;
+	if( CCBServer::ParseCCBContact( addr.c_str(), entry_addr, chain_ids ) ) {
+			// Outer hops, already outermost-first.
+		m_proxy_ids = chain_ids;
+		addr = entry_addr;
 	}
-	std::reverse( m_proxy_ids.begin(), m_proxy_ids.end() );
+		// A flat broker address carries no outer hop; either way the innermost id
+		// goes last.
+	m_proxy_ids.push_back( ccbid );
 	m_proxy_entry = addr;
 	m_proxy_return = my_ccb_return;
 
@@ -882,7 +884,11 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 	// If we are ourselves behind a CCB, the target cannot reverse-connect to us
 	// directly; ask the broker to proxy instead (streaming mode).
 	std::string my_ccb_return = streamingReturnAddr();
-	if( !my_ccb_return.empty() ) {
+		// Two independent reasons to stream.  (1) We are behind a CCB, so the
+		// target cannot dial us (my_ccb_return non-empty).  (2) The CONTACT is
+		// nested: the target is behind a tunnel and cannot dial anyone.
+	bool nested = param_boolean("CCB_CLIENT_STREAMING", true) && anyContactIsNested();
+	if( !my_ccb_return.empty() || nested ) {
 		m_target_sock->enter_reverse_connecting_state();
 		if( ProxyConnect_blocking( error, my_ccb_return.c_str() ) ) {
 			return true;
@@ -906,6 +912,14 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 	for (const auto& ccb_contact: m_ccb_contacts) {
 		bool success = false;
 		std::string ccb_address, ccbid;
+			// A nested contact names a CCB that is only reachable through another CCB.
+		if( ContactIsNested( ccb_contact.c_str() ) ) {
+			dprintf(D_ALWAYS,
+					"CCBClient: %s is reachable only through a CCB tunnel (%s); "
+					"a direct reverse connection is not possible.\n",
+					m_target_peer_description.c_str(), ccb_contact.c_str());
+			continue;
+		}
 		if( !SplitCCBContact( ccb_contact.c_str(), ccb_address, ccbid, m_target_peer_description, error ) ) {
 			continue;
 		}
@@ -1177,8 +1191,9 @@ bool CCBClient::SplitCCBContact( char const *ccb_contact, std::string &ccb_addre
 	// serialization instead wants the flat entry address with the whole nested id
 	// as a single CCBID, so it splits on the FIRST '#'.  A flat single-hop contact
 	// has exactly one '#', so the two are identical for the common case.
-	char const *ptr = peel_innermost ? strrchr(ccb_contact,'#') : strchr(ccb_contact,'#');
-	if( !ptr ) {
+	std::string address;
+	std::vector<std::string> ids;
+	if( !CCBServer::ParseCCBContact(ccb_contact,address,ids) ) {
 		std::string errmsg;
 		formatstr(errmsg, "Bad CCB contact '%s' when connecting to %s.",
 					   ccb_contact, peer.c_str());
@@ -1191,9 +1206,43 @@ bool CCBClient::SplitCCBContact( char const *ccb_contact, std::string &ccb_addre
 		}
 		return false;
 	}
-	ccb_address.assign(ccb_contact, ptr-ccb_contact);
-	ccbid = ptr+1;
+	if( peel_innermost ) {
+			// Innermost id is ours; every outer hop stays with the address.
+		ccb_address = address;
+		for( size_t i = 0; i + 1 < ids.size(); ++i ) {
+			ccb_address += "#";
+			ccb_address += ids[i];
+		}
+		ccbid = ids.back();
+	}
+	else {
+			// Flat entry address, whole id chain as one CCBID.
+		ccb_address = address;
+		ccbid = ids[0];
+		for( size_t i = 1; i < ids.size(); ++i ) {
+			ccbid += "#";
+			ccbid += ids[i];
+		}
+	}
 	return true;
+}
+
+bool CCBClient::ContactIsNested( char const *ccb_contact )
+{
+		// More than one hop id means the broker named by this contact is itself
+		// reachable only through another broker.
+	std::string address;
+	std::vector<std::string> ids;
+	if( !CCBServer::ParseCCBContact(ccb_contact,address,ids) ) {
+		return false;
+	}
+	return ids.size() > 1;
+}
+
+bool CCBClient::anyContactIsNested() const
+{
+	return std::any_of( m_ccb_contacts.begin(), m_ccb_contacts.end(),
+		[]( const std::string &c ) { return ContactIsNested(c.c_str()); } );
 }
 
 bool
@@ -1388,7 +1437,10 @@ CCBClient::try_next_ccb()
 	ASSERT( return_address && *return_address );
 
 	Sinful sinful_return(return_address);
-	if( sinful_return.getCCBContact() ) {
+		// As in the blocking path: stream either because WE cannot be dialed, or
+		// because the CONTACT is nested and the TARGET cannot dial anyone.
+	bool nested = ContactIsNested( ccb_contact.c_str() );
+	if( sinful_return.getCCBContact() || nested ) {
 		bool streaming_enabled = param_boolean("CCB_CLIENT_STREAMING", true);
 		if( m_streaming_phase && streaming_enabled ) {
 			// We are behind a CCB too (private-to-private): use streaming/proxy
@@ -1396,10 +1448,24 @@ CCBClient::try_next_ccb()
 			// (set by ReverseConnect).  Drive the broker exchange asynchronously
 			// so we do not block the DaemonCore main loop; the rest of the work
 			// happens in ProxyConnectCallback / ProxyMsgHandler.
-			if( ProxyConnect_nonblocking( ccbid.c_str(), return_address ) ) {
+			// Only offer a CCB return address if we actually have one; a
+			// publicly reachable client streams with an empty one and the broker
+			// honors CCBStreamingRequired regardless.
+			char const *proxy_return =
+				sinful_return.getCCBContact() ? return_address : "";
+			if( ProxyConnect_nonblocking( ccbid.c_str(), proxy_return ) ) {
 				return true;
 			}
 			// Failed to even initiate; try the next broker (or give up).
+			return try_next_ccb();
+		}
+
+		if( nested ) {
+				// Streaming is off or exhausted and the contact is nested.
+			dprintf(D_ALWAYS,
+					"CCBClient: %s is reachable only through a CCB tunnel (%s); "
+					"a direct reverse connection is not possible.\n",
+					m_target_peer_description.c_str(), ccb_contact.c_str());
 			return try_next_ccb();
 		}
 
