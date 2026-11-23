@@ -12,6 +12,7 @@ using ListOfCatalogs = std::vector< std::pair< std::string, std::string > >;
 std::optional<ListOfCatalogs>
 computeCommonInputFileCatalogs(
 	ClassAd * jobAd,
+	bool & cif_in_catalog,
 	const std::string & startdAddress,
 	std::map< std::string, std::string > * internalToSimpleNameMap = NULL
 );

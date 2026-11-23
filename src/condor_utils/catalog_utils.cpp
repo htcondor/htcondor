@@ -5,6 +5,7 @@
 #include <string>
 #include <optional>
 #include "compat_classad.h"
+#include "compat_classad_util.h"
 #include "catalog_utils.h"
 #include "guidance.h"
 #include "condor_attributes.h"
@@ -14,10 +15,13 @@
 std::optional<ListOfCatalogs>
 computeCommonInputFileCatalogs(
 	ClassAd * jobAd,
+	bool & cif_in_catalog,
 	const std::string & startdAddress,
 	std::map< std::string, std::string > * internalToSimpleNameMap
 ) {
 	ListOfCatalogs common_file_catalogs;
+
+	cif_in_catalog = false; // assume that there is no _x_catalog_* attr that refers to CommonInputFiles
 
 	//
 	// Which common files, if any, were we asked for?
@@ -26,7 +30,24 @@ computeCommonInputFileCatalogs(
 	jobAd->LookupString(ATTR_COMMON_INPUT_CATALOGS, commonInputCatalogs);
 	for( const auto & cifName : StringTokenIterator(commonInputCatalogs) ) {
 		std::string commonInputFiles;
-		jobAd->LookupString( "_x_catalog_" + cifName, commonInputFiles );
+		std::string catalog_attr = "_x_catalog_" + cifName;
+
+		// lookup the list of filenames in the catalog, and determine if that file list is
+		// an attribute reference pointing at CommonInputFiles (i.e. common input files is already in the catalog)
+		auto * expr = jobAd->Lookup(catalog_attr);
+		if (expr) {
+			if (ExprTreeIsLiteralString(expr, commonInputFiles)) {
+				// got it.
+			} else {
+				if ( ! cif_in_catalog) {
+					std::string attr;
+					cif_in_catalog = ExprTreeIsAttrRef(expr, attr) &&
+						MATCH == strcasecmp(ATTR_COMMON_INPUT_FILES, attr.c_str());
+				}
+				// not a string, try evaluating as an expression
+				jobAd->LookupString(catalog_attr, commonInputFiles);
+			}
+		}
 
 		auto internal_catalog_name = makeCIFName(* jobAd, cifName, startdAddress, commonInputFiles);
 		if(! internal_catalog_name) {

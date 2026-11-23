@@ -1018,7 +1018,8 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	bool required = cxfer_type == CXFER_STATE::INVALID;
 
     if( impossible || disallowed || required ) {
-		auto common_file_catalogs = shadow->computeCommonInputFileCatalogs( jobAd );
+		bool cif_in_catalog = false;
+		auto common_file_catalogs = shadow->computeCommonInputFileCatalogs( jobAd, cif_in_catalog );
 		if(! common_file_catalogs) {
 			dprintf( D_ERROR, "Failed to compute common input file catalogs, can't run job!\n" );
 
@@ -1032,7 +1033,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 		}
 
 		int required_version = 2;
-		if(! shadow->computeCommonInputFiles( jobAd, *common_file_catalogs, required_version )) {
+		if( ! cif_in_catalog && ! shadow->computeCommonInputFiles( jobAd, *common_file_catalogs, required_version )) {
 			dprintf( D_ERROR, "Failed to compute common input files, can't run job!\n" );
 
 			// We don't have a mechanism to inform the submitter of internal
