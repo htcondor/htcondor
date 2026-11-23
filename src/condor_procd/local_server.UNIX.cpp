@@ -30,7 +30,8 @@ LocalServer::LocalServer() :
 	m_initialized(false),
 	m_watchdog_server(NULL),
 	m_reader(NULL),
-	m_writer(NULL)
+	m_writer(NULL),
+	m_connected(false)
 {
 }
 
@@ -152,6 +153,7 @@ LocalServer::accept_connection(time_t timeout, bool &accepted)
 	// start without one and end_connection will have deleted
 	// any previous one)
 	//
+	ASSERT(!m_connected);
 	ASSERT(m_writer == NULL);
 
 	// see if a connection arrives within the timeout period
@@ -190,19 +192,24 @@ LocalServer::accept_connection(time_t timeout, bool &accepted)
 	                                                client_pid,
 	                                                client_sn);
 	if (!m_writer->initialize(client_addr)) {
-		delete[] client_addr;
+		// We can get here if the client got killed after sending
+		// its request but before we opened its response pipe. The
+		// rest of the request (command and arguments) is still in
+		// the shared command pipe, so we must accept the connection
+		// anyway and let the caller read it; otherwise the next read
+		// starts mid-message and every later request is misparsed.
+		// Responses to this client are silently dropped.
+		//
+		dprintf(D_ALWAYS,
+		        "LocalServer: client pid %d is gone, "
+		            "processing its request without responding\n",
+		        (int)client_pid);
 		delete m_writer;
 		m_writer = NULL;
-
-			// We can get here if the client got killed before we
-			// connected.  This should not be a fatal exception.  We
-			// used to return false, which was treated as fatal.
-
-		accepted = false;
-		return true;
 	}
 	delete[] client_addr;
 
+	m_connected = true;
 	accepted = true;
 	return true;
 }
@@ -212,13 +219,14 @@ LocalServer::close_connection()
 {
 	ASSERT(m_initialized);
 
-	// at this point, we should have a writer from the previous
+	// at this point, we should have a connection from the previous
 	// call to accept_connection
 	//
-	ASSERT(m_writer != NULL);
+	ASSERT(m_connected);
 
 	delete m_writer;
 	m_writer = NULL;
+	m_connected = false;
 
 	return true;
 }
@@ -226,14 +234,18 @@ LocalServer::close_connection()
 bool
 LocalServer::read_data(void* buffer, int len)
 {
-	ASSERT(m_writer != NULL);
+	ASSERT(m_connected);
 	return m_reader->read_data(buffer, len);
 }
 
 bool
 LocalServer::write_data(void* buffer, int len)
 {
-	ASSERT(m_writer != NULL);
+	ASSERT(m_connected);
+	if (m_writer == nullptr) {
+		// client died before we could open its response pipe
+		return true;
+	}
 	return m_writer->write_data(buffer, len);
 }
 
