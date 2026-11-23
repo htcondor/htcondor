@@ -49,6 +49,7 @@ if (WITH_SCITOKENS)
 		FetchContent_declare(
 			scitokens
 			URL ${EXTERNALS_SOURCE_URL}/scitokens-cpp-1.1.3.tar.gz
+			${CONDOR_DOWNLOAD_EXTRACT_TIMESTAMP}
 			URL_HASH SHA256=eeaeb06da74cae92bd03d6be4c407e4855db023f409c59540b3143069407be1f
 			EXCLUDE_FROM_ALL
 		)

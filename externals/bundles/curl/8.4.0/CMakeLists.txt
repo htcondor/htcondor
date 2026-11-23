@@ -56,6 +56,7 @@ if (WITH_CURL)
 							#-- Download Step ----------
 							DOWNLOAD_DIR ${CURL_STAGE}/dl
 							URL ${EXTERNALS_SOURCE_URL}/${CURL_DOWNLOAD}
+							${CONDOR_DOWNLOAD_EXTRACT_TIMESTAMP}
 							URL_MD5 ${CURL_DOWNLOAD_MD5SUM}
 							#--Patch Step ----------
 							PATCH_COMMAND ${CURL_PATCH}
