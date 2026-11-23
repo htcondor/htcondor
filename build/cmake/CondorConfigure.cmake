@@ -659,6 +659,17 @@ if (NOT EXTERNALS_SOURCE_URL)
    set (EXTERNALS_SOURCE_URL "https://htcss-downloads.chtc.wisc.edu/externals")
 endif()
 
+# cmake 3.24+ warns (CMP0135) about any URL download that does not
+# say whether extracted files keep the archive's timestamps.  Add
+# ${CONDOR_DOWNLOAD_EXTRACT_TIMESTAMP} to every ExternalProject_Add and
+# FetchContent_Declare that uses URL.  Older cmake does not know the
+# keyword, so it expands to nothing there.  FALSE (extraction time)
+# is safe even for the autoconf externals (munge, voms), because they
+# use AM_MAINTAINER_MODE, which disables the autotools rebuild rules.
+if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
+	set (CONDOR_DOWNLOAD_EXTRACT_TIMESTAMP DOWNLOAD_EXTRACT_TIMESTAMP FALSE)
+endif()
+
 option(CACHED_EXTERNALS "enable/disable cached externals" OFF)
 set (EXTERNAL_STAGE $ENV{CONDOR_BLD_EXTERNAL_STAGE})
 if (NOT EXTERNAL_STAGE)

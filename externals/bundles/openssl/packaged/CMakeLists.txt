@@ -26,6 +26,7 @@ if (APPLE)
 	FetchContent_declare(
 		libressl_headers_darwin
 		URL ${EXTERNALS_SOURCE_URL}/libressl-2.8.3.tar.gz
+		${CONDOR_DOWNLOAD_EXTRACT_TIMESTAMP}
 		PATCH_COMMAND /bin/rm -f "${CMAKE_BINARY_DIR}/_deps/libressl_headers_darwin-src/CMakeLists.txt" && ln -s ../libressl_libs_darwin-src/lib "${CMAKE_BINARY_DIR}/_deps/libressl_headers_darwin-src/lib"
 	)
 
@@ -34,6 +35,7 @@ if (APPLE)
 	FetchContent_declare(
 		libressl_libs_darwin
 		URL ${EXTERNALS_SOURCE_URL}/libressl_libs_${LIBRESSL_ARCH}-2.8.3.tar.gz
+		${CONDOR_DOWNLOAD_EXTRACT_TIMESTAMP}
 	)
 	FetchContent_MakeAvailable(libressl_headers_darwin libressl_libs_darwin)
 
