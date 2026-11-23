@@ -1,4 +1,4 @@
-*** 26.0.2 bugs
+*** 26.0.3 bugs
 
 - Fixed a rare bug that would cause the *condor_procd*, and then
   all other daemons to hang. This would only happen on systems
@@ -11,6 +11,8 @@
   immediately at job exit time, instead of waiting for the *condor_schedd*
   to restart.
   :jira:`4096`
+
+*** 26.0.2 bugs
 
 - :tool:`condor_tail` should now work on files larger than 2 Gb in size.
   :jira:`4008`
