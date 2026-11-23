@@ -363,9 +363,13 @@ sub check_expectations {
 				if (not defined $rhs) { $rhs = "undefined"; }
 			}
 			$rhs =~ s/\s*$//;
+			# patterns use / as the path separator on all platforms, so on Windows match them
+			# against a copy of the value that has \ changed to /
+			my $pat_rhs = $rhs;
+			if (CondorUtils::is_windows()) { $pat_rhs =~ tr{\\}{/}; }
 			if ($exv =~ /^\/(.*)\/$/) { # expectation is a pattern
 				my $re = qr/$1/;
-				if ($rhs =~ $re) {
+				if ($pat_rhs =~ $re) {
 					if ($verbose) { printf "\tfor %s: %s matches /%s/\n", $attr, $rhs, $re; }
 				} else {
 					printf "\tFAILURE: for %s: %s does not match expected /%s/\n", $attr, $rhs, $re;
@@ -373,7 +377,7 @@ sub check_expectations {
 				}
 			} elsif ($exv =~ /^!\/(.*)\/$/) { # expectation is an antipattern
 				my $re = qr/$1/;
-				if ($rhs =~ $re) {
+				if ($pat_rhs =~ $re) {
 					printf "\tFAILURE: for %s: %s should not match /%s/\n", $attr, $rhs, $re;
 					$misses += 1;
 				} else {
