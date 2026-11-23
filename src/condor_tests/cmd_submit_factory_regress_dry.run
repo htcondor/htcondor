@@ -33,6 +33,7 @@ my $peername = "cmd_submit_regress_dry";
 my %expect;
 my %expect_warn;
 my %dont_expect;
+my %expect_fail; # submits that should fail, each line is a substring that must appear in stderr
 
 mkdir("${testname}_scratchdir$$");
 chdir("${testname}_scratchdir$$");
@@ -51,7 +52,7 @@ if ( ! -d "Multilevel_Thesis_WheatData") {
 
 
 TLOG "Loading expectations from $peername.expect\n";
-load_expectations("../$peername.expect", \%expect, \%expect_warn, \%dont_expect);
+load_expectations("../$peername.expect", \%expect, \%expect_warn, \%dont_expect, \%expect_fail);
 
 # print the loaded expectations
 #
@@ -118,6 +119,27 @@ foreach my $sub (@subs) {
 		print("\t----stderr----\n");
 		foreach (@error) { print $_; }
 		print("\t----end stderr----\n");
+	}
+
+	# for submits that are expected to fail, check only the exit code and the error messages
+	# there is nothing to materialize when the submit fails
+	if (defined $expect_fail{$tag}) {
+		TLOG "$tag: Checking Expected Failure\n";
+		$result = $exitcode != 0;
+		if ( ! $result) { print "\tFAILURE: submit succeeded but was expected to fail\n"; }
+		my $errtext = join("", @error);
+		foreach my $msg (@{$expect_fail{$tag}}) {
+			my $tmp = $msg; $tmp =~ s/[ \t\r\n]*$//;
+			next if $tmp eq "" || $tmp =~ /^#/;
+			if (index($errtext, $tmp) < 0) {
+				print "\tFAILURE: stderr does not contain expected error: $tmp\n";
+				$result = 0;
+			} elsif ($verbose) {
+				print "\tstderr contains expected error: $tmp\n";
+			}
+		}
+		RegisterResult($result,test_name=>$testname, check_name=>"$sub");
+		next;
 	}
 
 	# print the raw command output only if we are in verbose mode
@@ -341,9 +363,13 @@ sub check_expectations {
 				if (not defined $rhs) { $rhs = "undefined"; }
 			}
 			$rhs =~ s/\s*$//;
+			# patterns use / as the path separator on all platforms, so on Windows match them
+			# against a copy of the value that has \ changed to /
+			my $pat_rhs = $rhs;
+			if (CondorUtils::is_windows()) { $pat_rhs =~ tr{\\}{/}; }
 			if ($exv =~ /^\/(.*)\/$/) { # expectation is a pattern
 				my $re = qr/$1/;
-				if ($rhs =~ $re) {
+				if ($pat_rhs =~ $re) {
 					if ($verbose) { printf "\tfor %s: %s matches /%s/\n", $attr, $rhs, $re; }
 				} else {
 					printf "\tFAILURE: for %s: %s does not match expected /%s/\n", $attr, $rhs, $re;
@@ -351,7 +377,7 @@ sub check_expectations {
 				}
 			} elsif ($exv =~ /^!\/(.*)\/$/) { # expectation is an antipattern
 				my $re = qr/$1/;
-				if ($rhs =~ $re) {
+				if ($pat_rhs =~ $re) {
 					printf "\tFAILURE: for %s: %s should not match /%s/\n", $attr, $rhs, $re;
 					$misses += 1;
 				} else {
@@ -512,6 +538,7 @@ sub load_expectations {
 	my $expectref = shift;
 	my $warnref = shift;
 	my $noexpectref = shift;
+	my $failref = shift;
 
 	my $name;
 	my $aryref;
@@ -529,6 +556,10 @@ sub load_expectations {
 		} elsif ($_ =~ /^=!=(\S+)/) {
 			$aryref = [];
 			${$noexpectref}{$1} = $aryref;
+			next;
+		} elsif ($_ =~ /^=fail=(\S+)/) {
+			$aryref = [];
+			${$failref}{$1} = $aryref;
 			next;
 		}
 		push @{$aryref}, $_;

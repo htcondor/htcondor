@@ -2589,6 +2589,134 @@ int SubmitHash::SetKillSig()
 	return 0;
 }
 
+// returns true if path is a relative path that stays at or below the directory that it is
+// relative to. i.e. it is not a full path and none of its path components are ".."
+// Note: FileTransfer::LegalPathInSandbox() does a similar check for paths sent by a file transfer peer.
+// This version also rejects Windows drive relative paths like "c:foo", because our full_path()
+// method treats them as full paths. These could be consolidated into a common helper in the future.
+static bool is_contained_relative_path(const char * path)
+{
+	if (fullpath(path)) return false;
+#ifdef WIN32
+	if (path[0] && path[1] == ':') return false;
+	auto is_delim = [](char ch) { return ch == '/' || ch == '\\'; };
+#else
+	auto is_delim = [](char ch) { return ch == '/'; };
+#endif
+	const char * p = path;
+	while (*p) {
+		const char * end = p;
+		while (*end && ! is_delim(*end)) ++end;
+		if (end - p == 2 && p[0] == '.' && p[1] == '.') return false;
+		p = *end ? end + 1 : end;
+	}
+	return true;
+}
+
+// helper for organized output
+const char* SubmitHash::UnexpandedOrganizedOutputDirectory(std::string & buffer, bool ignore_errors, const char ** pattern_out)
+{
+	if (pattern_out) { *pattern_out = nullptr; }
+	auto_free_ptr organized_output_base(submit_param(SUBMIT_KEY_OrganizedOutputBase));
+	// lookup pattern without expanding it (we expand later)
+	const char * pattern = lookup(SUBMIT_KEY_OrganizedOutputPattern);
+	if (pattern && ! *pattern) pattern = nullptr;
+
+	// We want to do organized output if the flag is set, or if the output_base is defined or
+	// the output pattern is defined.
+	bool oo_was_defined = false;
+	bool organized_output = submit_param_bool(SUBMIT_KEY_OrganizedOutput, NULL, false, &oo_was_defined);
+	if ((organized_output_base || pattern) && ! oo_was_defined) { organized_output = true; }
+	// if the pattern is not set in the submit file, grab it from the config
+	if (organized_output && ! pattern) {
+		pattern = param_unexpanded("ORGANIZED_OUTPUT_PATTERN");
+		if (pattern && ! *pattern) pattern = nullptr;
+	}
+	if (organized_output && ! pattern) {
+		if ( ! ignore_errors) {
+			push_error(stderr, "Cannot do " SUBMIT_KEY_OrganizedOutput " because " SUBMIT_KEY_OrganizedOutputPattern " is not defined\n");
+			abort_code = 1;
+		}
+		organized_output = false;
+	}
+
+	if (organized_output) {
+		if (pattern_out) { *pattern_out = pattern; }
+		if (organized_output_base) {
+			if (pattern) {
+				dircat(organized_output_base, pattern, buffer);
+			} else {
+				buffer = organized_output_base.ptr();
+			}
+			return buffer.c_str();
+		}
+		// this can be 
+		return pattern;
+	}
+
+	return nullptr;
+}
+
+// special handling for SUBMIT_KEY_OrganizedOutput and/or SUBMIT_KEY_OutputDirectory which interact
+int SubmitHash::SetOutputDirSpecial()
+{
+	std::string buffer;
+	auto_free_ptr out_dir(submit_param(SUBMIT_KEY_OutputDirectory, ATTR_OUTPUT_DIRECTORY));
+	RETURN_IF_ABORT();
+
+	// If this is not late materialization, check for the alternate way of specifying the
+	// output directory by setting an output base and a subdir pattern. In the late materialization case
+	// out_dir will already have been set to the base/pattern when the submit digest was created.
+	// The pattern is checked after $() expansion to make sure that it stays below the base directory.
+	// This check happens for every job in a non-late-materialization submit, but for late materialization
+	// it happens only for job 0 (when the cluster ad is made). Later jobs are expanded by the schedd,
+	// where the base and the pattern are no longer separate.
+	if ( ! clusterAd) {
+		const char * unexpanded_pattern = nullptr;
+		const char * unexpanded_out_dir = UnexpandedOrganizedOutputDirectory(buffer, false, &unexpanded_pattern);
+		RETURN_IF_ABORT();
+		if (unexpanded_out_dir) {
+			if (out_dir) {
+				push_warning(stderr, SUBMIT_KEY_OrganizedOutput " will be ignored in favor of " SUBMIT_KEY_OutputDirectory "\n");
+			} else {
+				if (unexpanded_pattern) {
+					auto_free_ptr pattern(expand_macro(unexpanded_pattern));
+					if (pattern && ! is_contained_relative_path(pattern)) {
+						// name the base that the pattern escapes from, either the organized output base directory
+						// or the job's initial working directory when there is no organized output base
+						auto_free_ptr base(submit_param(SUBMIT_KEY_OrganizedOutputBase));
+						push_error(stderr, "Cannot do " SUBMIT_KEY_OrganizedOutput " because the pattern %s expands to %s"
+							" which is not a subdirectory of the %s %s\n",
+							unexpanded_pattern, pattern.ptr(),
+							base ? SUBMIT_KEY_OrganizedOutputBase : "job's initial working directory",
+							base ? base.ptr() : JobIwd.c_str());
+						ABORT_AND_RETURN(1);
+					}
+				}
+				out_dir.set(expand_macro(unexpanded_out_dir));
+			}
+		}
+	}
+
+	// Before SUBMIT_KEY_OrganizedOutput was added, this is what SetSimpleJobExprs would have done.
+	// It converts the $() expanded output dir to a full path and optionally does a file check on it.
+	const char * str = out_dir;
+	if (str && str[0]) {
+		buffer = full_path(str);
+		if ( ! buffer.empty()) {
+			if (FnCheckFile) {
+				int rval = FnCheckFile(CheckFileArg, this, SFR_GENERIC, buffer.c_str(), O_APPEND);
+				if (rval) { ABORT_AND_RETURN(rval); }
+			}
+			check_and_universalize_path(buffer);
+			str = buffer.c_str();
+		}
+		AssignJobString(ATTR_OUTPUT_DIRECTORY, str);
+	}
+
+	return 0;
+}
+
 int SubmitHash::SetContainerSpecial()
 {
 	RETURN_IF_ABORT();
@@ -4840,7 +4968,6 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 
 	// formerly SetOutputDestination
 	{SUBMIT_KEY_OutputDestination, ATTR_OUTPUT_DESTINATION, SimpleSubmitKeyword::f_as_string},
-	{SUBMIT_KEY_OutputDirectory, ATTR_OUTPUT_DIRECTORY, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_genfile},
 	// formerly SetWantGracefulRemoval
 	{SUBMIT_KEY_WantGracefulRemoval, ATTR_WANT_GRACEFUL_REMOVAL, SimpleSubmitKeyword::f_as_expr},
 	// formerly SetJobMaxVacateTime
@@ -4976,6 +5103,11 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// disallow some custom resource tags that are likely to be mistaken attempts to constrain GPU properties
 	{"request_gpu_memory", NULL, SimpleSubmitKeyword::f_error | SimpleSubmitKeyword::f_special},
 	{"request_gpus_memory", NULL, SimpleSubmitKeyword::f_error | SimpleSubmitKeyword::f_special},
+
+	// invoke SetOutputDirSpecial which
+	{SUBMIT_KEY_OrganizedOutput, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special},
+	{SUBMIT_KEY_OrganizedOutputBase, NULL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_genfile | SimpleSubmitKeyword::f_special},
+	{SUBMIT_KEY_OutputDirectory, ATTR_OUTPUT_DIRECTORY, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_genfile | SimpleSubmitKeyword::f_special},
 
 	// invoke SetGridParams
 	{SUBMIT_KEY_GridResource, ATTR_GRID_RESOURCE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid},
@@ -8477,6 +8609,7 @@ ClassAd* SubmitHash::make_job_ad (
 	SetOAuth(); /* 1 attr, prunable, factory:ok */
 
 	SetSimpleJobExprs();
+	SetOutputDirSpecial(); // we do this here so that OutputDestination will already have been set (by SetSimpleJobExprs)
 	SetExtendedJobExprs();
 
 	SetJobDeferral(); /* 4 attrs, prunable */
@@ -10215,6 +10348,12 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, const std
 		// we set FACTORY.Requirements because we cannot afford to generate requirements using a pruned digest
 		omit_knobs.insert(SUBMIT_KEY_Requirements);
 
+		// convert the OrganizedOutput keys into a complex SUBMIT_KEY_OutputDirectory
+		// and then omit them from the digest
+		omit_knobs.insert(SUBMIT_KEY_OrganizedOutput);
+		omit_knobs.insert(SUBMIT_KEY_OrganizedOutputBase);
+		omit_knobs.insert(SUBMIT_KEY_OrganizedOutputPattern);
+
 		// For now, never put on_evict_checks in the digest. In order to do so correctly
 		// we would need to coordinate the $() expansion of the list with $() expansion with in the body
 		// TODO: evaluate on_evict_checks so that they can vary by proc for late materialization.
@@ -10279,6 +10418,28 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, const std
 		}
 	}
 	hash_iter_delete(&it);
+
+	// Special case for "organized" output since it uses several submit commands
+	// to set an existing submit command <sigh>.  We want to build a base/pattern
+	// for the organized output directory, and add it as "output_directory=" if
+	// it has unexpanded macros after selective expansion
+	const char * unexpanded_out_dir = UnexpandedOrganizedOutputDirectory(str, true);
+	if (unexpanded_out_dir) {
+		rhs = unexpanded_out_dir;
+		int iret = selective_expand_macro(rhs, skip_knobs, mctx);
+		if (iret < 0) {
+			// there was an error in selective expansion.
+			// the SubmitMacroSet will have the error message already
+			out.clear();
+		} else if (iret > 0) {
+			// if the organized out dir has pending expansions we need to add it
+			// to the submit digest as output_directory
+			out += SUBMIT_KEY_OutputDirectory;
+			out += "=";
+			out += rhs;
+			out += "\n";
+		}
+	}
 
 	mctx.cwd = old_cwd; // put the old cwd value back
 

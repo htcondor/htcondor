@@ -135,7 +135,10 @@ Options
         any commands added via **-insert_sub_file** or :macro:`DAGMAN_INSERT_SUB_FILE`.
  **-batch-name** *name*
     Set the :ad-attr:`JobBatchName` to *name* for DAGMan and all jobs managed
-    by DAGMan.
+    by DAGMan.  The default batch name is the name of the DAG file followed by
+    ``+`` and the ClusterId of the DAGMan job.  Node jobs that use
+    :subcom:`organized_output` with the default :macro:`ORGANIZED_OUTPUT_PATTERN`
+    will place their output in a subdirectory named for the batch name.
  **-AutoRescue** *<0|1>*
     Automatically detect rescue DAG files upon startup and rescue from the
     most recent (highest number) rescue file discovered. ``0`` is ``False``.
