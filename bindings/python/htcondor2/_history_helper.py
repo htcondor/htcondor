@@ -62,9 +62,21 @@ class HistorySrc(enum.IntEnum):
 
 # ASCII digits only: Python's \d also matches other Unicode digits
 _JOB_ID_RE = re.compile(r'[0-9]+(\.[0-9]+)?')
-# Any printable ASCII character except '"' and '\\' (condor_history puts the
-# name unescaped into an Owner == "name" constraint), not starting with '-'
-_USER_RE = re.compile(r'[ !#-,.-\[\]-~][ !#-\[\]-~]*')
+_DIGITS_RE = re.compile(r'[0-9]+')
+# condor_history puts a username unescaped into an Owner == "name" constraint
+_USER_BAD_CHARS = '"\\'
+
+
+def _is_username(user: str) -> bool:
+    """
+    True if ``user`` is non-empty printable ASCII except '"' and '\\', and
+    does not start with '-' (so it cannot be read as an option).
+    """
+    return (
+        user != ""
+        and not user.startswith("-")
+        and all(" " <= c <= "~" and c not in _USER_BAD_CHARS for c in user)
+    )
 _VERSION_RE = re.compile(r'\$CondorVersion:\s*(\d+)\.(\d+)\.(\d+)')
 
 
@@ -83,7 +95,7 @@ def _valid_user(name: str, user) -> str:
     if not isinstance(user, str):
         raise TypeError(f"{name} must be a string or list of strings")
     # A job id (N or N.M) would be read as a job id, not a username
-    if _USER_RE.fullmatch(user) is None or _JOB_ID_RE.fullmatch(user) is not None:
+    if not _is_username(user) or _JOB_ID_RE.fullmatch(user) is not None:
         raise ValueError(f"{name} contains invalid username '{user}'")
     return user
 
@@ -129,7 +141,8 @@ def _valid_batch_id(name: str, batch) -> str:
 
 def _valid_dag_id(name: str, dag) -> str:
     if isinstance(dag, str):
-        if not (dag.isascii() and dag.isdigit()):
+        # Not str.isascii(), which needs Python 3.7+
+        if _DIGITS_RE.fullmatch(dag) is None:
             raise ValueError(f"{name} contains invalid DAGMan job id '{dag}'")
         dag = int(dag)
     elif not _is_int(dag):
