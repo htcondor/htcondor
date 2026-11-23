@@ -1054,6 +1054,45 @@ FILE TRANSFER COMMANDS
         /path/to/output/00095/95.1/
         ...
 
+ :subcom-def:`organized_output_directory` = <dir>
+    When present, enables organized output and defines the base directory for
+    generating an :subcom:`output_directory` with a unique value for each job.
+    Causes :subcom:`organized_output` to default to true.  This directory is
+    combined with the pattern specified in :subcom:`organized_output_pattern`
+    or the default pattern set by the configuration variable :macro:`ORGANIZED_OUTPUT_PATTERN`
+    and used to set :subcom:`output_directory`.
+
+ :subcom-def:`organized_output_pattern` = <pattern>
+    When present, enables organized output and defines the pattern to give a
+    unique sub-directory name for each submission and/or each job.  This pattern
+    should use $() expansion of automatic submit variables such as $(JobId), $(ClusterId),
+    and $(ProcId); Or variables specified on the command line such as $(batch_name); Or
+    variables specified in the QUEUE statement such as $(Item).  After expansion, the pattern
+    must be a relative path that stays below the base directory; if it expands to a full
+    path or contains a ``..`` path component, the submit will fail with an error.
+
+ :subcom-def:`organized_output` = < true | false >
+    When present and true, enables organized output.  Organized output sets the
+    :subcom:`output_directory` to the combination of a base directory and a pattern
+    that gives a unique subdirectory for the output of each submission and/or each job
+    in the submission.  The base directory will be the current directory of submit
+    or the value of :subcom:`organized_output_directory`.  The per-job pattern will be the value
+    of :subcom:`organized_output_pattern` or a default given by the configuration variable
+    :macro:`ORGANIZED_OUTPUT_PATTERN`, which defaults to ``$(batch_name:$(ClusterId))/$(JobId)``.
+    For example, with the default pattern, submitting with ``organized_output = true`` and
+    ``batch_name = sweep`` would put the output of job 95.0 in the directory ``sweep/95.0/``,
+    while submitting without a batch name would use ``95/95.0/``.
+    If the pattern is empty in both locations, use of this submit command will generate an error message.
+
+    Jobs submitted by :tool:`condor_dagman` always have a batch name, so with the default
+    pattern the output of every node job in a DAG workflow will be placed together under
+    a single subdirectory named for the workflow.  Unless a batch name is given with the
+    **-batch-name** option of :tool:`condor_submit_dag`, DAGMan uses the name of the DAG
+    file followed by ``+`` and the DAGMan job's ClusterId.  For example, a node job with
+    job id 96.0 in the workflow ``diamond.dag`` run by DAGMan job 95.0 would put its output
+    in ``diamond.dag+95/96.0/``.  A :subcom:`batch_name` set in the node's own submit
+    description takes precedence over the one supplied by DAGMan.
+
  :subcom-def:`should_transfer_files` = <YES | NO | IF_NEEDED >
     The **should_transfer_files**
     setting is used to define if HTCondor should transfer files to and
