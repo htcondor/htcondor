@@ -291,7 +291,7 @@ check_cluster_list2 () {
 add_cluster_to_list () {
     # $1 = cluster to add
     # $2 = max queued setting of cluster
-    # $3 = cluster batch system (pbs, lsf, sge)
+    # $3 = cluster batch system (pbs, lsf, slurm, condor)
     # Remove the host (if already there), and (re)add
     remote_host=$1
     max_queued=$2
@@ -745,9 +745,9 @@ else
     if [ "$cluster_type" == "htcondor" ]; then
         cluster_type="condor"
     fi
-    if [ ! "$cluster_type" == "pbs" -a ! "$cluster_type" == "lsf" -a ! "$cluster_type" == "sge" -a ! "$cluster_type" == "condor" -a ! "$cluster_type" == "slurm" ]; then
+    if [ ! "$cluster_type" == "pbs" -a ! "$cluster_type" == "lsf" -a ! "$cluster_type" == "condor" -a ! "$cluster_type" == "slurm" ]; then
         echo "Unrecognized batch system: $1 (normalized: $cluster_type)"
-        echo "Please specify one of the following: pbs, lsf, sge, condor, slurm"
+        echo "Please specify one of the following: pbs, lsf, condor, slurm"
         exit 1
     fi
 fi

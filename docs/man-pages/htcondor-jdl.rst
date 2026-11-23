@@ -466,6 +466,13 @@ BASIC COMMANDS
     **<file name> | <list of items>**] Places zero or more copies of
     the job in the queue based on lines from the submit file or from
     **<file name>**
+ queue
+    [**<int expr>** ] [**<list of varnames>** ] **from** 
+    **table** [ **(<table options>)** ] [**slice** ] **<file name> | <table contents>** Places zero or more copies of
+    the job in the queue based on lines from the submit file or from **<file name>**. Optional
+    **(<table options>)** in the table keyword control how the table is parsed.
+    When using the **table** keyword, by default the **<list of varnames>** will be taken from the
+    column headings on the first row of the table.
 
     The optional argument *<int expr>* specifies how many times to
     repeat the job submission for a given set of arguments. It may be an
@@ -502,25 +509,59 @@ BASIC COMMANDS
        with \|, then it will be executed as a script whatever the script
        writes to ``stdout`` will be the list of items.
 
+    -  *from* *table[(<table options>)]* **<file name> | <table contents>**
+       Lines from **<file name>** or **<table contents>** will be treated as
+       rows of the table and interpreted according to **<table options>**.
+
     The optional argument *<varname>* or *<list of varnames>* is the
     name or names of variables that will be set to the value of the
     current item when queuing the job. If no *<varname>* is specified
-    the variable ITEM will be used. Leading and trailing whitespace be
+    variables may be taken from the **table**.
+    If no **table** or the table does not provide varnames,
+    the variable ITEM will be used. Leading and trailing whitespace will be
     trimmed. The optional argument *<slice>* is a python style slice
     selecting only some of the items in the list of items. Negative step
     values are not supported.
 
-    A submit file may contain more than one
-    **queue** statement, and if
-    desired, any commands may be placed between subsequent
-    **queue** commands, such as
-    new **input**,
-    **output**, 
-    **error**,
-    **initialdir**, or
-    **arguments** commands.
-    This is handy when submitting multiple runs into one cluster with
-    one submit description file.
+    The **table** keyword allows finer control over how the lines of **<file name>**
+    or **<table contents>** are interpreted.  Table options are specified by adding parens
+    after the **table** keyword with table options within the parens. Options may be
+    a comma separated list of the following options.
+
+    - **standard** Columns are split on comma and space and whitespace is trimmed. Sets header=none and skip=0.
+
+    - **csv** Columns are split on comma only, then leading and trailing whitespace is trimmed.
+      Equivalent to ``comma_sep=true,trim=true,header=none,skip=0``
+
+    - **header=<number> | none** If not *none*, rows before **<number>** are skipped, and the
+      column headings at row **<number>** are treated as a **<list of varnames>**.  The column headings
+      must be valid for use as varnames and so may not contain any character other than letters, numbers
+      and ``_``.
+
+    - **skip=<count>** After reading the header row (if any), skip the indicated number of rows.
+      The remaining rows specify items for submit.
+
+    - **sep=<char>** Use only the character **<char>** as the column separator. **sep=,** is not allowed,
+      use **comma_sep=true** instead.
+
+    - **comma_sep=true** Use only comma as the column separator.
+
+    - **trim=true|false** When true, trim whitespace from columns.
+
+    Example using **QUEUE FROM TABLE**:
+
+    .. code-block:: text
+
+        ...
+        transfer_input_files = $(FILENAME)
+
+        # use FROM TABLE to read queue itemdata and vars with comma separated columns
+        # specifying the submit var names from the first row of the table
+        QUEUE FROM TABLE(header=0,comma_sep=true,trim=true) (
+            FILENAME                , ARGS
+            filename with spaces.dat, -process "$(FILENAME)"
+        )
+
 
  :subcom-def:`universe` = <vanilla | scheduler | local | grid | java | vm | parallel | docker | container>
     Specifies which HTCondor universe to use when running this job. The
@@ -1746,12 +1787,12 @@ COMMANDS FOR THE GRID
  :subcom-def:`batch_cpu_count` = <count>
     Used for **batch** grid universe jobs.
     Specifies the total number of cpus to request for the
-    PBS/LSF/SGE/SLURM job.
+    PBS/LSF/SLURM job.
 
  :subcom-def:`batch_cpus_per_node` = <count>
     Used for **batch** grid universe jobs.
     Specifies how many cpus on each machine to request for the
-    PBS/LSF/SGE/SLURM job.
+    PBS/LSF/SLURM job.
 
  :subcom-def:`batch_extra_submit_args` = <command-line arguments>
     Used for **batch** grid universe jobs.
@@ -1761,16 +1802,16 @@ COMMANDS FOR THE GRID
  :subcom-def:`batch_node_count` = <count>
     Used for **batch** grid universe jobs.
     Specifies the number of machines requested for the
-    PBS/LSF/SGE/SLURM job.
+    PBS/LSF/SLURM job.
 
  :subcom-def:`batch_project` = <projectname>
     Used for **batch** grid universe jobs.
-    Specifies the name of the PBS/LSF/SGE/SLURM project, account, or
+    Specifies the name of the PBS/LSF/SLURM project, account, or
     allocation that should be charged for the resources used by the job.
 
  :subcom-def:`batch_queue` = <queuename>
     Used for **batch** grid universe jobs.
-    Specifies the name of the PBS/LSF/SGE/SLURM job queue into which the
+    Specifies the name of the PBS/LSF/SLURM job queue into which the
     job should be submitted. If not specified, the default queue is used.
     For a multi-cluster SLURM configuration, which cluster to use can be
     specified by supplying the name after an ``@`` symbol.
@@ -1780,11 +1821,11 @@ COMMANDS FOR THE GRID
  :subcom-def:`batch_runtime` = <seconds>
     Used for **batch** grid universe jobs.
     Specifies a limit in seconds on the execution time of the job.
-    This limit is enforced by the PBS/LSF/SGE/SLURM scheduler.
+    This limit is enforced by the PBS/LSF/SLURM scheduler.
 
  :subcom-def:`batch_whole_nodes` = <True | False>
     Used for **batch** grid universe jobs.
-    Specifies whether the PBS/LSF/SGE/SLURM job must run on machines
+    Specifies whether the PBS/LSF/SLURM job must run on machines
     with no other jobs. The default is False (the job can share
     machines with other jobs).
 
@@ -1993,7 +2034,7 @@ COMMANDS FOR THE GRID
 
     For a **grid-type-string** of **batch**, the single parameter is the
     name of the local batch system, and will be one of ``pbs``, ``lsf``,
-    ``slurm``, or ``sge``.
+    or ``slurm``.
 
     For a **grid-type-string** of **condor**, the first parameter is the
     name of the remote *condor_schedd* daemon. The second parameter is

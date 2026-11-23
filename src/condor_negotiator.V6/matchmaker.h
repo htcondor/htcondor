@@ -201,14 +201,64 @@ class Matchmaker : public Service
 		   bool ignore_schedd_limit, time_t deadline,
            int& numMatched, double &pieLeft);
 
-		int negotiateWithGroup ( bool isFloorRound,
-								 int untrimmed_num_startds,
-								 double untrimmedSlotWeightTotal,
-								 double minSlotWeight,
-								 std::vector<ClassAd *>& startdAds, 
-								 ClaimIdHash& claimIds,
-								 std::vector<ClassAd *>& submitterAds, 
-								 double groupQuota=INT_MAX, const char* groupName=NULL);
+		// A negotiation cycle runs a fixed sequence of rounds, each over its
+		// own set of submitters, and each seeing only the slots the rounds
+		// before it left unmatched:
+		//
+		//   Bundle     slot-bundle submitters (negotiateBundleRound).  Whole
+		//              remaining pie, no ceiling, ordered by bundle age, and
+		//              never charged to the accountant.
+		//   Floor      submitters below their floor.  Capped at the floor,
+		//              one pass of the pie.
+		//   FairShare  every submitter: the fair-share pie, spun until no
+		//              one can get any more.
+		//
+		// Floor and FairShare run once without group quotas, and once per
+		// group with them (negotiateFloor, then negotiateFairShare).
+		enum class RoundKind { Bundle, Floor, FairShare };
+
+		// What every round in one cycle shares.  Built once in
+		// negotiationTime(), after the slot ads are trimmed.  The slot list is
+		// a pointer so a round can be handed a filtered view of it.
+		struct NegotiationCycle {
+			std::vector<ClassAd *> *startdAds = nullptr;
+			ClaimIdHash *claimIds = nullptr;
+			int poolSize = 0;               // slots in the pool; only logged
+			double weightedPoolSize = 0.0;  // size of the pie
+			double minSlotWeight = 0.0;     // smallest slot worth matching
+		};
+
+		// What differs between rounds.
+		struct NegotiationRound {
+			RoundKind kind = RoundKind::FairShare;
+			double quota = INT_MAX;            // group quota; caps the pie
+			const char *groupName = nullptr;   // accounting group, if any
+
+			bool isFloor() const { return kind == RoundKind::Floor; }
+			bool isBundle() const { return kind == RoundKind::Bundle; }
+		};
+
+		int negotiateWithGroup(const NegotiationCycle &cycle,
+		                       const NegotiationRound &round,
+		                       std::vector<ClassAd *> &submitterAds);
+
+		// Negotiate for the slot-bundle submitters, which are removed from
+		// submitterAds.  Does nothing if there are none.
+		void negotiateBundleRound(const NegotiationCycle &cycle,
+		                          std::vector<ClassAd *> &submitterAds);
+
+		// A floor round for the submitters in submitterAds that are below
+		// their floor.  Does nothing if there are none.
+		void negotiateFloor(const NegotiationCycle &cycle,
+		                    std::vector<ClassAd *> &submitterAds,
+		                    double quota = INT_MAX,
+		                    const char *groupName = nullptr);
+
+		// A fair-share round for every submitter in submitterAds.
+		void negotiateFairShare(const NegotiationCycle &cycle,
+		                        std::vector<ClassAd *> &submitterAds,
+		                        double quota = INT_MAX,
+		                        const char *groupName = nullptr);
 
 		
 		ClassAd *matchmakingAlgorithm(const char* submitterName, const char* scheddAddr, const char* scheddName, ClassAd& request, std::vector<ClassAd *>& startdAds,
@@ -251,8 +301,9 @@ class Matchmaker : public Service
 		/** Calculate a submitter's share of the pie.
 			@param quiet Do not emitt debug information about the calculation
 			@param submitterName Name attribute from the submitter ad.
-			@param groupAccountingName Group name from the submitter ad.
-			@param groupQuota Usage limit for this group.
+			@param round The round being negotiated: its group name and quota,
+				and whether it is a floor round.
+			@param groupusage Current usage of the round's group.
 			@param maxPrioValue Largest prio value of any submitter.
 			@param maxAbsPrioValue Largest prio factor of any submitter
 			@param normalFactor Normalization for prio values
@@ -267,15 +318,13 @@ class Matchmaker : public Service
 			@param submitterPrioFactor Result is this submitter's prio factor
 		**/
 		void calculateSubmitterLimit(const std::string &submitterName,
-		                          char const *groupAccountingName,
-		                          float groupQuota,
-					  float groupusage,
+		                          const NegotiationRound &round,
+		                          float groupusage,
 		                          double maxPrioValue,
 		                          double maxAbsPrioValue,
 		                          double normalFactor,
 		                          double normalAbsFactor,
-								  double slotWeightTotal,
-								  bool isFloorRound,
+		                          double slotWeightTotal,
 		                            /* result parameters: */
 								  double &submitterLimit,
                                   double& submitterLimitUnclaimed,
@@ -288,8 +337,8 @@ class Matchmaker : public Service
 		/** Calculate how much pie might be dished out in this round.
 			@param quiet Do not emitt debug information about the calculation
 			@param submitterAds List of submitters
-			@param groupAccountingName Group name for all of these submitters
-			@param groupQuota Usage limit for this group.
+			@param round The round being negotiated
+			@param groupusage Current usage of the round's group.
 			@param maxPrioValue Largest prio value of any submitter.
 			@param maxAbsPrioValue Largest prio factor of any submitter
 			@param normalFactor Normalization for prio values
@@ -297,9 +346,8 @@ class Matchmaker : public Service
 			@param pieLeft Sum of submitterLimits
 		**/
 		void calculatePieLeft( std::vector<ClassAd *> &submitterAds,
-		                       char const *groupAccountingName,
-		                       float groupQuota,
-				       float groupusage,
+		                       const NegotiationRound &round,
+		                       float groupusage,
 		                       double maxPrioValue,
 		                       double maxAbsPrioValue,
 		                       double normalFactor,

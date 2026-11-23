@@ -2448,14 +2448,12 @@ usage(FILE* out)
 	fprintf( out, "\t-debug  \t\tDisplay debugging output\n" );
 	fprintf( out, "\t-append <line>\t\tadd line to submit file before processing\n"
 				  "\t              \t\t(overrides submit file; multiple -a lines ok)\n" );
+	fprintf( out, "\t-table <file> \t\tappend QUEUE FROM TABLE <file> before processing\n"
+				  "\t              \t\t(submit file must not already have a Queue or Iterate)\n" );
 	fprintf( out, "\t-queue <queue-opts>\tappend Queue statement to submit file before processing\n"
 				  "\t                   \t(submit file must not already have a Queue or Iterate)\n" );
-/* hidden for now until Miron approves for public use
 	fprintf( out, "\t-iterate <iter-opts>\tappend Iterate statement to submit file before processing\n"
 				  "\t                    \t(submit file must not already have a Queue or Iterate)\n" );
-	fprintf( out, "\t-table <file> \t\tappend Iterate FROM TABLE <file> before processing\n"
-				  "\t              \t\t(submit file must not already have a Queue or Iterate)\n" );
-*/
 	fprintf( out, "\t-batch-name <name>\tappend a line to submit file that sets the batch name\n"
 					/* "\t                  \t(overrides batch_name in submit file)\n" */);
 	fprintf( out, "\t-disable\t\tdisable file permission checks\n" );
@@ -2481,8 +2479,9 @@ usage(FILE* out)
 	fprintf( out, "\t-pool <host>\t\tUse host as the central manager to query\n" );
 	fprintf( out, "\t<attrib>=<value>\tSet <attrib>=<value> before reading the submit file.\n" );
 
-	fprintf( out, "\n    If <submit-file> is omitted or is -, and a -queue is not provided, submit commands\n"
-				  "     are read from stdin. Use of - implies verbose output unless -terse is specified\n");
+	fprintf( out, "\n    If <submit-file> is omitted or is -, and a -queue, -iterate, or -table\n"
+				  "     is not provided, submit commands are read from stdin.\n"
+				  "     Use of - implies verbose output unless -terse is specified\n");
 }
 
 

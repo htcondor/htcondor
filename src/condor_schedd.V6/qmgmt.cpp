@@ -1262,7 +1262,6 @@ ConvertOldJobAdAttrs( ClassAd *job_ad, bool startup )
 	if ( job_ad->LookupString( ATTR_GRID_JOB_ID, orig_value ) ) {
 		const char *orig_str = orig_value.c_str();
 		if ( strncasecmp( "pbs", orig_str, 3 ) == 0 ||
-			 strncasecmp( "sge", orig_str, 3 ) == 0 ||
 			 strncasecmp( "lsf", orig_str, 3 ) == 0 ||
 			 strncasecmp( "nqs", orig_str, 3 ) == 0 ||
 			 strncasecmp( "naregi", orig_str, 6 ) == 0 ) {
@@ -9028,7 +9027,7 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 		std::vector<std::string> old_paths;
 		std::string new_paths;
 		if ( AttrIsList[attrIndex] ) {
-			old_paths = split(buf);
+			old_paths = split(buf, ",");
 		} else {
 			old_paths.emplace_back(buf);
 		}

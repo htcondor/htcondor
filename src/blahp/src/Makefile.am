@@ -51,7 +51,7 @@ SUBDIRS = scripts
 
 sbin_PROGRAMS = blahpd_daemon blah_job_registry_add blah_job_registry_lkup blah_job_registry_scan_by_subject blah_check_config blah_job_registry_dump blah_job_registry_purge
 bin_PROGRAMS = blahpd
-libexec_PROGRAMS = BLClient BLParserLSF BLParserPBS BUpdaterCondor BNotifier BUpdaterLSF BUpdaterPBS BUpdaterSGE $(GLOBUS_EXECS)  blparser_master
+libexec_PROGRAMS = BLClient BLParserLSF BLParserPBS BUpdaterCondor BNotifier BUpdaterLSF BUpdaterPBS $(GLOBUS_EXECS)  blparser_master
 noinst_PROGRAMS = test_job_registry_create test_job_registry_purge test_job_registry_update test_job_registry_access test_job_registry_update_from_network test_cmdbuffer
 
 common_sources = console.c job_status.c resbuffer.c server.c commands.c classad_binary_op_unwind.C classad_c_helper.C proxy_hashcontainer.c config.c job_registry.c blah_utils.c env_helper.c mapped_exec.c md5.c cmdbuffer.c
@@ -136,8 +136,6 @@ BUpdaterLSF_LDADD = -lpthread -lm
 BUpdaterPBS_SOURCES = BUpdaterPBS.c Bfunctions.c job_registry.c md5.c config.c blah_utils.c job_registry_updater.c
 BUpdaterPBS_LDADD = -lpthread -lm
 
-BUpdaterSGE_SOURCES = BUpdaterSGE.c Bfunctions.c job_registry.c md5.c config.c blah_utils.c
-BUpdaterSGE_LDADD = -lpthread
 
 blparser_master_SOURCES = blparser_master.c config.c blah_utils.c
 blparser_master_LDADD = 
@@ -151,5 +149,5 @@ blah_job_registry_dump_CFLAGS = $(AM_CFLAGS)
 test_cmdbuffer_SOURCES = cmdbuffer.c
 test_cmdbuffer_CFLAGS = $(AM_CFLAGS) -DCMDBUF_DEBUG
 
-noinst_HEADERS = blahpd.h classad_binary_op_unwind.h classad_c_helper.h commands.h job_status.h resbuffer.h server.h console.h BPRcomm.h tokens.h BLParserPBS.h BLParserLSF.h proxy_hashcontainer.h job_registry.h md5.h config.h BUpdaterCondor.h Bfunctions.h BNotifier.h BUpdaterLSF.h BUpdaterPBS.h BUpdaterSGE.h blah_utils.h env_helper.h mapped_exec.h blah_check_config.h BLfunctions.h cmdbuffer.h job_registry_updater.h
+noinst_HEADERS = blahpd.h classad_binary_op_unwind.h classad_c_helper.h commands.h job_status.h resbuffer.h server.h console.h BPRcomm.h tokens.h BLParserPBS.h BLParserLSF.h proxy_hashcontainer.h job_registry.h md5.h config.h BUpdaterCondor.h Bfunctions.h BNotifier.h BUpdaterLSF.h BUpdaterPBS.h blah_utils.h env_helper.h mapped_exec.h blah_check_config.h BLfunctions.h cmdbuffer.h job_registry_updater.h
 

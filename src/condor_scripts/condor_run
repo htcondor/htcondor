@@ -1,16 +1,16 @@
-#!/usr/bin/env perl
+#!/bin/bash
 
 ##**************************************************************
 ##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2026, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
-## 
+##
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
 ## may not use this file except in compliance with the License.  You may
 ## obtain a copy of the License at
-## 
+##
 ##    http://www.apache.org/licenses/LICENSE-2.0
-## 
+##
 ## Unless required by applicable law or agreed to in writing, software
 ## distributed under the License is distributed on an "AS IS" BASIS,
 ## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,9 +18,6 @@
 ## limitations under the License.
 ##
 ##**************************************************************
-
-
-
 
 ###########################################################################
 #
@@ -34,195 +31,194 @@
 #    condor_run "zcat data.gz | awk -f myscript.awk > results.txt"
 #    condor_run "cc -o myprog myprog.c"
 #    condor_run "make"
-#    condor_run "condor_compile cc -o myprog myprog.c"
 #
-#  condor_run by Jim Basney <jbasney@cs.wisc.edu> 4/3/2000
+#  Originally written in Perl by Jim Basney <jbasney@cs.wisc.edu> 4/3/2000
 #
 ###########################################################################
 
-my @command;
-my @appends;
-my $universe = 'vanilla';
-if (!defined($ARGV[0])) {
-	goto HELP;
-}
-my $getenv_flag = 0;
-
-while ( $_ = shift( @ARGV ) ) {
-	SWITCH: {
-		if ( /^-h.*/ ) {
-			HELP:
-			print "usage: $0 [-getenv] [-u <universe>] [-a command]* \"shell-cmd\"\n";
-			print "\twhere shell-cmd is any Unix shell statement.\n";
-			print "\t-u lets you set the universe to which the job is submitted.\n";
-			print "\t   The default is vanilla.\n";
-			print "\t-a lets you add additional submit commands\n";
-			print "\t   e.g. -a request_memory=1024\n";
-			print "\tEnvironment variables CONDOR_ARCH, CONDOR_OPSYS, and\n";
-			print "\tCONDOR_REQUIREMENTS may specify remote machine's Arch,\n";
-			print "\tOpSys, and any additional requirements.\n";
-			exit 1;
-		}
-		if ( /^-u(.*)/ ) {
-			$universe = $1 ? $1 : shift(@ARGV);
-			next SWITCH;
-		}
-		if ( /^-a.*/ ) {
-			push(@appends, shift(@ARGV));
-			next SWITCH;
-		}
-		if ( /^-getenv/ ) {
-			$getenv_flag = 1;
-			next SWITCH;
-		}
-
-		# Anything passed in that isn't -u or -a is part of the command to run
-		push(@command, $_);
-	}
-}
-if (!@command) {
-	goto HELP;
+usage() {
+	echo "usage: $0 [-getenv] [-u <universe>] [-a command]* \"shell-cmd\""
+	echo "	where shell-cmd is any Unix shell statement."
+	echo "	-u lets you set the universe to which the job is submitted."
+	echo "	   The default is vanilla."
+	echo "	-a lets you add additional submit commands"
+	echo "	   e.g. -a request_memory=1024"
+	echo "	Environment variables CONDOR_ARCH, CONDOR_OPSYS, and"
+	echo "	CONDOR_REQUIREMENTS may specify remote machine's Arch,"
+	echo "	OpSys, and any additional requirements."
+	exit 1
 }
 
-# grab current working directory for initial dir in system using automounter
-$pwd = `pwd`;
-chomp $pwd;
+command=()
+appends=()
+universe=vanilla
+getenv_flag=0
 
-# set up environment for running something in the current directory in case
-# they want to run something in the current working directory and they
-# don't specify a "./" infront of it.
-$ENV{'PATH'} .= ":.";
+[[ $# -eq 0 ]] && usage
 
-# setup cleanup subroutine and error handlers
-sub cleanfiles {
-	unlink ".condor_run.$$", ".condor_submit.$$", ".condor_log.$$";
-	unlink ".condor_out.$$", ".condor_error.$$";
+# Options may appear anywhere on the command line; anything that is not
+# an option is part of the command to run.
+while [[ $# -gt 0 ]]; do
+	arg=$1
+	shift
+	case $arg in
+		-h*)
+			usage
+			;;
+		-u*)
+			universe=${arg#-u}
+			if [[ -z $universe ]]; then
+				universe=$1
+				shift
+			fi
+			;;
+		-a*)
+			appends+=("$1")
+			shift
+			;;
+		-getenv*)
+			getenv_flag=1
+			;;
+		*)
+			command+=("$arg")
+			;;
+	esac
+done
+
+[[ ${#command[@]} -eq 0 ]] && usage
+
+pid=$$
+cmd_file=.condor_run.$pid
+submit_file=.condor_submit.$pid
+log_file=.condor_log.$pid
+out_file=.condor_out.$pid
+err_file=.condor_error.$pid
+cluster=
+
+# Let the user run something in the current directory without "./"
+export PATH="$PATH:."
+
+cleanfiles() {
+	rm -f "$cmd_file" "$submit_file" "$log_file" "$out_file" "$err_file"
 }
 
-sub abort {
-	`condor_rm $cluster 2>&1 > /dev/null` if defined($cluster);
-	&cleanfiles;
-	die @_;
+abort() {
+	if [[ -n $cluster ]]; then
+		condor_rm "$cluster" >/dev/null 2>&1
+	fi
+	cleanfiles
+	printf '%s\n' "$1" >&2
+	exit 1
 }
 
-sub handler {
-	local($sig) = @_;
-	&abort("Killed by SIG$sig.\n");
-}
+for sig in HUP INT QUIT TERM; do
+	# shellcheck disable=SC2064
+	trap "abort 'Killed by SIG$sig.'" "$sig"
+done
 
-$SIG{'HUP'} = 'handler';
-$SIG{'INT'} = 'handler';
-$SIG{'QUIT'} = 'handler';
-$SIG{'TERM'} = 'handler';
+# Use the user's shell in the script we submit to Condor.  Only honor SHELL
+# if it came from the environment: when it is unset, bash fills it in from
+# the passwd entry, which for accounts like nobody is /usr/bin/false.
+shell=$(printenv SHELL)
+shell=${shell:-/bin/sh}
 
-# use the user's shell in the script we submit to Condor
-$shell = $ENV{'SHELL'};
-$shell = "/bin/sh" if (!defined($shell));
+# Get any requirements from the user's environment
+requirements=
+have_requirements=0
+if [[ -n ${CONDOR_REQUIREMENTS+set} ]]; then
+	requirements=$CONDOR_REQUIREMENTS
+	have_requirements=1
+fi
+if [[ -n ${CONDOR_ARCH+set} ]]; then
+	(( have_requirements )) && requirements+=" && "
+	requirements+="Arch == \"$CONDOR_ARCH\""
+	have_requirements=1
+fi
+if [[ -n ${CONDOR_OPSYS+set} ]]; then
+	(( have_requirements )) && requirements+=" && "
+	requirements+="OpSys == \"$CONDOR_OPSYS\""
+	have_requirements=1
+fi
 
-# get any requirements from the user's environment
-$requirements = $ENV{'CONDOR_REQUIREMENTS'};
-$arch = $ENV{'CONDOR_ARCH'};
-if (defined($arch)) {
-	$requirements .= " && " if (defined($requirements));
-	$requirements .= "Arch == \"" . $arch . "\"";
-}
-$opsys = $ENV{'CONDOR_OPSYS'};
-if (defined($opsys)) {
-	$requirements .= " && " if (defined($requirements));
-	$requirements .= "OpSys == \"" . $opsys . "\"";
-}
+# Refuse to overwrite a pre-existing temporary file
+set -o noclobber
 
-# create a shell script containing the user's command
-open(CMD, ">.condor_run.$$") ||
-&abort("Can't create temporary (CMD) file in current directory.\n");
-print CMD "#!", $shell, "\n";
-foreach $arg (@command) {
-	print CMD $arg, " ";
-}
-print CMD "\n";
-close(CMD) ||
-&abort("Failed to write temporary (CMD) file in current directory.\n");
-# fix the permissions to something nice.
-chmod 0700, ".condor_run.$$";
+# Create a shell script containing the user's command
+{
+	printf '#!%s\n' "$shell"
+	printf '%s ' "${command[@]}"
+	printf '\n'
+} > "$cmd_file" || abort "Can't create temporary (CMD) file in current directory."
+chmod 0700 "$cmd_file"
 
-# create a job description file to submit the shell script to Condor
-open(JDF, ">.condor_submit.$$") ||
-&abort("Can't create temporary (JDF) file in current directory.\n");
-print JDF "universe = $universe\n";
-print JDF "executable = .condor_run.$$\n";
-print JDF "initialdir = $pwd\n";
-print JDF "notification = NEVER\n";
-print JDF "log = .condor_log.$$\n";
-print JDF "output = .condor_out.$$\n";
-print JDF "error = .condor_error.$$\n";
-if ($getenv_flag == 1) {
-	print JDF "getenv = True\n";
-}
-print JDF "requirements = ", $requirements, "\n" if (defined($requirements));
-foreach my $append (@appends) {
-	print JDF $append . "\n";
-}
-print JDF "queue\n";
-close(JDF) ||
-&abort("Failed to write temporary (JDF) file in current directory.\n");
+# Create a job description file to submit the shell script to Condor
+{
+	echo "universe = $universe"
+	echo "executable = $cmd_file"
+	echo "initialdir = $PWD"
+	echo "notification = NEVER"
+	echo "log = $log_file"
+	echo "output = $out_file"
+	echo "error = $err_file"
+	(( getenv_flag )) && echo "getenv = True"
+	(( have_requirements )) && echo "requirements = $requirements"
+	for append in "${appends[@]}"; do
+		printf '%s\n' "$append"
+	done
+	echo "queue"
+} > "$submit_file" || abort "Can't create temporary (JDF) file in current directory."
 
-# submit the job; $cluster contains cluster number if successful
-open(SUBMIT, "condor_submit -terse .condor_submit.$$ |") ||
-&abort("Failed to run condor_submit.  Please check your path.\n");
-while(<SUBMIT>) {
-	if (/^(\d+)\.\d+ -/) {
-		($cluster) = $1;
-	} elsif (/WARNING.*Invalid log file/ ||
-		/WARNING.*is not writable by condor/) {
-		print STDERR $_;
-		&abort("Failed to submit Condor job.\n");
-	} else {
-		$submit_errors .= $_;
-	}
-}
+set +o noclobber
 
-if (!close(SUBMIT) || !defined($cluster)) {
-	print STDERR $submit_errors;
-	&abort("Failed to submit Condor job.\n");
-}
+# Submit the job.  The job's stderr goes straight to the terminal so the
+# user sees any submit warnings; stdout is parsed for the cluster id.
+submit_output=$(condor_submit -terse "$submit_file")
+submit_status=$?
 
-# watch the Condor log to see when the job completes
-$done = 0;
-$status = 0;
-while (!$done) {
-	sleep 5;
-	open(LOG, "<.condor_log.$$") ||
-	&abort("Failed to open Condor log file.\n");
-	while (<LOG>) {
-		if (/termination \(return value (\d+)\)/) {
-			$status = $1;
-			$done = 1;
-		} elsif (/termination \(signal (\d+)\)/) {
-			print STDERR "Condor job killed by signal ", $1 , ".\n";
-			$done = 1;
-		} elsif ( /^009/ && /Job was aborted/ ) {
-			print STDERR "The job was aborted";
-			$done = 1;
-		}
-	}
-	close(LOG) || &abort("Failed to close Condor log file.\n");
-}
-undef $cluster;			# indicate that job is no longer in queue
+submit_errors=
+while IFS= read -r line; do
+	if [[ $line =~ ^([0-9]+)\.[0-9]+\ - ]]; then
+		cluster=${BASH_REMATCH[1]}
+	elif [[ $line =~ WARNING.*Invalid\ log\ file || $line =~ WARNING.*is\ not\ writable\ by\ condor ]]; then
+		printf '%s\n' "$line" >&2
+		abort "Failed to submit Condor job."
+	else
+		submit_errors+="$line"$'\n'
+	fi
+done <<< "$submit_output"
 
-# display stdout to the terminal
-open(OUTPUT, "<.condor_out.$$") || &abort("Failed to open job output file.\n");
-while (<OUTPUT>) {
-	print STDOUT;
-}
-close(OUTPUT) || &abort("Failed to open job output file.\n");
+if [[ $submit_status -ne 0 || -z $cluster ]]; then
+	printf '%s' "$submit_errors" >&2
+	abort "Failed to submit Condor job."
+fi
 
-# display stderr to the terminal
-open(ERROR, "<.condor_error.$$") || &abort("Failed to open job error file.\n");
-while (<ERROR>) {
-	print STDERR;
-}
-close(ERROR) || &abort("Failed to open job output file.\n");
+# Watch the Condor log to see when the job completes
+done=0
+status=0
+while (( ! done )); do
+	# Sleep in the background so trapped signals are handled promptly
+	sleep 5 &
+	wait $!
+	[[ -r $log_file ]] || abort "Failed to open Condor log file."
+	while IFS= read -r line; do
+		if [[ $line =~ termination\ \(return\ value\ ([0-9]+)\) ]]; then
+			status=${BASH_REMATCH[1]}
+			done=1
+		elif [[ $line =~ termination\ \(signal\ ([0-9]+)\) ]]; then
+			echo "Condor job killed by signal ${BASH_REMATCH[1]}." >&2
+			done=1
+		elif [[ $line == 009* && $line == *"Job was aborted"* ]]; then
+			echo "The job was aborted" >&2
+			done=1
+		fi
+	done < "$log_file"
+done
+cluster=	# the job is no longer in the queue
 
-&cleanfiles;			# cleanup temporary files
+# Display the job's stdout and stderr on the terminal
+cat "$out_file" || abort "Failed to open job output file."
+cat "$err_file" >&2 || abort "Failed to open job error file."
 
-exit $status;			# exit with job's exit status
+cleanfiles
+
+exit "$status"

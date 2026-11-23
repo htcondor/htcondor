@@ -11,6 +11,12 @@
 - Remote history queries are now answered as the condor user instead of root.
   :jira:`4006`
 
+- Removed support for the SGE (Sun/Oracle Grid Engine) batch system from
+  the **batch** grid :subcom:`universe` and :tool:`condor_remote_cluster`.
+  The ``sge`` grid type and ``batch sge`` grid resource are no longer
+  accepted.
+  :jira:`4100`
+
 *** 26.2.0 features
 
 - Administrators can now cap the DAGMan throttles that users may set via
@@ -121,6 +127,12 @@
   :jira:`3970`
 
 *** 26.0.2 bugs
+
+- Fixed an unlikely bug where if a local universe starter crashes,
+  the *condor_schedd* now cleans up the job's scratch directory
+  immediately at job exit time, instead of waiting for the *condor_schedd*
+  to restart.
+  :jira:`4096`
 
 - :tool:`condor_tail` should now work on files larger than 2 Gb in size.
   :jira:`4008`

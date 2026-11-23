@@ -22,6 +22,18 @@ def condor_run_warning_outputs(default_condor,path_to_sleep):
      p = default_condor.run_command(["condor_run", "-a", """requrements=(OpSys=="LINUX")""", "{0} 1".format(path_to_sleep)])
      return p
 
+#submit 'condor_run "exit 3"' to check that the job's exit code is returned
+@action
+def condor_run_exit_code(default_condor):
+     p = default_condor.run_command(["condor_run", "exit 3"])
+     return p
+
+#submit to a nonexistent universe so that condor_submit fails
+@action
+def condor_run_submit_fails(default_condor):
+     p = default_condor.run_command(["condor_run", "-u", "nosuchuniverse", "/bin/true"])
+     return p
+
 class TestCondorRun:
      def test_condor_run_sleep_succeeds(self, condor_run_sleep_succeeds):
      #check to make sure that 'condor_run script' works
@@ -53,3 +65,10 @@ class TestCondorRun:
                print("Warning did not appear in stderr.")
           print(condor_run_warning_outputs.stderr)
           assert passed
+
+     def test_condor_run_returns_job_exit_code(self, condor_run_exit_code):
+          assert condor_run_exit_code.returncode == 3
+
+     def test_condor_run_reports_submit_failure(self, condor_run_submit_fails):
+          assert condor_run_submit_fails.returncode != 0
+          assert "Failed to submit Condor job." in condor_run_submit_fails.stderr

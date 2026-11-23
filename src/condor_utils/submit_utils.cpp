@@ -2760,7 +2760,7 @@ static bool validate_gridtype(const std::string & JobGridType) {
 	// Validate
 	// Valid values are (as of 7.5.1): nordugrid, globus,
 	//    gt2, gt5, blah, pbs, lsf, nqs, naregi, condor,
-	//    unicore, cream, ec2, sge
+	//    unicore, cream, ec2
 
 	// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
 	//   system names should be used (pbs, lsf). Glite are the only
@@ -2769,7 +2769,6 @@ static bool validate_gridtype(const std::string & JobGridType) {
 	if (gridType == "blah" ||
 		gridType == "batch" ||
 		gridType == "pbs" ||
-		gridType == "sge" ||
 		gridType == "lsf" ||
 		gridType == "nqs" ||
 		gridType == "naregi" ||

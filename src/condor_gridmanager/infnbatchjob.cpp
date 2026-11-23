@@ -120,7 +120,6 @@ bool INFNBatchJobAdMatch( const ClassAd *job_ad ) {
 		   strncasecmp( resource.c_str(), "pbs", 3 ) == 0 ||
 		   strncasecmp( resource.c_str(), "lsf", 3 ) == 0 ||
 		   strncasecmp( resource.c_str(), "nqs", 3 ) == 0 ||
-		   strncasecmp( resource.c_str(), "sge", 3 ) == 0 ||
 		   strncasecmp( resource.c_str(), "naregi", 6 ) == 0 ) ) {
 
 		return true;
@@ -1343,6 +1342,18 @@ void INFNBatchJob::ProcessRemoteAd( ClassAd *remote_ad )
 		if ( new_expr != NULL && ( old_expr == NULL || !(*old_expr == *new_expr) ) ) {
 			ExprTree * pTree =  new_expr->Copy();
 			jobAd->Insert( attrs_to_copy[index], pTree );
+		}
+	}
+
+	// Need to set ATTR_ON_EXIT_SIGNAL for a completed job. The blahp
+	// doesn't set it in the status update ad.
+	bool bool_value;
+	if (new_remote_state == COMPLETED && !jobAd->LookupBool(ATTR_ON_EXIT_SIGNAL, bool_value)) {
+		int value;
+		if (jobAd->LookupInteger(ATTR_ON_EXIT_SIGNAL, value)) {
+			jobAd->Assign(ATTR_ON_EXIT_BY_SIGNAL, true);
+		} else if (jobAd->LookupInteger(ATTR_ON_EXIT_CODE, value)) {
+			jobAd->Assign(ATTR_ON_EXIT_BY_SIGNAL, false);
 		}
 	}
 

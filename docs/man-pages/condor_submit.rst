@@ -16,7 +16,7 @@ Synopsis
 [**-dump** *filename*] [**-interactive** ] [**-factory** ]
 [**-allow-crlf-script** ] [**-dry-run** *file*]
 [**-maxjobs** *number-of-jobs*] [**-single-cluster** ]
-[**<submit-variable>=<value>** ] [*submit
+[**<submit-variable>=<value>** ]  [**-table** *table_file*] [*submit
 description file* ] [**-queue** *queue_arguments*]
 
 Description
@@ -191,6 +191,11 @@ Options
     without white space characters before and after the equals sign
     (``=``), or the entire option must be surrounded by double quote
     marks.
+ **-table** *table_file*
+    Read the queue information from *table_file*.
+    Equivalent to *queue_arguments* of **from table** *table_file*
+ **-iterate** *queue_arguments*
+    Alternate name for the **-queue** argument.
  **-queue** *queue_arguments*
     A command line specification of how many jobs to queue, which is
     only permitted if the submit description file does not have a
@@ -283,7 +288,6 @@ Examples
              Input   = in.$(Process)
              Output  = out.$(Process)
              Log     = sleep.log
-             Queue
 
 -  Command Line example: The following command uses the **-append**
    option to add two commands before the job(s) is queued. A log file

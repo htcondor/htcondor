@@ -165,7 +165,6 @@ void BaseResource::Reconfig()
 				strcmp( type, "pbs" ) == 0 ||
 				strcmp( type, "lsf" ) == 0 ||
 				strcmp( type, "nqs" ) == 0 ||
-				strcmp( type, "sge" ) == 0 ||
 				strcmp( type, "naregi" ) == 0 ) {
 		legacy_job_poll_param = "INFN_JOB_POLL_INTERVAL";
 	}

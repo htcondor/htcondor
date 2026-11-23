@@ -35,8 +35,6 @@ libexec_SCRIPTS = blah_load_config.sh blah_common_submit_functions.sh \
   pbs_cancel.sh pbs_status.sh pbs_submit.sh pbs_hold.sh pbs_resume.sh \
   lsf_cancel.sh lsf_status.sh lsf_submit.sh lsf_hold.sh lsf_resume.sh \
   condor_cancel.sh condor_status.sh condor_submit.sh condor_hold.sh condor_resume.sh \
-  sge_cancel.sh sge_helper sge_resume.sh sge_submit.sh sge_filestaging \
-  sge_hold.sh sge_status.sh runcmd.pl.template sge_local_submit_attributes.sh \
   slurm_cancel.sh slurm_hold.sh slurm_resume.sh slurm_status.sh \
   slurm_submit.sh slurm_local_submit_attributes.sh \
   condor_local_submit_attributes.sh \
