@@ -10304,8 +10304,10 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	// punch holes in our security layer to authorize this startd for READ operations
 	//
 	std::string auth_hole_id;
-	if (msg->startd_fqu() && *msg->startd_fqu()) {
+	if (strcmp(msg->startd_fqu(), EXECUTE_SIDE_MATCHSESSION_FQU) == 0) {
 		auth_hole_id = msg->startd_fqu();
+	} else if (*msg->startd_fqu()) {
+		formatstr(auth_hole_id, "%s/%s", msg->startd_fqu(), msg->startd_ip_addr());
 	} else {
 		auth_hole_id = msg->startd_ip_addr();
 	}
