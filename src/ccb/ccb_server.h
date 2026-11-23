@@ -62,6 +62,19 @@ class CCBServer: Service {
 	static void CCBIDToContactString( char const * my_address, CCBID ccbid, std::string & ccb_contact );
 	static bool CCBIDFromString( CCBID & ccbid, char const * ccbid_str );
 
+		// Split a CCB contact "<address>#id1#...#idN" into its address and its
+		// ordered id list (outermost first).  False if it carries no id at all.
+		//
+		// Do NOT split or count '#' by hand instead as '#' is not escaped inside
+		// a sinful string.  For example, PRIVATE_NETWORK_NAME is admin-supplied
+		// and can contain unescaped '#'.
+		//
+		// This peels from the right while each trailing token is a well-formed
+		// CCBID, so a '#' in the address stops the scan instead of being counted
+		// as a hop.
+	static bool ParseCCBContact( char const * ccb_contact, std::string & address,
+								 std::vector<std::string> & ids );
+
 	friend class CCBTarget;
 		// The upstream registration listener hands routed (tunneled) reverse-connect
 		// requests back to us via StartInboundRelay (which takes a CCBRouteContext).

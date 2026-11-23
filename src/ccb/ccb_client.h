@@ -105,6 +105,9 @@ class CCBClient: public Service, public ClassyCountedPtr {
 	// drop the last reference to this CCBClient, so callers must not touch *this
 	// afterward.
 	void adoptProxiedSocket( Sock *sock );
+	// Pure helpers over the contact wire format; public so the unit tests can
+	// reach them (OTEST_CCBContact).
+public:
 	// Split a (possibly nested) CCB contact "<address>#id[#id...]" into an address
 	// and an id.  peel_innermost (the default, for the recursive connect path)
 	// splits on the LAST '#', peeling one hop: address="<entry>#id0..#id(N-1)",
@@ -113,6 +116,13 @@ class CCBClient: public Service, public ClassyCountedPtr {
 	// (addrs=) Sinful serialization needs, where a source route carries the full
 	// nested id as a single CCBID.
 	static bool SplitCCBContact( char const *ccb_contact, std::string &ccb_address, std::string &ccbid, const std::string & peer, CondorError *error, bool peel_innermost = true );
+
+	// True if ccb_contact is a nested (tunneled) contact.
+	// We must differentiate these to avoid contacting a tunnel in non-streaming mode.
+	static bool ContactIsNested( char const *ccb_contact );
+private:
+	// True if any of this client's contacts is nested.
+	bool anyContactIsNested() const;
 
 	// Streaming/proxy mode (CCB_STREAMING): used when this client is itself
 	// behind a CCB (i.e. our own return address is CCB-routed), so the target

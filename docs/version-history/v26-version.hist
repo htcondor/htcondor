@@ -6,6 +6,13 @@
   accepted.
   :jira:`4100`
 
+*** 26.3.0 bugs
+
+- HTCondor now uses CCB streaming mode whenever the target's contact is
+  tunneled through more than one Connection Broker. This allows a public AP
+  to correctly connect to an EP behind a nested tunnel.
+  :jira:`4102`
+
 *** 26.2.0 features
 
 - Administrators can now cap the DAGMan throttles that users may set via
