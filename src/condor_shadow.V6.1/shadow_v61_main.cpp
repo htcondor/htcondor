@@ -34,6 +34,7 @@
 #include "condor_holdcodes.h"
 #include "job_ad_instance_recording.h"
 #include "transfer_proc.h"
+#include "authentication.h"
 
 BaseShadow *Shadow = NULL;
 
@@ -318,18 +319,14 @@ initShadow( ClassAd* ad )
 
 void startShadow( ClassAd *ad )
 {
-		// see if the SchedD punched a DAEMON-level authorization
-		// hole for this job. if it did, we'll do the same here
-		//
-	std::string auth_hole_id;
-	if (ad->LookupString(ATTR_STARTD_PRINCIPAL, auth_hole_id)) {
+	if (param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true)) {
 		IpVerify* ipv = daemonCore->getIpVerify();
-		if (!ipv->PunchHole(DAEMON, auth_hole_id) ||
-			!ipv->PunchHole(CLIENT_PERM, auth_hole_id)) {
+		if (!ipv->PunchHole(WRITE, EXECUTE_SIDE_MATCHSESSION_FQU) ||
+			!ipv->PunchHole(CLIENT_PERM, EXECUTE_SIDE_MATCHSESSION_FQU)) {
 			dprintf(D_ALWAYS,
 			        "WARNING: IpVerify::PunchHole error for %s: "
 			            "job may fail to execute\n",
-			        auth_hole_id.c_str());
+			        EXECUTE_SIDE_MATCHSESSION_FQU);
 		}
 	}
 

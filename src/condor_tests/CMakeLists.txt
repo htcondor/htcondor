@@ -684,6 +684,7 @@ endif()
 			condor_pl_test(test_issue_credentials "Test issue_credentials()" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_produce_creds "Test DAGMan creates job credentials" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_htcondor_credential "Test the htcondor credential" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_krb_send_credential "Test SendCredential (krb) fetch from shadow to starter" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			# Skips unless `pelican` and `pelican-server` are in PATH and the
 			# credmon/storer implement the Pelican integration (see the test).
 			# As of 9/14 this test doesn't work, let's just turn it off for now
