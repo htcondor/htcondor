@@ -96,39 +96,132 @@ void reset_pty_and_exit(int signo) {
 	exit(signo);
 }
 
-int enter_ns(pid_t pid, const char *ns) {
+// Convert a waitpid() status into a shell-style exit code
+static int
+exit_code_from_status(int status)
+{
+	if (WIFEXITED(status)) {
+		return WEXITSTATUS(status);
+	}
+	if (WIFSIGNALED(status)) {
+		return 128 + WTERMSIG(status);
+	}
+	return 1;
+}
+
+// When the interactive shell exits, exit with its exit code, as ssh
+// would, as the starter passes our exit code back to condor_ssh_to_job.
+pid_t shell_pid = -1;
+void shell_exited(int /* signo */) {
+	int status = 0;
+	int code = 0;
+	if (shell_pid > 0 && waitpid(shell_pid, &status, WNOHANG) == shell_pid) {
+		code = exit_code_from_status(status);
+	}
+	if (pty_is_raw)
+		tcsetattr(0, TCSAFLUSH, &old_tio);
+	_exit(code);
+}
+
+// Explain, as specifically as we can, why setns() into a namespace failed.
+// These messages are shown to the condor_ssh_to_job user, and are also
+// logged by the condor_starter -classad startup test, so they need to
+// make sense to an administrator who has never seen this code.
+static const char *
+setns_failure_hint(const char *ns, int err)
+{
+	bool is_user_ns = (strcmp(ns, "user") == 0);
+	switch (err) {
+		case EPERM:
+			if (is_user_ns) {
+				return "Entering a user namespace requires CAP_SYS_ADMIN in that namespace. "
+					"This usually means HTCondor is not running as root, and the container "
+					"runtime (singularity/apptainer) is either installed setuid-root, or "
+					"is running the job as a different user than HTCondor.";
+			}
+			if (geteuid() != 0) {
+				return "HTCondor is not running as root, and the container runtime did not "
+					"create a user namespace that this user owns, so there is no way to get "
+					"the privileges needed to enter the container.  This happens when "
+					"singularity/apptainer is installed setuid-root but HTCondor is not root.";
+			}
+			return "Permission denied even though condor_nsenter is root.  A security module "
+				"(SELinux, AppArmor, seccomp) or a container that HTCondor itself runs in "
+				"may be blocking setns().";
+		case EINVAL:
+			if (is_user_ns) {
+				return "The kernel refused to enter the user namespace.  This happens if "
+					"condor_nsenter is chrooted or multi-threaded, or if the job's user "
+					"namespace is not a descendant of the one HTCondor runs in (for example, "
+					"if HTCondor runs inside a container that was started separately).";
+			}
+			return "The kernel refused to enter the namespace.";
+		case ENOSYS:
+			return "The kernel does not support setns() for this namespace type.";
+		default:
+			return "";
+	}
+}
+
+// Explain why we could not open a /proc/<pid>/ns/<ns> file
+static const char *
+open_ns_failure_hint(int err)
+{
+	switch (err) {
+		case ENOENT:
+		case ESRCH:
+			return "The job process has exited.";
+		case EACCES:
+		case EPERM:
+			return "Not allowed to inspect the job process.  This happens when /proc is "
+				"mounted with hidepid, when the job process is not dumpable, or when "
+				"HTCondor is not root and the job runs as a different user.";
+		default:
+			return "";
+	}
+}
+
+void enter_ns(pid_t pid, const char *ns) {
 	struct stat st{};
 	char buf[256];
 	snprintf(buf, sizeof(buf), "/proc/self/ns/%s", ns);
 	if (stat(buf, &st) < 0) {
-		fprintf(stderr, "stat(%s) failed: %s\n", buf, strerror(errno));
+		int err = errno;
+		fprintf(stderr, "condor_nsenter: cannot stat %s: %s.  This kernel may not support %s namespaces.\n",
+			buf, strerror(err), ns);
 		exit(-1);
 	}
-	long my_ns = st.st_ino;
+	ino_t my_ns = st.st_ino;
 	snprintf(buf, sizeof(buf), "/proc/%d/ns/%s", pid, ns);
 	if (stat(buf, &st) < 0) {
-		fprintf(stderr, "stat(%s) failed: %s\n", buf, strerror(errno));
+		int err = errno;
+		fprintf(stderr, "condor_nsenter: cannot stat %s: %s.  %s\n",
+			buf, strerror(err), open_ns_failure_hint(err));
 		exit(-1);
 	}
-	long your_ns = st.st_ino;
+	ino_t your_ns = st.st_ino;
 
 	// It is an error to try to setns to a namespace we are already in.
 	if (your_ns == my_ns) {
 		// Quietly return, this is probably not a problem
-		return 0;
+		return;
 	}
 	int fd = open(buf, O_RDONLY);
-	int r = setns(fd, 0);
-	close(fd);
-	if (r < 0) {
-		fprintf(stderr, "cannot setns %s: %s\n", ns, strerror(errno));
-		fprintf(stderr, "condor_ssh_to_job cannot enter the namespace of the containerized job.\n");
-		fprintf(stderr, "This is probably because the container runtime is installed as setuid,\n");
-		fprintf(stderr, "but htcondor itself was not installed as root, so it does not have the\n");
-		fprintf(stderr, "permissions to enter the user namespace.\n");
+	if (fd < 0) {
+		int err = errno;
+		fprintf(stderr, "condor_nsenter: cannot open %s: %s.  %s\n",
+			buf, strerror(err), open_ns_failure_hint(err));
 		exit(-1);
 	}
-	return 0;
+	int r = setns(fd, 0);
+	int err = errno;
+	close(fd);
+	if (r < 0) {
+		fprintf(stderr, "condor_nsenter: cannot enter the %s namespace of job pid %d "
+			"(setns failed as uid %d: %s).  %s\n",
+			ns, pid, (int)geteuid(), strerror(err), setns_failure_hint(ns, err));
+		exit(-1);
+	}
 }
 
 // The name part of a NAME=VALUE environment entry
@@ -223,7 +316,9 @@ int main( int argc, char *argv[] )
 	
 	int e = open(envfile.c_str(), O_RDONLY);
 	if (e < 0) {
-		fprintf(stderr, "Can't open %s %s\n", envfile.c_str(), strerror(errno));
+		int err = errno;
+		fprintf(stderr, "condor_nsenter: cannot read the job's environment from %s: %s.  %s\n",
+			envfile.c_str(), strerror(err), open_ns_failure_hint(err));
 		exit(1);
 	}
 	char buf[512];
@@ -370,14 +465,22 @@ int main( int argc, char *argv[] )
 	enter_ns(pid, "mnt");
 
 	// order matters!
+	// EINVAL from these means the id has no mapping in the container's
+	// user namespace.
 	int r = setgid(gid);
 	if (r < 0) {
-		fprintf(stderr, "Can't setgid to %d\n", gid);
+		int err = errno;
+		fprintf(stderr, "condor_nsenter: inside the container, cannot setgid to %d: %s.%s\n",
+			(int)gid, strerror(err),
+			(err == EINVAL) ? "  This gid is not mapped in the container's user namespace." : "");
 		exit(1);
 	}
 	r = setuid(uid);
 	if (r < 0) {
-		fprintf(stderr, "Can't setuid to %d\n", uid);
+		int err = errno;
+		fprintf(stderr, "condor_nsenter: inside the container, cannot setuid to %d: %s.%s\n",
+			(int)uid, strerror(err),
+			(err == EINVAL) ? "  This uid is not mapped in the container's user namespace." : "");
 		exit(1);
 	}
 
@@ -403,13 +506,23 @@ int main( int argc, char *argv[] )
 
 			execvpe(cmd_argv[0], const_cast<char *const *>(cmd_argv.data()),
 				const_cast<char *const *>(envp.data()));
-			fprintf(stderr, "exec of %s failed: %s\n", cmd_argv[0], strerror(errno));
+			fprintf(stderr, "condor_nsenter: inside the container, exec of %s failed: %s\n",
+				cmd_argv[0], strerror(errno));
 			exit(errno);
-		} else {
-			int status;
-			waitpid(childpid, &status, 0);
+		} else if (childpid < 0) {
+			fprintf(stderr, "condor_nsenter: fork failed: %s\n", strerror(errno));
+			exit(1);
 		}
-		return 0;
+
+		// Exit with the command's status, like a shell does, so that
+		// the caller can tell whether the command succeeded.
+		int status = 0;
+		pid_t reaped = waitpid(childpid, &status, 0);
+		if (reaped != childpid) {
+			fprintf(stderr, "condor_nsenter: waitpid failed: %s\n", strerror(errno));
+			exit(1);
+		}
+		return exit_code_from_status(status);
 	}
 
 	struct winsize win;
@@ -433,6 +546,10 @@ int main( int argc, char *argv[] )
 	}
 
 	int childpid = fork();
+	if (childpid < 0) {
+		fprintf(stderr, "condor_nsenter: fork failed: %s\n", strerror(errno));
+		exit(1);
+	}
 	if (childpid == 0) {
 
 		// in the child --
@@ -494,7 +611,8 @@ int main( int argc, char *argv[] )
 
 		struct sigaction handler;
 		struct sigaction oldhandler;
-		handler.sa_handler = reset_pty_and_exit;
+		shell_pid = childpid;
+		handler.sa_handler = shell_exited;
 		handler.sa_flags   = 0;
 		sigemptyset(&handler.sa_mask);
 
@@ -538,7 +656,13 @@ int main( int argc, char *argv[] )
 			}
 		}
 		int status;
-		waitpid(childpid, &status, 0);
+		pid_t reaped = waitpid(childpid, &status, 0);
+		if (pty_is_raw) {
+			tcsetattr(0, TCSAFLUSH, &old_tio);
+		}
+		if (reaped == childpid) {
+			return exit_code_from_status(status);
+		}
 	}
 	return 0;
 }
