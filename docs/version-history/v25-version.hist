@@ -1,3 +1,11 @@
+*** 25.15.17 bugs
+
+*** 25.0.17 bugs
+
+- Update :macro:`SEC_FS_ENFORCE_CHANNEL_BINDING` in daemons to work with
+  clients that are version 25.14.1 or later.
+  :jira:`4098`
+
 *** 25.15.16 bugs
 
 - Fixed a bug where a large backlog of higher job priority jobs could
@@ -40,10 +48,6 @@
   other daemons closed it as the condor user, which on Lustre caused the close
   to fail on the metadata server and leak open file handles.
   :jira:`4058`
-
-- Update :macro:`SEC_FS_ENFORCE_CHANNEL_BINDING` in daemons to work with
-  clients that are version 25.14.1 or later.
-  :jira:`4098`
 
 - Fixed a bug where :tool:`condor_watch_q` would show a self-checkpointing
   job as stuck transferring output after a checkpoint was transferred, rather
