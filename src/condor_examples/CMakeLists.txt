@@ -25,8 +25,9 @@ install(FILES		condor-annex-ec2
 
 # Only install the master shutdown script on RHEL for now
 if (RPM_SYSTEM_NAME)
+cmake_path(GET C_CONFIGD PARENT_PATH configd_parent)
 install(FILES		master_shutdown_script.sh
-		DESTINATION	"${C_CONFIGD}/.."
+		DESTINATION	"${configd_parent}"
 		PERMISSIONS	${CONDOR_SCRIPT_PERMS}
 )
 endif()

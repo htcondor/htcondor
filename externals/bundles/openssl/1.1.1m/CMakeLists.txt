@@ -32,6 +32,7 @@ if (WITH_OPENSSL)
 	include(FetchContent)
 	FetchContent_declare(openssl
 		URL ${EXTERNALS_SOURCE_URL}/${OPENSSL_DOWNLOAD}
+		${CONDOR_DOWNLOAD_EXTRACT_TIMESTAMP}
 		URL_MD5 ${OPENSSL_DOWNLOAD_MD5}
 		)
 	FetchContent_MakeAvailable(openssl)

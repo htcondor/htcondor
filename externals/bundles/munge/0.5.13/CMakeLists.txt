@@ -31,6 +31,7 @@ if (WITH_MUNGE)
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${MUNGE_STAGE}/dl
 				    URL ${EXTERNALS_SOURCE_URL}/munge-0.5.13.tar.gz
+				    ${CONDOR_DOWNLOAD_EXTRACT_TIMESTAMP}
 					#--Configure step ----------
 				    CONFIGURE_COMMAND ./configure --prefix=${MUNGE_INSTALL_LOC}
 				    #--Build Step ----------

@@ -26,12 +26,6 @@ set(CMAKE_CXX_STANDARD 23) # when changing this, also change classad CMake
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Remove warnings in cmake 3.24+.  This setting 
-# forces cmake to not update the timestamps on downloaded
-# tarballs.  The autoconf-built externals need this old setting
-if (${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.24)
-  cmake_policy(SET CMP0135 OLD)
-endif()
  
 # generate a compile_commands.json file which tools
 # like clang-tidy use

@@ -47,6 +47,7 @@ if ( WITH_VOMS )
 			#-- Download Step ----------
 			DOWNLOAD_DIR ${VOMS_STAGE}/dl
 			URL ${EXTERNALS_SOURCE_URL}/voms-2.1.0-rc0.tar.gz
+			${CONDOR_DOWNLOAD_EXTRACT_TIMESTAMP}
 			#--Patch step ----------
 			PATCH_COMMAND ${VOMS_PATCH}
 			#--Configure step ----------

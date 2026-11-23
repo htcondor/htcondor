@@ -47,6 +47,7 @@ if (WITH_KRB5)
 				#-- Download Step ----------
 				DOWNLOAD_DIR ${KRB5_STAGE}/dl
 				URL ${EXTERNALS_SOURCE_URL}/${KRB5_DOWNLOAD}
+				${CONDOR_DOWNLOAD_EXTRACT_TIMESTAMP}
 				URL_MD5 ${KRB5_DOWNLOAD_MD5SUM}
 				#--Patch step ----------
 				PATCH_COMMAND ${KRB5_PATCH}
