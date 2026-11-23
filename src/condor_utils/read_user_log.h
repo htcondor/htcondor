@@ -104,6 +104,18 @@ class ReadUserLog
 	*/
     bool isInitialized( void ) const { return m_initialized; };
 
+	/** Control whether readEvent() calls fstat() on the open log after
+		every event: once to make AFS notice writes from other machines
+		(HTCONDOR-463) and once to record the file's size, inode and ctime
+		for rotation matching and getFileState().  On a network file system
+		each fstat() is a round trip to the file server, which limits how
+		fast events can be read while another machine writes the log.
+		Enabled by default.  Ignored when the reader handles rotation,
+		because rotation matching needs the recorded file state.
+		@param enable false to skip both per-event fstat() calls
+	*/
+	void setStatAfterEachEvent( bool enable ) { m_stat_after_each_event = enable; }
+
 
     /** Initialize to read the EventLog file.  This function will return
 		false if it can't open the event log (among other problems).
@@ -452,6 +464,7 @@ class ReadUserLog
 	int					 m_max_rotations; /** Max rotation number */
 	bool				 m_read_header;	  /** Read the file's header? */
 	bool				 m_read_only;	  /** Open file read only? */
+	bool				 m_stat_after_each_event; /** fstat() the log after every event? */
 
 	bool				 m_lock_enable;	  /** Should we lock the file? */
     FileLockBase		*m_lock;		  /** The log file lock */
