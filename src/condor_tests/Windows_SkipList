@@ -194,6 +194,7 @@ test_xfer_stats_overflow_regression
 test_concurrency_limits
 test_allowed_job_duration
 test_allowed_execute_duration
+test_allowed_execute_duration_universes
 test_checkpoint_destination
 test_clean_output_failure
 test_condor_dag_checker
