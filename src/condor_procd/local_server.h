@@ -100,6 +100,12 @@ private:
 	NamedPipeWatchdogServer* m_watchdog_server;
 	NamedPipeReader*         m_reader;
 	NamedPipeWriter*         m_writer;
+
+	// true between accept_connection and close_connection. m_writer
+	// may be null while connected if the client died before we could
+	// open its response pipe; we still must read its whole request
+	//
+	bool                     m_connected;
 #endif
 };
 

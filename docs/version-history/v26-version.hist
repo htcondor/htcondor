@@ -6,6 +6,22 @@
   accepted.
   :jira:`4100`
 
+*** 26.3.0 bugs
+
+*** 26.0.3 bugs
+
+- Fixed a rare bug that would cause the *condor_procd*, and then
+  all other daemons to hang. This would only happen on systems
+  that do not use cgroups.  That is, glideins, personal condors,
+  and other non-root Linux systems.
+  :jira:`4105`
+
+- Fixed an unlikely bug where if a local universe starter crashes,
+  the *condor_schedd* now cleans up the job's scratch directory
+  immediately at job exit time, instead of waiting for the *condor_schedd*
+  to restart.
+  :jira:`4096`
+
 *** 26.2.0 features
 
 - Administrators can now cap the DAGMan throttles that users may set via
@@ -125,12 +141,6 @@
   :jira:`3970`
 
 *** 26.0.2 bugs
-
-- Fixed an unlikely bug where if a local universe starter crashes,
-  the *condor_schedd* now cleans up the job's scratch directory
-  immediately at job exit time, instead of waiting for the *condor_schedd*
-  to restart.
-  :jira:`4096`
 
 - :tool:`condor_tail` should now work on files larger than 2 Gb in size.
   :jira:`4008`

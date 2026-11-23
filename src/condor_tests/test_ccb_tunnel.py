@@ -602,27 +602,59 @@ class TestCCBTunnelMultipleUpstream:
         )
 
 
-def _reserve_port():
+def _reserve_port(host):
     # A TCP port that is free right now, so a broker started LATER can be named in
-    # CCB_OUTBOUND_NEXT_HOP before it exists.  Bound without ever connecting, so
-    # closing it leaves no TIME_WAIT to block the collector's bind.
+    # CCB_OUTBOUND_NEXT_HOP before it exists.
+    #
+    # Do NOT take the port from bind(port 0): that hands out a port from the
+    # kernel's ephemeral range, and between our probe and the broker's startup
+    # (the whole inside pool startup) any other daemon or outbound connection on
+    # this host -- e.g. another test under `ctest -j` -- can be handed the same
+    # port, and the broker then fails to bind.  Pick a port BELOW the ephemeral
+    # range instead, which the kernel never auto-assigns, so only an explicit
+    # bind can collide with it.
+    #
+    # Probe on the broker's address and on loopback rather than the wildcard
+    # address (CodeQL py/bind-socket-all-network-interfaces).  The probe sockets
+    # never connect, so closing them leaves no TIME_WAIT to block the broker.
+    import random
     import socket
 
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("127.0.0.1", 0))
-        return s.getsockname()[1]
+    ceiling = 32767
+    try:
+        with open("/proc/sys/net/ipv4/ip_local_port_range") as f:
+            ceiling = min(ceiling, int(f.read().split()[0]) - 1)
+    except (OSError, ValueError, IndexError):
+        pass
+    floor = 20000
+    if ceiling <= floor:
+        floor = 1024
+
+    addrs = [host] if host == "127.0.0.1" else [host, "127.0.0.1"]
+    candidates = random.sample(range(floor, ceiling + 1), min(200, ceiling + 1 - floor))
+    for port in candidates:
+        try:
+            for addr in addrs:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.bind((addr, port))
+        except OSError:
+            continue
+        return port
+    raise RuntimeError(
+        "no free TCP port in %d..%d for the late broker" % (floor, ceiling)
+    )
 
 
 @action
-def late_broker_port():
-    return _reserve_port()
-
-
-@action
-def late_broker_hostport(outside, late_broker_port):
+def late_broker_hostport(outside):
     # Same host as the other brokers; only the port is ours to pick.
     host = _broker_hostport(outside).rpartition(":")[0]
-    return "%s:%d" % (host, late_broker_port)
+    return "%s:%d" % (host, _reserve_port(host))
+
+
+@action
+def late_broker_port(late_broker_hostport):
+    return int(late_broker_hostport.rpartition(":")[2])
 
 
 @action

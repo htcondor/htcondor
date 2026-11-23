@@ -44,6 +44,17 @@ logger.setLevel(logging.DEBUG)
 
 pytest_plugins = ["ornithology.plugin"]
 
+# pytest (8.x) creates .pytest_cache by building it in a temporary
+# "pytest-cache-files-*" directory next to it and renaming it into place.
+# When several tests run concurrently out of this directory, another pytest
+# collecting here can list that temp dir, which then vanishes; on Windows,
+# collection calls os.path.samefile() on every sibling of the test file and
+# dies with FileNotFoundError before running anything.  This glob is matched
+# by name alone, with no stat, so the temp dir is never collected.
+# (norecursedirs is NOT enough: it is only consulted after is_dir(), which
+# returns False for the vanished dir.)
+collect_ignore_glob = ["pytest-cache-files-*"]
+
 RE_ID = re.compile(r"\[([^()]*)\]$")
 
 ALREADY_SEEN = set()
