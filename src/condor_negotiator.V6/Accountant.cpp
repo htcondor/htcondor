@@ -391,6 +391,14 @@ double Accountant::GetPriorityFactor(const std::string& CustomerName)
 	}
 		// if AccountantLocalDomain is empty, all users are considered local
 
+		// The configured factors (DEFAULT_PRIO_FACTOR etc.) are parsed with
+		// atof() and may be below the minimum.  SetPriorityFactor() clamps
+		// the stored value, so clamp here too: the value returned must match
+		// what later reads will see, and callers divide by it.
+	if (PriorityFactor < MIN_PRIORITY_FACTOR) {
+		PriorityFactor = MIN_PRIORITY_FACTOR;
+	}
+
     // Warning!  This read function has a side effect of a write.
     SetPriorityFactor(CustomerName, PriorityFactor); // write and dprintf()
   }

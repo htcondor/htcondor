@@ -8770,10 +8770,10 @@ int SubmitHash::finalize_job_tasks (int /*max_tasks*/)
 	job->set_taskad(nullptr); // just to be sure
 
 	std::string input_files;
-	job->LookupString(ATTR_TRANSFER_INPUT_FILES, input_files);
-
 	std::set<std::string> exist;
-	for (const auto & file : StringTokenIterator(input_files, ",")) { exist.insert(file); }
+	if (job->LookupString(ATTR_TRANSFER_INPUT_FILES, input_files)) {
+		for (const auto & file : StringTokenIterator(input_files, ",")) { exist.insert(file); }
+	}
 
 	long long exist_input_mb = 0;
 	job->LookupInt(ATTR_TRANSFER_INPUT_SIZE_MB, exist_input_mb);

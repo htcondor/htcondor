@@ -5727,8 +5727,8 @@ Matchmaker::calculateSubmitterLimit(
 		// calculate this schedd's absolute fair-share for allocating
 		// resources other than CPUs (like network capacity and licenses)
 	submitterPrioFactor = accountant.GetPriorityFactor ( submitterName );
-	submitterAbsShare =
-		maxAbsPrioValue/(submitterPrioFactor*normalAbsFactor);
+	double abs_share_denom = submitterPrioFactor * normalAbsFactor;
+	submitterAbsShare = (abs_share_denom > 0.0) ? maxAbsPrioValue / abs_share_denom : 0.0;
 
 		// if we are in the "floor round", only give up to
 		// the floor number of resources configured for this
