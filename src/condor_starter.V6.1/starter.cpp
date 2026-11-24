@@ -2662,9 +2662,9 @@ Starter::AllocateJob(int taskid)
 
 		std::string taskattr = "task" + std::to_string(taskid);
 		classad::Value taskval, val;
-		jobAd->EvaluateAttr(taskattr, taskval, classad::Value::ALL_VALUES);
 		ClassAd * ad = nullptr;
-		if (taskval.IsClassAdValue(ad) && ad) {
+		if (jobAd->EvaluateAttr(taskattr, taskval, classad::Value::ALL_VALUES) &&
+			taskval.IsClassAdValue(ad) && ad) {
 			for (auto & [attr,expr] : *ad) {
 				// TODO: allow lists ??
 				if (ad->EvaluateAttr(attr, val, classad::Value::SCALAR_EX_VALUES)) {
