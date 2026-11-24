@@ -317,7 +317,13 @@ int main( int argc, char *argv[] )
 						event->formatEvent(event_str, format_opts);
 						printf("%s...\n", event_str.c_str());
 					}
-					fflush(stdout); // fflush the event we just wrote in case we are writing to a pipe
+					// Flush each event in case we are writing to a pipe, and stop if it
+					// cannot be written, for example because the reader has gone away.
+					// ferror() also catches a write that failed in printf() above.
+					if (fflush(stdout) == EOF || ferror(stdout)) {
+						fprintf(stderr, "Failed to write echoed event to stdout: %s\n", strerror(errno));
+						exit(1);
+					}
 				}
 
 				if(event->eventNumber==ULOG_SUBMIT) {
