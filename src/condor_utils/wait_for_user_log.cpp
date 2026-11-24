@@ -27,7 +27,13 @@
 #include "utc_time.h"
 
 WaitForUserLog::WaitForUserLog( const std::string & f ) :
-	filename( f ), reader( f.c_str(), true ), trigger( f ) { };
+	filename( f ), reader( f.c_str(), true ), trigger( f ) {
+	// The reader follows a single, unrotated log, and the trigger already
+	// notices when the log grows, so the reader's per-event fstat() calls
+	// only cost a file-server round trip each when the log is on a
+	// network file system.
+	reader.setStatAfterEachEvent( false );
+}
 
 WaitForUserLog::~WaitForUserLog() { }
 

@@ -898,7 +898,7 @@ ReadUserLog::internalReadEvent (ULogEvent *& event, bool store_state )
 		if ( ULOG_OK != status ) {
 			return status;
 		}
-	} else {
+	} else if ( m_stat_after_each_event || m_handle_rot ) {
 		// If the file wasn't closed, and the file is on AFS, we need
 		// to stat() it to make sure that AFS notices if some other
 		// machine wrote to the file since we last looked at it.
@@ -1009,7 +1009,9 @@ ReadUserLog::internalReadEvent (ULogEvent *& event, bool store_state )
 			m_state->LogRecordNo( starting_recno + starting_event - 1 );
 		}
 		m_state->EventNumInc();
-		m_state->StatFile( m_fd );
+		if ( m_stat_after_each_event || m_handle_rot ) {
+			m_state->StatFile( m_fd );
+		}
 	}
 
 	// Close the file between operations
@@ -1518,6 +1520,7 @@ ReadUserLog::clear( void )
 	m_lock_enable = false;
 	m_max_rotations = 0;
 	m_read_header = false;
+	m_stat_after_each_event = true;
 
 	m_error = LOG_ERROR_NONE;
 	m_line_num = 0;
