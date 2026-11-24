@@ -78,10 +78,12 @@ class TestSpoolPreservedRelativePaths:
         spool_list = ads[0]["TransferInput"].split(",")
         if platform.system() == "Windows":
             # On Windows, submit only treats a trailing backslash as a
-            # directory to expand, so "inputs/" is passed through as-is
-            # and expanded later, when spooled.  Ignore that entry.
+            # directory to expand, so "inputs/" is passed through as-is.
+            # When spooled, the schedd rewrites it to its basename, which
+            # is the empty string.  Ignore that entry in both lists.
+            # TODO: have submit on Windows expand a trailing "/" too.
             submit_list = [f for f in submit_list if not f.startswith("inputs")]
-            spool_list = [f for f in spool_list if not f.startswith("inputs")]
+            spool_list = [f for f in spool_list if f and not f.startswith("inputs")]
             assert submit_list == [
                 "input_1", "input with space", "dir with space/file with space",
             ]
