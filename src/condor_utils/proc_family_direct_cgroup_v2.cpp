@@ -744,7 +744,13 @@ ProcFamilyDirectCgroupV2::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
 	this->cgroup_cpu_shares = fi->cgroup_cpu_shares;
 	this->cgroup_hide_devices = fi->cgroup_hide_devices;
 
-	assign_cgroup_for_pid(pid, cgroup_name);
+	// Pass the raw fi->cgroup, not cgroup_name: assign_cgroup_for_pid
+	// canonicalizes itself, and passing the canonical name would record
+	// "<name>.slice.slice".  This runs in the child after fork/clone.
+	// Under fork() the entry is discarded and the parent records its own,
+	// but under clone() (the schedd) the child shares our address space,
+	// so this is the only entry the parent's cgroup_map ever gets.
+	assign_cgroup_for_pid(pid, fi->cgroup);
 
 	fi->cgroup_active = cgroupify_myself(cgroup_name);
 	return fi->cgroup_active;
