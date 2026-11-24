@@ -114,7 +114,9 @@ chirp_client_connect_starter()
 		return 0;
 	}
 
-    fields = fscanf(file,"%s %d %s",host,&port,cookie);
+	// Field widths must be one less than the buffer sizes
+	static_assert(sizeof(host) == 256 && sizeof(cookie) == 5120, "update fscanf widths");
+	fields = fscanf(file,"%255s %d %5119s",host,&port,cookie);
     fclose(file);
 
     if(fields!=3) {

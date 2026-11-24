@@ -231,7 +231,8 @@ chirp_client_connect_default()
 	file = fopen(default_filename,"r");
 	if(!file) return 0;
 
-	fields = fscanf(file,"%s %d %s",host,&port,cookie);
+	/* Field widths must be CHIRP_LINE_MAX-1 */
+	fields = fscanf(file,"%5119s %d %5119s",host,&port,cookie);
 	fclose(file);
 
 	if(fields!=3) {
