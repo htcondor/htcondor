@@ -70,7 +70,7 @@ def submitJobInputFailureEP(default_condor):
            "arguments": "0",
            "transfer_executable": "false",
            "should_transfer_files": "yes",
-           "transfer_input_files": "http://nonexistent.invalid/index.html",
+           "transfer_input_files": "file:///no-such-file-that-exists",
         }
     )
 
