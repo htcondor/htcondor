@@ -13,6 +13,7 @@
 #ifdef LINUX
 
 #include <sys/mount.h>
+#include <mntent.h>
 #include <sys/statvfs.h>
 #include "directory.h"
 
@@ -856,33 +857,32 @@ VolumeManager::RemoveLV(const std::string &lv_name, const std::string &vg_name, 
 {
     TemporaryPrivSentry sentry(PRIV_ROOT);
 
-    // If a crash or restart left the volume mounted, unmount it now
-    // Format of /proc/mounts is
-    // device-name mount-point fstype other_stuff
-    // Find the matching device-name field, so we can umount the mount-point
-    FILE *f = fopen("/proc/self/mounts", "r");
+    // If a crash or restart left the volume mounted, unmount it now.
+    // Find the mount entry whose device matches, so we can umount the mount-point.
+    // Use getmntent_r() rather than hand parsing: it splits all six fields,
+    // decodes octal escapes in the mount point, and discards (rather than
+    // overflowing on) any line longer than the buffer, e.g. long overlay options.
+    FILE *f = setmntent("/proc/self/mounts", "r");
     if (f == nullptr) {
         dprintf(D_ALWAYS, "VolumeManager::RemoveLV error opening /proc/self/mounts: %s\n", strerror(errno));
     } else {
-        char dev[PATH_MAX];
-        char mnt[PATH_MAX];
-        char dummy[PATH_MAX];
-
         std::string per_slot_device = DevicePath(vg_name, lv_name, encrypted);
-        while (fscanf(f, "%s %s %s\n", dev, mnt, dummy) > 0) {
-            if (strcmp(dev, per_slot_device.c_str()) == MATCH) {
+        std::vector<char> line_buf(4 * PATH_MAX);
+        struct mntent entry;
+        while (getmntent_r(f, &entry, line_buf.data(), (int)line_buf.size()) != nullptr) {
+            if (per_slot_device == entry.mnt_fsname) {
                 dprintf(D_ALWAYS, "VolumeManager::RemoveLV found leftover mount from device %s on path %s, unmounting\n",
-                        dev, mnt);
-                int r = umount(mnt);
+                        entry.mnt_fsname, entry.mnt_dir);
+                int r = umount(entry.mnt_dir);
                 if (r != 0) {
-                    err.pushf("VolumeManager", 12, "Failed to unmount %s (%d): %s", mnt, errno, strerror(errno));
-                    fclose(f);
+                    err.pushf("VolumeManager", 12, "Failed to unmount %s (%d): %s", entry.mnt_dir, errno, strerror(errno));
+                    endmntent(f);
                     return -1;
                 }
                 break;
             }
         }
-        fclose(f);
+        endmntent(f);
     }
 
     // Don't run command if encrypted device does not exist
