@@ -10,7 +10,9 @@ from time import time as now
 from types import SimpleNamespace
 from typing import Dict, List, Optional, Tuple
 
+import classad2
 import htcondor2
+from htcondor2._utils.bytes import BytesUnit, best_fit_unit, pretty_fmt_bytes
 from htcondor2._utils.ansi import AnsiOptions, Color, bold, colorize, id_colorize, stylize
 
 # 256-color id for the light-orange used to highlight suggested follow-up
@@ -40,7 +42,7 @@ REQUIRED_ATTRS = [
     "RequestCpus",
     "RequestGpus",
 
-    # Resource usage (RAW values in KiB)
+    # Resource usage (unrounded values, KiB)
     "ResidentSetSize_RAW",
     "DiskUsage_RAW",
 
@@ -63,6 +65,23 @@ REQUIRED_ATTRS = [
     "JobStartDate",
     "EnteredCurrentStatus",
 ]
+
+# Attributes that request expressions commonly reference (e.g. the default
+# RequestDisk from JOB_DEFAULT_REQUESTDISK uses TransferInputSizeMB). They are
+# projected so the requests can be evaluated, but are not written to the CSV.
+EXPRESSION_DEPENDENCY_ATTRS = [
+    "TransferInputSizeMB",
+    "MemoryUsage",
+    "ResidentSetSize",
+    "ImageSize",
+    "DiskUsage",
+]
+
+# Native units of the job attributes the analytics suite works with. Values
+# are kept in these units and only converted when compared or displayed.
+MEMORY_REQUEST_UNIT = BytesUnit.MEGA  # RequestMemory
+MEMORY_USAGE_UNIT = BytesUnit.KILO    # ResidentSetSize_RAW
+DISK_UNIT = BytesUnit.KILO            # RequestDisk, DiskUsage_RAW
 
 # HTCondor JobStatus code -> human-readable name, in canonical display order.
 JOB_STATUS_NAMES = {
@@ -90,23 +109,20 @@ def _fetch_cluster_jobs(cluster_id: int, filepath: Path) -> int:
     data = dict()
 
     def _get_attr(ad, attr):
-        """Best-effort read of one ClassAd attribute, falling back to eval()."""
+        """Best-effort evaluation of one ClassAd attribute (None if missing, undefined, or error)."""
         try:
-            value = ad.get(attr)
+            value = ad.eval(attr)
         except Exception:
-            value = None
-        if value is None:
-            try:
-                value = ad.eval(attr)
-            except Exception:
-                value = None
+            return None
+        if isinstance(value, classad2.Value):
+            return None
         return value
 
     def _get_job_info(query_func, **query_func_kwargs) -> int:
         nonlocal data
         duplicate_count = 0
 
-        for ad in query_func(constraint=f"ClusterId=={cluster_id}", projection=REQUIRED_ATTRS, **query_func_kwargs):
+        for ad in query_func(constraint=f"ClusterId=={cluster_id}", projection=REQUIRED_ATTRS + EXPRESSION_DEPENDENCY_ATTRS, **query_func_kwargs):
             jid = str(ad["ClusterId"]) + "." + str(ad["ProcId"])
 
             if jid in data:
@@ -187,7 +203,7 @@ def _validate_cluster_exists(cluster_id: int) -> bool:
     schedd = htcondor2.Schedd()
 
     try:
-        if len(schedd.query(f"ClusterId=={cluster_id}", ["ClusterId"], match=1)) == 1:
+        if len(schedd.query(f"ClusterId=={cluster_id}", ["ClusterId"], limit=1)) == 1:
             return True
     except Exception:
         pass
@@ -294,36 +310,22 @@ class Dashboard(Verb):
         print(f"\nCluster {cluster_id} Status Dashboard\n")
         Dashboard.draw_bars(counts)
 
-    # get data from the schedd
     def fetch_counts(cluster_id):
-        schedd = htcondor2.Schedd()
+        _ensure_cluster_data(cluster_id)
+
         counts = {name: 0 for name in JOB_STATUS_NAMES.values()}
 
-        print("Fetching job history (this may take a moment)...", file=sys.stderr)
-
-        total_found = 0
-
-        for ad in schedd.history(
-            constraint=f"ClusterId == {cluster_id}",
-            projection=["JobStatus"],
-            match=-1,
-        ):
-            total_found += 1
-            counts[JOB_STATUS_NAMES[ad.eval("JobStatus")]] += 1
-
-            if total_found % 1000 == 0:
-                print(f"  Found {total_found} matching jobs...", file=sys.stderr)
-
-        print(f"  Completed: {total_found} matching jobs found", file=sys.stderr)
-
-        print("Fetching current queue...", file=sys.stderr)
-        for ad in schedd.query(
-            constraint=f"ClusterId == {cluster_id}",
-            projection=["JobStatus"],
-            limit=-1,
-        ):
-            counts[JOB_STATUS_NAMES[ad.eval("JobStatus")]] += 1
-        print("Done fetching data\n", file=sys.stderr)
+        for job in _load_csv_for_cluster(cluster_id):
+            proc = job.get("ProcId", -1)
+            status_num = job.get("JobStatus")
+            if status_num:
+                status = JOB_STATUS_NAMES.get(int(status_num))
+                if status:
+                    counts[status] += 1
+                else:
+                    print(f"  ERROR: Job {cluster_id}.{proc} has unknown job status {status_num}", file=sys.stderr)
+            else:
+                print(f"  ERROR: Job {cluster_id}.{proc} is missing JobStatus", file=sys.stderr)
 
         return counts
 
@@ -593,7 +595,17 @@ class Histogram(Verb):
         runtimes = rt.values
         percentiles_list = np_linspace(0, 100, percentiles + 1)
         raw_edges = np_percentile(runtimes, percentiles_list)
-        bin_edges = np_unique(raw_edges)
+
+        # Tied runtimes can produce duplicate percentile edges, which would make
+        # zero-width bins. Keep only the first (lowest) percentile for each edge
+        # value so each surviving bin is labeled with the real percentile span
+        # it covers (e.g. 0% and 6.7% both at 1s -> one bin labeled 0-13%).
+        bin_edges, edge_pcts = [], []
+        for edge, pct in zip(raw_edges, percentiles_list):
+            if not bin_edges or edge != bin_edges[-1]:
+                bin_edges.append(edge)
+                edge_pcts.append(pct)
+        edge_pcts[-1] = 100.0
 
         if len(bin_edges) < 2:
             print("[WARN] Not enough unique runtime values to build histogram.")
@@ -613,7 +625,7 @@ class Histogram(Verb):
         header = (
             f"{'Percentile':<{pct_width}}"
             f"{'Time Range':<{label_width}}"
-            f"| {'Histogram':<{max_width}}"
+            f" | {'Histogram':<{max_width}}"
             f" {'# Jobs':>{count_width}}"
         )
         print(header)
@@ -642,10 +654,8 @@ class Histogram(Verb):
                 f"{format_seconds_human(left):>10} - {format_seconds_human(right):>10}"
             ).rjust(label_width)
 
-            # Because duplicate percentile edges may have been collapsed by np.unique,
-            # compute an approximate percentile label from the actual edge positions.
-            left_pct = int(round(100 * i / len(counts)))
-            right_pct = int(round(100 * (i + 1) / len(counts)))
+            left_pct = int(round(edge_pcts[i]))
+            right_pct = int(round(edge_pcts[i + 1]))
             pct_range = f"{left_pct:02}–{right_pct:02}%".ljust(pct_width)
 
             bar = f"{render_bar(counts[i], max_count, max_width):<{max_width}}"
@@ -656,6 +666,13 @@ class Histogram(Verb):
 
         print(f"\n{colorize('Note:', Color.BRIGHT_RED)} Bars in red represent bins with median runtime < 10 minutes.")
         print(f"{colorize('Info:', Color.BRIGHT_RED)} Total number of jobs in such bins: {jobs_in_red_bins}")
+
+        merged = percentiles - len(counts)
+        if merged > 0:
+            print(
+                f"{colorize('Note:', Color.BRIGHT_RED)} {percentiles} bins requested, {len(counts)} shown: "
+                f"tied runtimes merged {merged} bin{'s' if merged != 1 else ''}."
+            )
 
         if show_fast_jobs:
             if "ClusterId" in df.columns and "ProcId" in df.columns:
@@ -764,7 +781,12 @@ class Analytics(Verb):
         return (used / expected) * 100
 
     # to print the usage report
-    def compute_usage_summary(data, label, percentage=False, unit=None):
+    # native_unit: byte unit of the data; the row is shown in the unit that best fits its max
+    def compute_usage_summary(data, label, percentage=False, native_unit=None):
+        if native_unit is not None and data:
+            _, display_unit = best_fit_unit(max(data), native_unit)
+            label = f"{label} ({display_unit.unit()})"
+
         if not data or len(data) < 2:
             return f"{label:<25}: Not enough data"
 
@@ -776,6 +798,11 @@ class Analytics(Verb):
         max_val = data_sorted[-1]
         std_dev = statistics.stdev(data_sorted)
 
+        if native_unit is not None:
+            min_val, q1, median, q3, max_val, std_dev = (
+                native_unit.convert(v, display_unit) for v in (min_val, q1, median, q3, max_val, std_dev)
+            )
+
         fmt = "{:.1f}%" if percentage else "{:.1f}"
         return (
             f"{label:<25}: "
@@ -784,7 +811,7 @@ class Analytics(Verb):
         )
 
     # prints the resource request table
-    def print_resource_table(name, values, unit=""):
+    def print_resource_table(name, values, byte_unit=None):
         if not values:
             print(f"{name:<15}: No data")
             return
@@ -792,15 +819,17 @@ class Analytics(Verb):
         counts = Counter(values)
         print(f"{name:<15}:")
         for val, count in sorted(counts.items()):
-            print(f"{'':<15}  {val:<10} {unit:<5}  {count} job(s)")
+            display = pretty_fmt_bytes(val, byte_unit) if byte_unit is not None else val
+            print(f"{'':<15}  {display:<16}  {count} job(s)")
         print()
 
     # prints distribution of jobs by actual resource usage as a histogram
-    def print_usage_distribution(name, used_list, unit="GiB"):
+    def print_usage_distribution(name, used_list, native_unit):
         if not used_list:
             return
 
-        max_val = max(used_list)
+        # Bins are chosen in the unit that best fits the largest value
+        max_val, display_unit = best_fit_unit(max(used_list), native_unit)
 
         # Define bins based on the data range
         if max_val <= 10:
@@ -812,6 +841,10 @@ class Analytics(Verb):
         else:
             bins = [0, 10, 25, 50, 100, float("inf")]
             labels = ["0-10", "10-25", "25-50", "50-100", "100+"]
+
+        # Bin edges are chosen in display units; convert them once to the
+        # data's native unit instead of converting every value
+        bins = [display_unit.convert(edge, native_unit) for edge in bins]
 
         # Count jobs in each bin
         bin_counts = [0] * len(labels)
@@ -832,24 +865,31 @@ class Analytics(Verb):
         for label, count in zip(labels, bin_counts):
             pct = (count / total_jobs) * 100 if count > 0 else 0.0
             bar_visual = render_bar(count, max_count, bar_width)
-            print(f"  {label:>10} {unit}: {bar_visual:<{bar_width}} {count:>4} ({pct:>5.1f}%)")
+            print(f"  {label:>10} {display_unit.unit()}: {bar_visual:<{bar_width}} {count:>4} ({pct:>5.1f}%)")
 
     # compute recommended requests + potential savings from p95 usage plus a
     # buffer; shared by summarize() (prints it) and get_analytics_data()
     # (returns it as-is)
     def compute_savings(mem_requested, mem_used, disk_requested, disk_used, cpu_requests, cpu_eff_list, avg_runtime_hours):
+        # avg_runtime_hours is None when no job has runtime data; the
+        # unit-hours savings are then unknown (None) rather than guessed
+        def _unit_hours(waste_per_job, jobs, hours):
+            return None if hours is None else waste_per_job * jobs * hours
+
         savings = {}
 
         if mem_requested and mem_used:
+            # Usage (KiB) is finer grained than requests (MiB): compare in KiB
             p95_mem = np_percentile(mem_used, 95)
             recommended_mem = p95_mem * 1.1  # 10% buffer
-            median_mem_req = statistics.median(mem_requested)
+            median_mem_req = MEMORY_REQUEST_UNIT.convert(statistics.median(mem_requested), MEMORY_USAGE_UNIT)
 
             if recommended_mem < median_mem_req * 0.8:  # can save > 20%
                 savings["memory"] = {
+                    "unit": MEMORY_USAGE_UNIT,
                     "current": median_mem_req,
                     "recommended": recommended_mem,
-                    "savings_gib_hours": (median_mem_req - recommended_mem) * len(mem_used) * avg_runtime_hours,
+                    "savings_unit_hours": _unit_hours(median_mem_req - recommended_mem, len(mem_used), avg_runtime_hours),
                     "reduction_pct": ((median_mem_req - recommended_mem) / median_mem_req) * 100,
                     "jobs_affected": len(mem_used),
                 }
@@ -861,9 +901,10 @@ class Analytics(Verb):
 
             if recommended_disk < median_disk_req * 0.8:
                 savings["disk"] = {
+                    "unit": DISK_UNIT,
                     "current": median_disk_req,
                     "recommended": recommended_disk,
-                    "savings_gib_hours": (median_disk_req - recommended_disk) * len(disk_used) * avg_runtime_hours,
+                    "savings_unit_hours": _unit_hours(median_disk_req - recommended_disk, len(disk_used), avg_runtime_hours),
                     "reduction_pct": ((median_disk_req - recommended_disk) / median_disk_req) * 100,
                     "jobs_affected": len(disk_used),
                 }
@@ -882,30 +923,32 @@ class Analytics(Verb):
 
         return savings
 
-    # print recommendations
-    def print_recommendations(savings, avg_runtime_hours):
+    # prints the memory/disk recommendation block for one byte-valued resource
+    def print_byte_recommendation(s, buffer_note, avg_runtime):
+        unit = s["unit"]
+        waste_per_job = pretty_fmt_bytes(s["current"] - s["recommended"], unit)
+        print(f"  Current Request     : {pretty_fmt_bytes(s['current'], unit)}")
+        print(f"  Recommended         : {pretty_fmt_bytes(s['recommended'], unit)} ({buffer_note})")
+        if s["savings_unit_hours"] is not None:
+            print(f"  Potential Savings   : {pretty_fmt_bytes(s['savings_unit_hours'], unit)}-hours")
+            print(f"                        (≈ {waste_per_job}/job × {s['jobs_affected']} jobs × {format_seconds_human(avg_runtime)} avg runtime)")
+        else:
+            print(f"  Potential Savings   : ≈ {waste_per_job}/job × {s['jobs_affected']} jobs")
+            print(f"                        (no job runtime data; cannot estimate byte-hours)")
+        print(f"  Jobs Affected       : {s['jobs_affected']}")
+
+    # print recommendations (avg_runtime in seconds; 0 when unknown)
+    def print_recommendations(savings, avg_runtime):
         print(f"\n{'Resource Optimization Recommendations':^80}")
         print("=" * 80)
 
         if "memory" in savings:
-            s = savings["memory"]
-            waste_per_job = s["current"] - s["recommended"]
             print(f"\n📊 Memory:")
-            print(f"  Current Request     : {s['current']:.1f} GiB")
-            print(f"  Recommended         : {s['recommended']:.1f} GiB (P95 + 10% buffer)")
-            print(f"  Potential Savings   : {s['savings_gib_hours']:.1f} GiB-hours")
-            print(f"                        (≈ {waste_per_job:.1f} GiB/job × {s['jobs_affected']} jobs × {avg_runtime_hours:.1f} hr avg runtime)")
-            print(f"  Jobs Affected       : {s['jobs_affected']}")
+            Analytics.print_byte_recommendation(savings["memory"], "P95 + 10% buffer", avg_runtime)
 
         if "disk" in savings:
-            s = savings["disk"]
-            waste_per_job = s["current"] - s["recommended"]
             print(f"\n💾 Disk:")
-            print(f"  Current Request     : {s['current']:.1f} GiB")
-            print(f"  Recommended         : {s['recommended']:.1f} GiB (P95 + 20% buffer)")
-            print(f"  Potential Savings   : {s['savings_gib_hours']:.1f} GiB-hours")
-            print(f"                        (≈ {waste_per_job:.1f} GiB/job × {s['jobs_affected']} jobs × {avg_runtime_hours:.1f} hr avg runtime)")
-            print(f"  Jobs Affected       : {s['jobs_affected']}")
+            Analytics.print_byte_recommendation(savings["disk"], "P95 + 20% buffer", avg_runtime)
 
         if "cpu" in savings:
             s = savings["cpu"]
@@ -928,21 +971,26 @@ class Analytics(Verb):
         runtimes = []
         cpu_requests = []
         gpu_requests = []
+        per_job_mem_eff, per_job_disk_eff = [], []
 
         for job in jobs:
             mem_req = safe(float, job.get("RequestMemory"))
             mem_use = safe(float, job.get("ResidentSetSize_RAW"))
             if mem_req:
-                mem_requested.append(round(mem_req / 1024, 2))  # Convert MiB to GiB
+                mem_requested.append(mem_req)  # MiB
             if mem_use:
-                mem_used.append(mem_use / 1024 / 1024)  # Convert KiB to GiB
+                mem_used.append(mem_use)  # KiB
+            if mem_req and mem_use:
+                per_job_mem_eff.append(Analytics.efficiency(mem_use, MEMORY_REQUEST_UNIT.convert(mem_req, MEMORY_USAGE_UNIT)))
 
             disk_req = safe(float, job.get("RequestDisk"))
             disk_use = safe(float, job.get("DiskUsage_RAW"))
             if disk_req:
-                disk_requested.append(round(disk_req / (1024 * 1024), 2))  # Convert KiB to GiB
+                disk_requested.append(disk_req)  # KiB
             if disk_use:
-                disk_used.append(disk_use / (1024 * 1024))  # Convert KiB to GiB
+                disk_used.append(disk_use)  # KiB
+            if disk_req and disk_use:
+                per_job_disk_eff.append(Analytics.efficiency(disk_use, disk_req))
 
             cpus = safe(float, job.get("RequestCpus"))
             if cpus:
@@ -963,10 +1011,9 @@ class Analytics(Verb):
             if wall_time:
                 runtimes.append(wall_time)
 
-        # Compute per-job efficiency lists
+        # Compute per-job CPU efficiency (memory/disk are paired per job above,
+        # since the request and usage lists can differ in length)
         per_job_cpu_eff = [Analytics.efficiency(u, r) for u, r in zip(cpu_used_time, run_time) if r]
-        per_job_mem_eff = [Analytics.efficiency(u, r) for u, r in zip(mem_used, mem_requested) if r]
-        per_job_disk_eff = [Analytics.efficiency(u, r) for u, r in zip(disk_used, disk_requested) if r]
 
         # Take medians
         avg_cpu_eff = statistics.median(per_job_cpu_eff) if per_job_cpu_eff else 0
@@ -974,7 +1021,7 @@ class Analytics(Verb):
         avg_disk_eff = statistics.median(per_job_disk_eff) if per_job_disk_eff else 0
 
         avg_runtime = statistics.mean(runtimes) if runtimes else 0
-        avg_runtime_hours = avg_runtime / 3600 if avg_runtime else 1.0
+        avg_runtime_hours = avg_runtime / 3600 if avg_runtime else None
 
         savings = Analytics.compute_savings(
             mem_requested, mem_used, disk_requested, disk_used,
@@ -1016,18 +1063,18 @@ class Analytics(Verb):
 
         print(f"{'Requested Resources':^80}")
         print("=" * 80)
-        Analytics.print_resource_table("Memory (GiB)", m["mem_requested"], "GiB")
-        Analytics.print_resource_table("Disk (GiB)", m["disk_requested"], "GiB")
-        Analytics.print_resource_table("CPUs", m["cpu_requests"], "")
-        Analytics.print_resource_table("GPUs", m["gpu_requests"], "")
+        Analytics.print_resource_table("Memory", m["mem_requested"], MEMORY_REQUEST_UNIT)
+        Analytics.print_resource_table("Disk", m["disk_requested"], DISK_UNIT)
+        Analytics.print_resource_table("CPUs", m["cpu_requests"])
+        Analytics.print_resource_table("GPUs", m["gpu_requests"])
 
         print(f"{'Number Summary Table':^80}")
         print("=" * 80)
         print(f"{'Resource (units)':<25}: {'Min':>6}  {'Q1':>6}  {'Median':>7}  {'Q3':>6}  {'Max':>6}   {'StdDev':>6}")
         print("-" * 80)
 
-        print(Analytics.compute_usage_summary(m["mem_used"], "Memory Used (GiB)"))
-        print(Analytics.compute_usage_summary(m["disk_used"], "Disk Used (GiB)"))
+        print(Analytics.compute_usage_summary(m["mem_used"], "Memory Used", native_unit=MEMORY_USAGE_UNIT))
+        print(Analytics.compute_usage_summary(m["disk_used"], "Disk Used", native_unit=DISK_UNIT))
         print(Analytics.compute_usage_summary(m["cpu_efficiency_list"], "CPU Usage (%)", percentage=True))
 
         print()
@@ -1042,11 +1089,11 @@ class Analytics(Verb):
         # Usage distribution
         print(f"{'Resource Usage Distribution':^80}")
         print("=" * 80)
-        Analytics.print_usage_distribution("Memory", m["mem_used"], "GiB")
-        Analytics.print_usage_distribution("Disk", m["disk_used"], "GiB")
+        Analytics.print_usage_distribution("Memory", m["mem_used"], MEMORY_USAGE_UNIT)
+        Analytics.print_usage_distribution("Disk", m["disk_used"], DISK_UNIT)
 
         # Recommendations
-        Analytics.print_recommendations(m["savings"], m["avg_runtime_hours"])
+        Analytics.print_recommendations(m["savings"], m["avg_runtime"])
 
         # Gives human readable notes on the efficiency and also warnings
         print()
@@ -1709,7 +1756,7 @@ class Summarize(Verb):
         table_data = []
         for finding in findings:
             if finding["status"] == "INFO":
-                status_display = colorize("ℹ️  INFO", Color.BRIGHT_CYAN)
+                status_display = colorize("ⓘ INFO", Color.BRIGHT_CYAN)
             else:
                 status_display = Summarize.get_status_symbol(finding["status"])
             table_data.append([

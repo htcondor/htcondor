@@ -6,6 +6,9 @@
   accepted.
   :jira:`4100`
 
+- Improved displayed information for :tool:`htcondor cluster` verbs.
+  :jira:`4005`
+
 - When :tool:`condor_ssh_to_job` cannot enter a Singularity or Apptainer
   container job, it now prints an error saying which step failed and the
   likely cause, rather than always blaming a setuid container runtime,
