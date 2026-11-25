@@ -488,22 +488,6 @@ def _broker_hostport(condor):
     return m.group(1) if m else sinful
 
 
-def _hostport_reachable(hostport):
-    # True iff a TCP connection to host:port completes.  Takes a captured host:port
-    # string (not a live Condor) because a broker taken down with condor_off deletes
-    # its collector address file, so it can no longer be read back from the daemon.
-    # Used to confirm a broker is really down (so a later success genuinely required
-    # failover, not a lucky race against a still-listening socket).
-    import socket
-
-    host, _, port = hostport.rpartition(":")
-    try:
-        with socket.create_connection((host, int(port)), timeout=2):
-            return True
-    except OSError:
-        return False
-
-
 class TestCCBTunnelMultipleUpstream:
     def test_schedd_advertises_both_tunnel_paths(self, outside, outside2, inside_multi):
         # The inside CCB registered upstream through BOTH brokers, so the schedd's
@@ -561,19 +545,24 @@ class TestCCBTunnelMultipleUpstream:
             "schedd contact did not carry both tunnel paths before failover: %s" % addr
         )
 
-        # Capture the outside broker's host:port BEFORE taking it down: condor_off
-        # deletes its collector address file, so it cannot be read back afterward.
-        outside_hostport = _broker_hostport(outside)
-
-        # Bring the first broker down and confirm it is truly unreachable, so the
-        # later success cannot be a race against a still-listening socket.
+        # Bring the first broker down and wait until its master has reaped the
+        # collector, so the later success cannot be a race against a
+        # still-listening socket.  Wait on the master's reaper message rather
+        # than probing the port: the collector bound an ephemeral port, and once
+        # freed, another daemon on this host (e.g. a concurrent test under
+        # `ctest -j`) can be handed that same port, so "the port answers" does
+        # not mean "the broker is still up".  The master logs
+        # "The COLLECTOR (pid N) exited with status ..." (or "died due to ...")
+        # when it reaps the collector.
+        master_log = outside.master_log.open()
+        # Skip what is already logged, so only an exit after condor_off counts.
+        for _ in master_log.read():
+            pass
         outside.run_command(["condor_off", "-fast", "-collector"], timeout=30)
-        down_by = time.time() + 60
-        while time.time() < down_by and _hostport_reachable(outside_hostport):
-            time.sleep(1)
-        assert not _hostport_reachable(outside_hostport), (
-            "outside broker's collector never went down after condor_off"
-        )
+        assert master_log.wait(
+            condition=lambda msg: msg.message.startswith("The COLLECTOR (pid "),
+            timeout=60,
+        ), "outside broker's collector never exited after condor_off"
 
         before_survivor = proxy_session_count(outside2)
 
