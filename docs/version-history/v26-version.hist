@@ -12,6 +12,12 @@
   to restart.
   :jira:`4096`
 
+- Fixed a bug in :tool:`condor_adstash` where stuck history subprocesses
+  would keep adstash from exiting even when a timeout was set. Adstash
+  now escalates its attempts to stop timed out processes and logs any
+  processes that remain stuck (i.e. are in uninterruptible sleep).
+  :jira:`3909`
+
 *** 26.0.2 bugs
 
 - :tool:`condor_tail` should now work on files larger than 2 Gb in size.
