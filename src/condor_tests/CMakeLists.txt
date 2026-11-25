@@ -294,6 +294,7 @@ if (BUILD_TESTING)
 			condor_pl_test(test_classad_eval "Test classad_eval" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_adstash_conversion "Test adstash ClassAd conversion" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/test_adstash_job_history_input;src/condor_tests/test_adstash_transfer_epoch_history_input;src/condor_scripts/adstash")
 			condor_pl_test(test_adstash_index_setup "Test adstash index setup" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_scripts/adstash")
+			condor_pl_test(test_adstash_run_workers "Test adstash process management" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libadstash.py;src/condor_scripts/adstash")
 			# Note that ctest can NOT find this test if it's named
 			# test_AwaitableDeadlineReaper.  I can't even.
 			condor_pl_test(test_awaitable_deadline_reaper "Test AwaitableDeadlineReaper" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;$<TARGET_FILE:test_for_AwaitableDeadlineReaper>")
