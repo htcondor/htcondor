@@ -49,6 +49,7 @@ htcondor2/personal.py
 htcondor2/_utils/__init__.py
 htcondor2/_utils/ansi.py
 htcondor2/_utils/bytes.py
+htcondor2/_utils/safe_file.py
 htcondor2/_utils/keyboard.py
 
 # sigh. sigh.

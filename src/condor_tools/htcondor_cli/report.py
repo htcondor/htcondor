@@ -1,4 +1,5 @@
 import csv
+import os
 import statistics
 import sys
 
@@ -13,6 +14,7 @@ from typing import Dict, List, Optional, Tuple
 import classad2
 import htcondor2
 from htcondor2._utils.bytes import BytesUnit, best_fit_unit, pretty_fmt_bytes
+from htcondor2._utils.safe_file import atomic_write, is_safe_regular_file, safe_makedirs, safe_open_read
 from htcondor2._utils.ansi import AnsiOptions, Color, bold, colorize, id_colorize, stylize
 
 # 256-color id for the light-orange used to highlight suggested follow-up
@@ -101,7 +103,11 @@ def _fetch_cluster_jobs(cluster_id: int, filepath: Path) -> int:
     """
     schedd = htcondor2.Schedd()
 
-    filepath.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        safe_makedirs(filepath.parent)
+    except OSError as e:
+        print(f"Error: unable to use cache directory {filepath.parent}: {e}", file=sys.stderr)
+        sys.exit(1)
 
     print(f"Fetching jobs for cluster {cluster_id}...")
     print(f"This may take a moment for large clusters...\n")
@@ -165,7 +171,7 @@ def _fetch_cluster_jobs(cluster_id: int, filepath: Path) -> int:
 
     print(f"\nWriting {job_count} jobs to CSV...", file=sys.stderr)
     try:
-        with open(filepath, "w", newline="", encoding="utf-8") as csvfile:
+        with atomic_write(filepath, newline="") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=REQUIRED_ATTRS)
             writer.writeheader()
             writer.writerows(data.values())
@@ -256,7 +262,10 @@ def _load_csv_for_cluster(cluster_id: int, exit_on_missing: bool = True):
     """
     filepath = _cached_cluster_file(cluster_id, _DEFAULT_CACHE_DIR)
 
-    if not filepath.exists():
+    try:
+        with safe_open_read(filepath, newline="") as f:
+            rows = list(csv.DictReader(f))
+    except FileNotFoundError:
         if exit_on_missing:
             print(
                 f"Cluster data not found for cluster {cluster_id}. "
@@ -264,9 +273,14 @@ def _load_csv_for_cluster(cluster_id: int, exit_on_missing: bool = True):
             )
             sys.exit(1)
         return None
+    except OSError as e:
+        print(f"Error: refusing to read cluster data {filepath}: {e}", file=sys.stderr)
+        if exit_on_missing:
+            sys.exit(1)
+        return None
 
-    with open(filepath, newline="", encoding="utf-8") as f:
-        return list(csv.DictReader(f))
+    # The cache is a local file: only trust rows that belong to this cluster
+    return [row for row in rows if safe(int, row.get("ClusterId")) == int(cluster_id)]
 
 
 def _ensure_cluster_data(cluster_id: int, cache_dir: Path = _DEFAULT_CACHE_DIR, fresh: bool = False) -> None:
@@ -275,10 +289,13 @@ def _ensure_cluster_data(cluster_id: int, cache_dir: Path = _DEFAULT_CACHE_DIR, 
     """
     filepath = _cached_cluster_file(cluster_id, cache_dir)
 
-    if not fresh and filepath.exists():
+    cached = is_safe_regular_file(filepath)
+    if not fresh and cached:
         return
-    elif filepath.exists():
+    elif cached:
         print(f"Fetching fresh data for cluster {cluster_id}...")
+    elif os.path.lexists(filepath):
+        print(f"Ignoring cached data for cluster {cluster_id} ({filepath} is not a regular file owned by you). Fetching data...")
     else:
         print(f"No cached data found for cluster {cluster_id}. Fetching data...")
 
@@ -316,16 +333,17 @@ class Dashboard(Verb):
         counts = {name: 0 for name in JOB_STATUS_NAMES.values()}
 
         for job in _load_csv_for_cluster(cluster_id):
-            proc = job.get("ProcId", -1)
-            status_num = job.get("JobStatus")
-            if status_num:
-                status = JOB_STATUS_NAMES.get(int(status_num))
-                if status:
-                    counts[status] += 1
-                else:
-                    print(f"  ERROR: Job {cluster_id}.{proc} has unknown job status {status_num}", file=sys.stderr)
+            # Cached values are untrusted text: only use/display them once converted
+            proc = safe(int, job.get("ProcId"))
+            job_id = f"{cluster_id}.{proc if proc is not None else '?'}"
+            status_num = safe(int, job.get("JobStatus"))
+            status = JOB_STATUS_NAMES.get(status_num)
+            if status:
+                counts[status] += 1
+            elif status_num is not None:
+                print(f"  ERROR: Job {job_id} has unknown job status {status_num}", file=sys.stderr)
             else:
-                print(f"  ERROR: Job {cluster_id}.{proc} is missing JobStatus", file=sys.stderr)
+                print(f"  ERROR: Job {job_id} has a missing or invalid JobStatus", file=sys.stderr)
 
         return counts
 
