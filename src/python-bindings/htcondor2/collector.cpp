@@ -104,42 +104,7 @@ _collector_query( PyObject *, PyObject * args ) {
 	}
 
 	if( result == Q_OK ) {
-		PyObject * list = PyList_New(0);
-		if( list == NULL ) {
-			PyErr_SetString( PyExc_MemoryError, "_collector_query" );
-			return NULL;
-		}
-
-		for( auto & classAd : adList ) {
-			ClassAd * c = classAd.release();
-			PyObject * pyClassAd = py_new_classad2_classad(c);
-			if( pyClassAd == NULL ) {
-				// At this point, every ClassAd originally in adList:
-				//    (a) is owned by `adList`; or
-				//    (b) was just deleted by py_new_classad2_classad(); or
-				//    (b) is owned by `list`.
-				//
-				// (FIXME: We presume that release()ing a unique_ptr accessed
-				// via an iterator unsets the unique_ptr and that cleaning up
-				// the local doesn't lead to a double-free.)
-				//
-				// FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
-
-				// py_new_classad2_classad() has already set an exception for us.
-				return NULL;
-			}
-			auto rv = PyList_Append( list, pyClassAd );
-			Py_DecRef(pyClassAd);
-
-			if(rv != 0) {
-				// FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
-
-				// PyList_Append() has already set an exception for us.
-				return NULL;
-			}
-		}
-
-		return list;
+	    return py_list_from_vector( adList, "_collector_query" );
 	} else {
 		switch (result) {
 			case Q_COMMUNICATION_ERROR:

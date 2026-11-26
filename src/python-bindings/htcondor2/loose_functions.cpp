@@ -484,3 +484,18 @@ _send_generic_payload_command( PyObject *, PyObject * args ) {
 
 	return result_tuple;
 }
+
+static PyObject *
+_initialize_module_refcounts( PyObject *, PyObject * ) {
+	ClassAd * c = new ClassAd();
+	if( c == NULL ) {
+		PyErr_SetString( PyExc_MemoryError, "_initialize_module_refcounts()" );
+		return NULL;
+	}
+	PyObject * py_ad = py_new_classad2_classad(c);
+	if( py_ad != NULL ) {
+		Py_DecRef(py_ad);
+	}
+
+	Py_RETURN_NONE;
+}

@@ -92,27 +92,26 @@ _placement_query_users(PyObject *, PyObject * args) {
 		return nullptr;
 	}
 
-	PyObject * list = PyList_New(0);
-	if (list == nullptr) {
-		PyErr_SetString(PyExc_MemoryError, "_placement_query_users");
-		return nullptr;
-	}
 
-	ClassAd result_ad;
+	std::vector<std::unique_ptr<ClassAd>> result_list;
 	do {
-		result_ad.Clear();
-		if ( !getClassAd(sock, result_ad)) {
+		auto resultAd = std::make_unique<ClassAd>();
+		if(! resultAd) {
+			PyErr_SetString(PyExc_MemoryError, "_placement_query_users");
+		}
+
+		if(! getClassAd(sock, * resultAd) ) {
 			PyErr_SetString( PyExc_HTCondorException, "Failed to receive reply from PlacementD\n");
 			delete sock;
 			return nullptr;
 		}
 
 		std::string str;
-		if (result_ad.LookupString("MyType", str) && str == "Summary") {
+		if (resultAd->LookupString("MyType", str) && str == "Summary") {
 			int error_code = 0;
 			std::string error_string = "(unknown)";
-			if (result_ad.LookupString(ATTR_ERROR_STRING, error_string)) {
-				result_ad.LookupInteger(ATTR_ERROR_CODE, error_code);
+			if (resultAd->LookupString(ATTR_ERROR_STRING, error_string)) {
+				resultAd->LookupInteger(ATTR_ERROR_CODE, error_code);
 				std::string msg;
 				formatstr(msg, "PlacementD returned error %d, %s\n", error_code, error_string.c_str());
 				PyErr_SetString( PyExc_HTCondorException, msg.c_str());
@@ -123,31 +122,11 @@ _placement_query_users(PyObject *, PyObject * args) {
 			break;
 		}
 
-		// We could probably construct this on the heap initially, pass the
-		// dereferenced pointer to getClassAd(), and skip this copy.
-		PyObject * pyClassAd = py_new_classad2_classad_via_copy(& result_ad);
-		if( pyClassAd == NULL ) {
-			// FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
-			delete sock;
-
-			// py_new_classad2_classad_via_copy() has already set an exception for us.
-			return NULL;
-		}
-
-		auto rv = PyList_Append(list, pyClassAd);
-		Py_DecRef(pyClassAd);
-		if (rv != 0) {
-			// FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
-
-			// PyList_Append() has already set an exception for us.
-			delete sock;
-			return nullptr;
-		}
+		result_list.push_back( std::move(resultAd) );
 	} while (true);
-
 	delete sock;
 
-	return list;
+	return py_list_from_vector( result_list, "_placement_query_users()" );
 }
 
 static PyObject *
@@ -186,27 +165,28 @@ _placement_query_tokens(PyObject *, PyObject * args) {
 		return nullptr;
 	}
 
-	PyObject * list = PyList_New(0);
-	if (list == nullptr) {
-		PyErr_SetString(PyExc_MemoryError, "_placement_query_tokens");
-		return nullptr;
-	}
 
-	ClassAd result_ad;
+	std::vector<std::unique_ptr<ClassAd>> result_list;
 	do {
-		result_ad.Clear();
-		if ( !getClassAd(sock, result_ad)) {
+		auto resultAd = std::make_unique<ClassAd>();
+		if(! resultAd ) {
+			PyErr_SetString(PyExc_MemoryError, "_placement_query_tokens");
+			delete sock;
+			return nullptr;
+		}
+
+		if(! getClassAd(sock, * resultAd)) {
 			PyErr_SetString( PyExc_HTCondorException, "Failed to receive reply from PlacementD\n");
 			delete sock;
 			return nullptr;
 		}
 
 		std::string str;
-		if (result_ad.LookupString("MyType", str) && str == "Summary") {
+		if (resultAd->LookupString("MyType", str) && str == "Summary") {
 			int error_code = 0;
 			std::string error_string = "(unknown)";
-			if (result_ad.LookupString(ATTR_ERROR_STRING, error_string)) {
-				result_ad.LookupInteger(ATTR_ERROR_CODE, error_code);
+			if (resultAd->LookupString(ATTR_ERROR_STRING, error_string)) {
+				resultAd->LookupInteger(ATTR_ERROR_CODE, error_code);
 				std::string msg;
 				formatstr(msg, "PlacementD returned error %d, %s\n", error_code, error_string.c_str());
 				PyErr_SetString( PyExc_HTCondorException, msg.c_str());
@@ -217,30 +197,11 @@ _placement_query_tokens(PyObject *, PyObject * args) {
 			break;
 		}
 
-		// We could probably construct this on the heap initially, pass the
-		// dereferenced pointer to getClassAd(), and skip this copy.
-		PyObject * pyClassAd = py_new_classad2_classad_via_copy(& result_ad);
-		if( pyClassAd == NULL ) {
-			// FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
-			delete sock;
-
-			// py_new_classad2_classad_via_copy() has already set an exception for us.
-			return NULL;
-		}
-		auto rv = PyList_Append(list, pyClassAd);
-		Py_DecRef(pyClassAd);
-		if (rv != 0) {
-			// PyList_Append() has already set an exception for us.
-			delete sock;
-
-			// FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
-			return nullptr;
-		}
+		result_list.push_back( std::move(resultAd) );
 	} while (true);
-
 	delete sock;
 
-	return list;
+	return py_list_from_vector( result_list, "placement_query_tokens" );
 }
 
 static PyObject *
@@ -273,27 +234,28 @@ _placement_query_authorizations(PyObject *, PyObject * args) {
 		return nullptr;
 	}
 
-	PyObject * list = PyList_New(0);
-	if (list == nullptr) {
-		PyErr_SetString(PyExc_MemoryError, "_placement_query_authorizations");
-		return nullptr;
-	}
 
-	ClassAd result_ad;
+	std::vector<std::unique_ptr<ClassAd>> result_list;
 	do {
-		result_ad.Clear();
-		if ( !getClassAd(sock, result_ad)) {
+		auto resultAd = std::make_unique<ClassAd>();
+		if(! resultAd ) {
+			PyErr_SetString(PyExc_MemoryError, "_placement_query_authorizations");
+			delete sock;
+			return nullptr;
+		}
+
+		if(! getClassAd(sock, * resultAd)) {
 			PyErr_SetString( PyExc_HTCondorException, "Failed to receive reply from PlacementD\n");
 			delete sock;
 			return nullptr;
 		}
 
 		std::string str;
-		if (result_ad.LookupString("MyType", str) && str == "Summary") {
+		if (resultAd->LookupString("MyType", str) && str == "Summary") {
 			int error_code = 0;
 			std::string error_string = "(unknown)";
-			if (result_ad.LookupString(ATTR_ERROR_STRING, error_string)) {
-				result_ad.LookupInteger(ATTR_ERROR_CODE, error_code);
+			if (resultAd->LookupString(ATTR_ERROR_STRING, error_string)) {
+				resultAd->LookupInteger(ATTR_ERROR_CODE, error_code);
 				std::string msg;
 				formatstr(msg, "PlacementD returned error %d, %s\n", error_code, error_string.c_str());
 				PyErr_SetString( PyExc_HTCondorException, msg.c_str());
@@ -304,26 +266,9 @@ _placement_query_authorizations(PyObject *, PyObject * args) {
 			break;
 		}
 
-		// We could probably construct this on the heap initially, pass the
-		// dereferenced pointer to getClassAd(), and skip this copy.
-		PyObject * pyClassAd = py_new_classad2_classad_via_copy(& result_ad);
-		if( pyClassAd == NULL ) {
-			// FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
-			delete sock;
-
-			// py_new_classad2_classad_via_copy() has already set an exception for us.
-			return NULL;
-		}
-		auto rv = PyList_Append(list, pyClassAd);
-		Py_DecRef(pyClassAd);
-		if (rv != 0) {
-			// PyList_Append() has already set an exception for us.
-			delete sock;
-			return nullptr;
-		}
+		result_list.push_back( std::move(resultAd) );
 	} while (true);
-
 	delete sock;
 
-	return list;
+	return py_list_from_vector( result_list, "placement_query_authorizations" );
 }

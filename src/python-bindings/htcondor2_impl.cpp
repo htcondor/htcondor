@@ -121,6 +121,8 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	    :param str filepath: The full path to the usermap file
 	)C0ND0R"},
 
+    {"_initialize_module_refcounts", & _initialize_module_refcounts, METH_VARARGS, NULL},
+
 	{"_send_command", & _send_command, METH_VARARGS, NULL},
 	{"_send_alive", & _send_alive, METH_VARARGS, NULL},
 	{"_ping", & _ping, METH_VARARGS, NULL},

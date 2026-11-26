@@ -75,7 +75,7 @@ py_new_classad2_classad_via_copy(ClassAd * classAd) {
 	// such a mistake, it seems rather possible that it was the result of
 	// an unexpected Python exception being raised.  If so, we don't want
 	// to replace that exception with our own.  Otherwise, raising an
-	// exception probably our least user-hostile option.
+	// exception is probably our least user-hostile option.
 	if( classAd == NULL ) {
 		if( PyErr_Occurred() == NULL ) {
 			// Using RuntimeError instead of HTCondorException to avoid
@@ -434,3 +434,58 @@ py_list_to_projection( PyObject * l, classad::References & attrs, const char * n
 	return 0;
 }
 
+
+//
+// Returns either NULL after having raised a Python exception, or a pointer
+// to a PyList object containing-and-owning the classad2.ClassAds created
+// from the vector of unique pointers to classad::ClassAds.
+//
+// On return, each unique_ptr in the vector will either be the original one,
+// an empty one whose former pointer has been freed, or an empty one whose
+// former pointer is now owned by the PyList object (via a Python ClassAd
+// object).
+//
+// This allows the callers, if they pass a local vector, to just return this
+// function call: either everything worked; or NULL is returned, an exception
+// has been raised, and all of the C++ objects have been delete'd.
+//
+
+PyObject *
+py_list_from_vector( std::vector<std::unique_ptr<ClassAd>> & adList, const char * where ) {
+	PyObject * list = PyList_New(0);
+	if( list == NULL ) {
+		PyErr_SetString( PyExc_MemoryError, where );
+		return NULL;
+	}
+
+	for( auto & classAd : adList ) {
+		ClassAd * c = classAd.release();
+		// `c` is now a loose, unowned pointer.  If it does not become
+		// owned by something before going out of scope, it must be
+		// delete()d.
+
+		PyObject * pyClassAd = py_new_classad2_classad(c);
+		if( pyClassAd == NULL ) {
+			// At this point, every ClassAd originally in adList:
+			//    (a) is owned by `adList`; or
+			//    (b) was just deleted by py_new_classad2_classad(); or
+			//    (b) is owned by `list`.
+			//
+			Py_DecRef(list);
+
+			// py_new_classad2_classad() has already set an exception for us.
+			return NULL;
+		}
+		auto rv = PyList_Append( list, pyClassAd );
+		Py_DecRef(pyClassAd);
+
+		if(rv != 0) {
+			Py_DecRef(list);
+
+			// PyList_Append() has already set an exception for us.
+			return NULL;
+		}
+	}
+
+	return list;
+}
