@@ -32,6 +32,7 @@ Synopsis
 | **htcondor** **dag** *resources* [**-history**] dagman-job-id
 
 | **htcondor** **snake** *submit* [**-\-jobdir** *directory*] [**snakefile**] [**-\- snakemake_args ...**]
+| **htcondor** **snake** *remove* **mgmt_id** [**-f/-\-fast** | **-p/-\-peaceful**]
 
 | **htcondor** **eventlog** *read* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog [eventlog2 [eventlog3 ...]]
 | **htcondor** **eventlog** *follow* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog
@@ -402,37 +403,55 @@ DAG Verbs
 Snake Verbs
 -----------
 
-.. warning::
-     Snakemake is not packaged with HTCondor and must be installed separately.
-     See the `Snakemake documentation <https://snakemake.readthedocs.io/>`_ for more information about Snakemake,
-     the `snakemake-executor-plugin-htcondor <https://github.com/htcondor/snakemake-executor-plugin-htcondor/blob/main/examples/README.md>`__
-     for integrating a Snakemake workflow with HTCondor, and the plugin's `PyPI page <https://pypi.org/project/snakemake-executor-plugin-htcondor/>`_ for installation instructions.
+  .. warning::
+      Snakemake is not packaged with HTCondor and must be installed seperately.
+      See the `Snakemake documentation <https://snakemake.readthedocs.io/>`_ for more information about Snakemake,
+      the `snakemake-executor-plugin-htcondor <https://github.com/htcondor/snakemake-executor-plugin-htcondor/blob/main/examples/README.md>`__
+      for integrating a Snakemake workflow with HTCondor, and the plugin's `PyPI page <https://pypi.org/project/snakemake-executor-plugin-htcondor/>`_ for installation instructions.
 
-**htcondor snake submit** [**-\-jobdir <directory>**] [**snakefile**] [**-\- snakemake_args ...**]
+  **htcondor snake submit** [**-\-jobdir <directory>**] [**snakefile**] [**-\- snakemake_args ...**]
 
-     Submits `Snakemake <https://snakemake.readthedocs.io/>`_ itself as an HTCondor local-universe management
-     job.  That management job runs Snakemake with the
-     `snakemake-executor-plugin-htcondor <https://github.com/htcondor/snakemake-executor-plugin-htcondor>`__, which in turn submits each
-     Snakemake rule as its own HTCondor job.
+      Submits `Snakemake <https://snakemake.readthedocs.io/>`_ itself as an HTCondor local-universe management
+      job.  That management job runs Snakemake with the
+      `snakemake-executor-plugin-htcondor <https://github.com/htcondor/snakemake-executor-plugin-htcondor>`__, which in turn submits each
+      Snakemake rule as its own HTCondor job.
 
-     **snakefile**
-        Tell which Snakemake workflow file to run. If omitted, a file named ``Snakefile`` in the
-        current directory is used. **snakefile** can be specified before or after **-\-jobdir**.
+      **snakefile**
+          Tell which Snakemake workflow file to run. If omitted, a file named ``Snakefile`` in the
+          current directory is used. **snakefile** can be specified before or after **-\-jobdir**.
 
-     **-\-jobdir <directory>**
-        Create a directory in the current working directory with the specified name.
-        If omitted, a directory named **logs** will be created by default in the current directory to store the management job logs.
-     
-     Anything after a **-\-** separator is passed through to Snakemake unmodified, so additional Snakemake
-     options can be supplied. 
-     
-     **For examples:**
+      **-\-jobdir <directory>**
+          Create a directory in the current working directory with the specified name.
+          If omitted, a directory named **logs** will be created by default in the current directory to store the management job logs.
 
-     .. code-block:: console
+      Anything after a **-\-** separator is passed through to Snakemake unmodified, so additional Snakemake
+      options can be supplied.
 
-         $ htcondor snake submit /path/to/Snakefile --jobdir mylogs -- --profile htcondor_profile
-         
-         $ htcondor snake submit -- --jobs 6 --cores 4
+      **For examples:**
+
+      .. code-block:: console
+
+          $ htcondor snake submit /path/to/Snakefile --jobdir mylogs -- --profile htcondor_profile
+
+          $ htcondor snake submit -- --jobs 6 --cores 4
+
+  **htcondor snake remove** **mgmt_id** [**-f/-\-fast** | **-p/-\-peaceful**]
+
+      Remove jobs associated with the management job including the manager itself.
+
+      Exactly one of **-\-fast** or **-\-peaceful** flag or none at all (equivalent to the **-\-fast** behavior)
+      must be specified to indicate the type of removal mode to execute.
+
+      **mgmt_id**
+          Tell which management job should be removed. Must be specified.
+
+       **-f, -\-fast**
+          Immediately terminate the workflow: all jobs associated with the management job, including
+          currently-running ones, are removed right away.
+
+      **-p, -\-peaceful**
+          Gracefully terminate the workflow: currently-running jobs are allowed to finish, and no new jobs
+          are submitted. The management job itself keeps running until Snakemake shuts down on its own.
 
 .. sidebar:: HTCondor CLI System Nouns
 
