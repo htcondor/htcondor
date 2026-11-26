@@ -1280,7 +1280,12 @@ _schedd_submit( PyObject *, PyObject * args ) {
 
 static PyObject *
 _history_query(PyObject *, PyObject * args) {
-    // _history_query( addr, constraint, projection, match, since, history_record_source, command )
+    // _history_query( addr, constraint, projection, match, since, ad_filter,
+    //                 history_record_source, command,
+    //                 jobspec_filter, dagid_filter, batchid_filter, batchname_filter,
+    //                 use_librarian )
+    // The four trailing filters are each the string form of a ClassAd list
+    // of strings (i.e. {"a", "b"}) or the empty string for no filter.
 
     const char * addr = NULL;
     const char * constraint = NULL;
@@ -1290,7 +1295,13 @@ _history_query(PyObject *, PyObject * args) {
     const char * adFilter = NULL;
     long history_record_source = -1;
     long command = -1;
-    if(! PyArg_ParseTuple( args, "zzzlzzll", & addr, & constraint, & projection, & match, & since, & adFilter, & history_record_source, & command )) {
+    const char * jobspecFilter = NULL;
+    const char * dagIdFilter = NULL;
+    const char * batchIdFilter = NULL;
+    const char * batchNameFilter = NULL;
+    int useLibrarian = 1;
+    if(! PyArg_ParseTuple( args, "zzzlzzllzzzzp", & addr, & constraint, & projection, & match, & since, & adFilter, & history_record_source, & command,
+                           & jobspecFilter, & dagIdFilter, & batchIdFilter, & batchNameFilter, & useLibrarian )) {
         // PyArg_ParseTuple() has already set an exception for us.
         return NULL;
     }
@@ -1308,6 +1319,10 @@ _history_query(PyObject *, PyObject * args) {
 
     commandAd.Assign(ATTR_NUM_MATCHES, match);
 
+    if (! useLibrarian) {
+        commandAd.InsertAttr(ATTR_HISTORY_NO_LIBRARIAN, true);
+    }
+
     std::string prefix = "";
     std::string projectionList = "{";
     for (auto& attr : StringTokenIterator(projection)) {
@@ -1323,6 +1338,28 @@ _history_query(PyObject *, PyObject * args) {
 
     if ( adFilter && adFilter[0] != '\0' ) {
         commandAd.InsertAttr(ATTR_HISTORY_AD_TYPE_FILTER, adFilter);
+    }
+
+    const std::pair<const char *, const char *> filters[] = {
+        { ATTR_HISTORY_JOB_SPEC_FILTER, jobspecFilter },
+        { ATTR_HISTORY_DAG_ID_FILTER, dagIdFilter },
+        { ATTR_HISTORY_BATCH_ID_FILTER, batchIdFilter },
+        { ATTR_HISTORY_BATCH_NAME_FILTER, batchNameFilter },
+    };
+    for (const auto & [attr, list] : filters) {
+        if ( list && list[0] != '\0' ) {
+            // The Python layer quotes each item with classad.quote() (new ClassAd
+            // syntax), so parse with the new syntax parser. AssignExpr() uses the
+            // old syntax, which does not unescape backslashes.
+            classad::ClassAdParser parser;
+            classad::ExprTree * expr = parser.ParseExpression(list, true);
+            if (! expr || ! commandAd.Insert(attr, expr)) {
+                delete expr;
+                // The Python layer builds these lists, so this should never happen
+                PyErr_SetString( PyExc_HTCondorException, "internal error: invalid history filter list" );
+                return NULL;
+            }
+        }
     }
 
     switch( history_record_source ) {

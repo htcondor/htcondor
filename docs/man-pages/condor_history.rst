@@ -104,7 +104,9 @@ Options
 **-no-librarian**
     Ignore using the *condor_librarian* record index database regardless of
     :macro:`USING_LIBRARIAN` being ``True``. The database is not used when
-    **-file**, **-search**, or **-dir** is specified.
+    **-file** or **-dir** is specified, or when **-search** names a file
+    other than the history file the librarian is indexing. With **-name**,
+    the remote history query also does not use the librarian.
 *cluster*
     Only display ClassAds containing the specified :ad-attr:`ClusterId`'s.
 *cluster.process*

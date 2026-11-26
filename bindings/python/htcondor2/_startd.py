@@ -13,14 +13,18 @@ from ._common_imports import (
 from ._drain_type import DrainType
 from ._vacate_type import VacateType
 from ._completion_type import CompletionType
-from ._history_src import HistorySrc
+
+from ._history_helper import (
+    _history_internal,
+    HistorySrc,
+    CMD_STARTD_HISTORY
+)
 
 from .htcondor2_impl import (
     _startd_drain_jobs,
     _startd_vacate_slots,
     _startd_cancel_drain_jobs,
     _startd_rehome,
-    _history_query,
 )
 
 
@@ -161,32 +165,12 @@ class Startd():
             If :py:obj:`None`, return all (matching) jobs.
         :return:  A list of `job ClassAds <https://htcondor.readthedocs.io/en/latest/classad-attributes/job-classad-attributes.html>`_.
         """
-        projection_string = ",".join(projection)
-
-        if isinstance(since, int):
-            since = f"ClusterID == {since}"
-        elif isinstance(since, str):
-            pattern = re.compile(r'(\d+).(\d+)')
-            matches = pattern.match(since)
-            if matches is None:
-                raise ValueError("since string must be in the form {clusterID}.{procID}")
-            since = f"ClusterID == {matches[0]} && ProcID == {matches[1]}"
-        elif isinstance(since, classad.ExprTree):
-            since = str(since)
-        elif since is None:
-            since = ""
-        else:
-            raise TypeError("since must be an int, string, or ExprTree")
-
-        if constraint is None:
-            constraint = ""
-
-        return _history_query(self._addr,
-            str(constraint), projection_string, int(match), since,
-            # Ad Type Filter
-            "",
-            HistorySrc.StartdJob,
-            # GET_HISTORY
-            429,
+        return _history_internal(
+            addr=self._addr,
+            cmd=CMD_STARTD_HISTORY,
+            src=HistorySrc.StartdJob,
+            constraint=constraint,
+            projection=projection,
+            match=match,
+            since=since,
         )
-

@@ -124,12 +124,12 @@ void Usage(const char* name, int iExitCode)
   exit(iExitCode);
 }
 
-static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir, Daemon& daemon);
+static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir, bool no_librarian, Daemon& daemon);
 static void readHistoryFromFiles(const char* matchFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromDirectory(const char* searchDirectory, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromSingleFile(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr, bool read_backwards);
-static bool readHistoryFromLibrarian(const char* constraint, ExprTree *constraintExpr);
+static bool readHistoryFromLibrarian(const char* search_path, const char* constraint, ExprTree *constraintExpr);
 static void printJobAds(std::vector<ClassAd*> & jobs);
 static void printJob(ClassAd & ad);
 
@@ -215,6 +215,7 @@ static bool abort_transfer = false;
 static classad::References projection;
 static ExprTree *sinceExpr = NULL;
 static bool want_startd_history = false;
+static bool usedLibrarian = false; // query answered from the librarian index (reported to remote clients)
 static bool delete_epoch_ads = false;
 static std::deque<ClusterMatchInfo> jobIdFilterInfo;
 static std::deque<std::string> ownersList;
@@ -232,6 +233,15 @@ static bool hasDagBatchSearch() {
 // cluster/cluster.proc is not a reason to stop searching.
 static bool hasNonJobIdSearch() {
 	return ! ownersList.empty() || hasDagBatchSearch();
+}
+
+// True if the whole argument is a job id. Anything else (i.e. "1abc") is not
+// a job id. The argument must start with a digit because StrIsProcId skips
+// leading whitespace and signs.
+static bool isJobIdArg(const char *arg, PROC_ID &jid) {
+	if ( ! isdigit(static_cast<unsigned char>(*arg))) { return false; }
+	const char *pend = nullptr;
+	return StrIsProcId(arg, jid.cluster, jid.proc, &pend) && ! *pend;
 }
 
 static std::set<std::string> filterAdTypes; // Allow filter of Ad types specified in history banner (different from MyType)
@@ -776,23 +786,21 @@ main(int argc, const char* argv[])
 		dagIdList.push_back(dagid);
 		constraint.addCustomOR(dagconst.c_str());
 	}
-    else if (sscanf (argv[i], "%d.%d", &cluster, &proc) == 2) {
+	else if (PROC_ID jid{}; isJobIdArg(argv[i], jid)) {
+		// N.M or N (a non job id argument like "1abc" is an owner below)
+		cluster = jid.cluster;
+		proc = jid.proc;
 		std::string jobconst;
-		formatstr (jobconst, "%s == %d && %s == %d", 
-				 ATTR_CLUSTER_ID, cluster,ATTR_PROC_ID, proc);
+		if (proc >= 0) {
+			formatstr(jobconst, "%s == %d && %s == %d", ATTR_CLUSTER_ID, cluster, ATTR_PROC_ID, proc);
+		} else {
+			formatstr(jobconst, "%s == %d", ATTR_CLUSTER_ID, cluster);
+		}
 		constraint.addCustomOR(jobconst.c_str());
 		ClusterMatchInfo jobIdMatch;
-		jobIdMatch.jid = JOB_ID_KEY(cluster,proc);
+		jobIdMatch.jid = JOB_ID_KEY(cluster, proc);
 		jobIdFilterInfo.push_back(jobIdMatch);
-    }
-    else if (sscanf (argv[i], "%d", &cluster) == 1) {
-		std::string jobconst;
-		formatstr (jobconst, "%s == %d", ATTR_CLUSTER_ID, cluster);
-		constraint.addCustomOR(jobconst.c_str());
-		ClusterMatchInfo jobIdMatch;
-		jobIdMatch.jid = JOB_ID_KEY(cluster,-1);
-		jobIdFilterInfo.push_back(jobIdMatch);
-    }
+	}
     else if (is_dash_arg_colon_prefix(argv[i],"debug",&pcolon,3)) {
           // dprintf to console
           dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
@@ -964,12 +972,15 @@ main(int argc, const char* argv[])
 
       // Direct-seek path: resolve the restriction list via the librarian DB instead
       // of scanning the history files. See readHistoryFromLibrarian(). The librarian
-      // only indexes HISTORY, so an explicit -search path takes precedence.
+      // only indexes its active history file (and rotations), so an explicit -search
+      // path only uses the librarian when it is that file (i.e. the remote history
+      // helper is always given -search).
       bool tookDirectPath = false;
-      if (recordSrc == HRS_SCHEDD_JOB_HIST && ! JobHistoryFileName && ! searchPath && ! readFromDir && ! noLibrarian
+      if (recordSrc == HRS_SCHEDD_JOB_HIST && ! JobHistoryFileName && ! readFromDir && ! noLibrarian
           && (! jobIdFilterInfo.empty() || hasNonJobIdSearch())) {
-          tookDirectPath = readHistoryFromLibrarian(my_constraint.c_str(), constraintExpr);
+          tookDirectPath = readHistoryFromLibrarian(searchPath, my_constraint.c_str(), constraintExpr);
       }
+      usedLibrarian = tookDirectPath;
 
       // Read from single file, matching files, or a directory (if valid option)
     if ( ! tookDirectPath) {
@@ -983,7 +994,7 @@ main(int argc, const char* argv[])
     }
   }
   else {
-      readHistoryRemote(constraintExpr, subsys, want_startd_history, readFromDir, history_daemon);
+      readHistoryRemote(constraintExpr, subsys, want_startd_history, readFromDir, noLibrarian, history_daemon);
   }
   delete constraintExpr;
 
@@ -1007,6 +1018,7 @@ main(int argc, const char* argv[])
 	ad.InsertAttr(ATTR_NUM_MATCHES, matchCount);
 	ad.InsertAttr("MalformedAds", writetosocket_failcount);
 	ad.InsertAttr("AdCount", adCount);
+	ad.InsertAttr("UsedLibrarian", usedLibrarian);
 	dprintf(D_FULLDEBUG, "condor_history: sending final ad:\n");
 	dPrintAd(D_FULLDEBUG, ad);
 	if ( ! putClassAd(socks[0], ad) || ! socks[0]->end_of_message()) {
@@ -1111,8 +1123,50 @@ static void printFooter()
 	}
 }
 
+// Bundle the user, job id, DAGMan job id, batch id, and batch name filters into
+// the remote query ad, each as a ClassAd list of strings, so the remote side can
+// pass them to its history helper (allowing use of the librarian). These terms
+// are already part of the query constraint, so results are correct even when the
+// remote side ignores them.
+static void
+addRemoteJobFilters(ClassAd &ad)
+{
+	// Users and job ids share one list of non-flag job specs (N, N.M, or user)
+	std::string jobspecs, dagids, batchids, batchnames;
+
+	auto append = [](std::string &list, const std::string &item) {
+		std::string quoted;
+		if ( ! list.empty()) { list += ", "; }
+		list += QuoteAdStringValue(item.c_str(), quoted);
+	};
+
+	for (const auto &owner : ownersList) { append(jobspecs, owner); }
+	for (const auto &info : jobIdFilterInfo) {
+		std::string spec = std::to_string(info.jid.cluster);
+		if (info.jid.proc >= 0) { spec += "." + std::to_string(info.jid.proc); }
+		append(jobspecs, spec);
+	}
+	for (const int id : dagIdList) { append(dagids, std::to_string(id)); }
+	for (const auto &id : batchIdList) { append(batchids, id); }
+	for (const auto &name : batchNameList) { append(batchnames, name); }
+
+	const std::pair<const char *, const std::string &> filters[] = {
+		{ ATTR_HISTORY_JOB_SPEC_FILTER, jobspecs },
+		{ ATTR_HISTORY_DAG_ID_FILTER, dagids },
+		{ ATTR_HISTORY_BATCH_ID_FILTER, batchids },
+		{ ATTR_HISTORY_BATCH_NAME_FILTER, batchnames },
+	};
+	for (const auto &[attr, list] : filters) {
+		if (list.empty()) { continue; }
+		std::string expr = "{ " + list + " }";
+		if ( ! ad.AssignExpr(attr, expr.c_str())) {
+			dprintf(D_ERROR, "condor_history: failed to add %s = %s to remote query\n", attr, expr.c_str());
+		}
+	}
+}
+
 // Read history from a remote schedd or startd
-static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir, Daemon& daemon)
+static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir, bool no_librarian, Daemon& daemon)
 {
 	ASSERT(recordSrc != HRS_AUTO);
 	printHeader(); // this has the side effect of setting the projection for the default output
@@ -1128,6 +1182,8 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string sub
 		ad.InsertAttr("StreamResults", want_streamresults);
 	}
 	if ( ! backwards) { ad.InsertAttr("HistoryReadForwards", true); }
+	// Older versions ignore this, but their history helper never uses the librarian
+	if (no_librarian) { ad.InsertAttr(ATTR_HISTORY_NO_LIBRARIAN, true); }
 	if (maxAds >= 0) { ad.InsertAttr("ScanLimit", maxAds); }
 	// only 8.5.6 and later will honor this, older schedd's will just ignore it
 	if (sinceExpr) ad.Insert("Since", sinceExpr);
@@ -1211,6 +1267,10 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string sub
 			std::string adFilter = std::accumulate(std::next(filterAdTypes.begin()), filterAdTypes.end(), *(filterAdTypes.begin()), join);
 			ad.InsertAttr(ATTR_HISTORY_AD_TYPE_FILTER, adFilter);
 		}
+		// Only send the job/user and DAG/batch filters to versions that understand them
+		if (v.built_since_version(26, 3, 0)) {
+			addRemoteJobFilters(ad);
+		}
 	}
 
 	if (do_projection) {
@@ -1261,6 +1321,11 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string sub
 					fprintf(stderr, "Client and server do not agree on number of ads sent;\n"
 						"Indicates lost network packets or an internal error\n");
 					exit(1);
+				}
+				bool used_librarian = false;
+				if (ad.EvaluateAttrBool("UsedLibrarian", used_librarian)) {
+					dprintf(D_FULLDEBUG, "condor_history: remote query %s answered from the librarian index\n",
+					        used_librarian ? "was" : "was not");
 				}
 			} else {
 				fprintf(stderr, "Error: Unexpected Owner=%d\n", (int)intVal);
@@ -1479,10 +1544,17 @@ static void printLibrarianRecords(const char* constraint, ExprTree *constraintEx
 // history files, unioning results the same way the restriction list itself is OR'd.
 // Returns false if the librarian is unavailable (or its schema predates the DAG/batch
 // columns when those are requested), so the caller can fall back to the file scan.
-static bool readHistoryFromLibrarian(const char* constraint, ExprTree *constraintExpr)
+// If search_path is given (-search), the librarian is only used when it is
+// tracking that file.
+static bool readHistoryFromLibrarian(const char* search_path, const char* constraint, ExprTree *constraintExpr)
 {
 	LibrarianClient librarian;
 	if ( ! librarian.IsValid()) { return false; }
+
+	if (search_path && ! librarian.IsTrackingFile(search_path)) {
+		dprintf(D_FULLDEBUG, "condor_history: librarian does not index '%s'; scanning files\n", search_path);
+		return false;
+	}
 
 	// DAG/batch columns were added in librarian schema v3
 	if (hasDagBatchSearch() && librarian.SchemaVersion() < 3) { return false; }
@@ -1517,6 +1589,8 @@ static bool readHistoryFromLibrarian(const char* constraint, ExprTree *constrain
 		auto recs = librarian.GetRecordsByBatchName(batch_name);
 		records.insert(records.end(), std::make_move_iterator(recs.begin()), std::make_move_iterator(recs.end()));
 	}
+
+	dprintf(D_FULLDEBUG, "condor_history: answering query from librarian index (%zu records)\n", records.size());
 
 	printHeader();
 	printLibrarianRecords(constraint, constraintExpr, records);

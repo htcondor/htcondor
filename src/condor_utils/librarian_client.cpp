@@ -25,6 +25,8 @@
 #include "basename.h"
 #include "historyFileFinder.h"
 
+#include <filesystem>
+#include <system_error>
 #include <tuple>   // std::ignore
 
 #ifdef HAVE_SQLITE3_H
@@ -155,6 +157,46 @@ LibrarianClient::LibrarianClient() : m_impl(std::make_unique<Impl>()) {
 }
 
 LibrarianClient::~LibrarianClient() = default;
+
+bool LibrarianClient::IsTrackingFile([[maybe_unused]] const std::string& path) const {
+#ifdef HAVE_SQLITE3_H
+	if ( ! IsValid() || path.empty()) { return false; }
+
+	// The tracked (live) history file is not rotated and not deleted
+	static const char* sql =
+		"SELECT FileName, FileInode FROM Files"
+		" WHERE DateOfDeletion IS NULL AND (DateOfRotation IS NULL OR DateOfRotation = 0)";
+	sqlite3_stmt* stmt = nullptr;
+	if (sqlite3_prepare_v2(m_impl->db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+		dprintf(D_ERROR, "LibrarianClient: prepare failed: %s\n", sqlite3_errmsg(m_impl->db));
+		return false;
+	}
+
+	bool tracked = false;
+	while ( ! tracked && sqlite3_step(stmt) == SQLITE_ROW) {
+		const char* fn = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+		std::error_code ec;
+		if ( ! fn || ! std::filesystem::equivalent(path, fn, ec) || ec) { continue; }
+
+	#ifndef WIN32
+		// The file at path must still be the one indexed: a file rotated since the
+		// librarian's last update has a new inode. Inode 0 means none was recorded.
+		const int64_t inode = sqlite3_column_int64(stmt, 1);
+		struct stat st;
+		if (inode != 0 && (stat(path.c_str(), &st) != 0 || static_cast<int64_t>(st.st_ino) != inode)) {
+			dprintf(D_FULLDEBUG, "LibrarianClient: '%s' does not match indexed inode (rotated since last update?)\n",
+			        path.c_str());
+			continue;
+		}
+	#endif
+		tracked = true;
+	}
+	std::ignore = sqlite3_finalize(stmt);
+	return tracked;
+#else
+	return false;
+#endif
+}
 
 bool LibrarianClient::IsValid() const {
 #ifdef HAVE_SQLITE3_H

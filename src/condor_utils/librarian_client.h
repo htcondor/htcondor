@@ -60,6 +60,12 @@ public:
 	// and the database file was opened successfully.
 	bool IsValid() const;
 
+	// True if path is the live (not rotated, not deleted) history file tracked
+	// in the librarian database. Symlinks and alternate spellings of the path
+	// are resolved. On Unix the file's inode must also match the tracked inode,
+	// so a file rotated since the librarian's last update is not tracked.
+	bool IsTrackingFile(const std::string& path) const;
+
 	// The database's schema version (PRAGMA user_version), or 0 if not valid.
 	// The DAG/batch lookups below require schema version 3 or newer.
 	int SchemaVersion() const;

@@ -24,7 +24,12 @@ from ._submit import Submit
 from ._submit_result import SubmitResult
 # So that the typehints match version 1.
 from ._query_opt import QueryOpt as QueryOpts
-from ._history_src import HistorySrc
+
+from ._history_helper import (
+    _history_internal,
+    HistorySrc,
+    CMD_SCHEDD_HISTORY
+)
 
 from .htcondor2_impl import (
     _schedd_query,
@@ -42,7 +47,6 @@ from .htcondor2_impl import (
     _schedd_unexport_job_ids,
     _schedd_unexport_job_constraint,
     _schedd_submit,
-    _history_query,
     _schedd_retrieve_job_constraint,
     _schedd_retrieve_job_ids,
     _schedd_spool,
@@ -148,8 +152,7 @@ class Schedd():
             raise TypeError("location must be a ClassAd")
 
         self._addr = location['MyAddress']
-        # We never actually use this for anything, but we'll carry it
-        # around in case somebody else does.
+        # Used to verify the schedd supports newer history filters
         self._version = location['CondorVersion']
 
 
@@ -605,82 +608,6 @@ class Schedd():
         return match_count
 
 
-    def _history(self,
-        src: int,
-        constraint : Optional[Union[str, classad.ExprTree]] = None,
-        projection : List[str] = [],
-        match : int = -1,
-        since : Union[int, str, classad.ExprTree] = None,
-        **kwargs,
-    ) -> List[classad.ClassAd]:
-        """
-        Internal handler for all history queries to Schedd
-        since all queries take similar arguments.
-
-        :param src: Then enumeration value of which historical record
-            source to read from. See history.cpp
-        :param constraint: Constraint expression to return only the
-            matching ClassAds.
-        :param projection: List of specific ClassAd attributes to return
-            from each matched ClassAd. If not specified the full ClassAd
-            is returned.
-        :param match: Limit of the maximum number of matching ClassAds to
-            return. -1 represents no limit.
-        :param since: Condition to stop scanning the history file. In the
-            integer and string case, stop once job id is located. Otherwise,
-            stop if the ClassAd expression evaluates to true.
-        :return: List of ClassAds.
-
-        :meta private:
-        """
-        projection_string = ",".join(projection)
-
-        if isinstance(since, int):
-            since = f"ClusterID == {since}"
-        elif isinstance(since, str):
-            pattern = re.compile(r'(\d+)\.(\d+)')
-            matches = pattern.fullmatch(since)
-            if matches is not None:
-                since = f"ClusterID == {matches[1]} && ProcID == {matches[2]}"
-            else:
-                pattern = re.compile(r'(\d+)')
-                matches = pattern.fullmatch(r'(\d+)')
-                if matches is not None:
-                    since = f"ClusterID == {matches[1]}"
-                else:
-                    try:
-                        e = classad.ExprTree(since)
-                    except classad.ClassAdException:
-                        raise ValueError("The job_spec string must be a clusterID[.procID] or the string form of an ExprTree.");
-        elif isinstance(since, classad.ExprTree):
-            since = str(since)
-        elif since is None:
-            since = ""
-        else:
-            raise TypeError("since must be an int, string, or ExprTree")
-
-        ad_type = kwargs.get("ad_type", None)
-        if isinstance(ad_type, list):
-            ad_type = ",".join(ad_type)
-        elif ad_type is None:
-            ad_type = ""
-        elif not isinstance(ad_type, str):
-            raise TypeError("ad_type must be a list of strings or a string")
-
-        if constraint is None:
-            constraint = ""
-
-        return _history_query(self._addr,
-            str(constraint), projection_string, int(match), since,
-            # Specific record type filter
-            ad_type,
-            # Specific history source file(s)
-            src,
-            # QUERY_SCHEDD_HISTORY (command int)
-            515
-        )
-
-
     # In version 1, history() returned a HistoryIterator which kept a
     # socket around to read results from; this was OK, because the socket
     # usually required no, and at most minimal, attention from the schedd
@@ -695,6 +622,12 @@ class Schedd():
         projection : List[str] = [],
         match : int = -1,
         since : Union[int, str, classad.ExprTree] = None,
+        users : Optional[Union[str, List[str]]] = None,
+        jobs : Optional[Union[str, int, List[Union[str, int]]]] = None,
+        batchnames : Optional[Union[str, List[str]]] = None,
+        batchids : Optional[Union[str, int, List[Union[str, int]]]] = None,
+        dagids : Optional[Union[int, str, List[Union[int, str]]]] = None,
+        use_librarian : bool = True,
     ) -> List[classad.ClassAd]:
         """
         Query this schedd's job history.
@@ -717,9 +650,61 @@ class Schedd():
             ``"clusterID == 1038"`` return the same set of jobs.
 
             If :py:obj:`None`, return all (matching) jobs.
+        :param users:  A username, or list of usernames.  Return jobs whose
+            :ad-attr:`Owner` matches one of the given names (case-insensitive).
+        :param jobs:  A cluster ID or job ID, or a list of them.  A cluster ID
+            is an integer or a string of digits (``1038`` or ``"1038"``)
+            and matches every job in that cluster; a job ID is a string in
+            the format ``{clusterID}.{procID}`` (``"1038.2"``).
+        :param batchnames:  A batch name, or list of batch names.  Return jobs
+            whose :ad-attr:`JobBatchName` matches one of the given names
+            exactly (case-sensitive).
+        :param batchids:  A batch ID, or list of batch IDs, as integers or
+            strings.  Return jobs whose :ad-attr:`JobBatchId` matches one of the
+            given IDs exactly (case-sensitive).  DAGMan sets the batch ID
+            of every job in a workflow, including jobs of nested sub-DAGs,
+            to the :ad-attr:`ClusterId` of the root DAGMan job.
+        :param dagids:  A DAGMan job's :ad-attr:`ClusterId`, or list of them,
+            as integers or strings of digits.
+            Return jobs whose :ad-attr:`DAGManJobId` matches one of the given
+            IDs, i.e. the node jobs submitted directly by that DAGMan job
+            (not the jobs of its nested sub-DAGs).
+        :param use_librarian:  If :py:obj:`False`, do not use the librarian
+            index (:macro:`USING_LIBRARIAN`) to answer this query; read the
+            history file(s) instead.  This always finds jobs that completed
+            since the librarian's last update, but may be much slower.
+
         :return: List of ClassAds.
+        :raises HTCondorException:  If a problem occurs querying the
+            *condor_schedd*'s history.
+        :raises TypeError:  If an argument is of the wrong type.
+        :raises ValueError:  If an argument has an invalid value.
+
+        .. note::
+
+            A job is returned if it matches any of the ``users``, ``jobs``,
+            ``batchnames``, ``batchids``, or ``dagids`` values and also
+            matches ``constraint``.  With the librarian (:macro:`USING_LIBRARIAN`),
+            these filters are much faster than an equivalent ``constraint``.
+            For a *condor_schedd* older than version 26.3.0, the filters are
+            sent as the equivalent ``constraint`` instead.
         """
-        return self._history(HistorySrc.ScheddJob, constraint, projection, match, since)
+        return _history_internal(
+            addr=self._addr,
+            cmd=CMD_SCHEDD_HISTORY,
+            src=HistorySrc.ScheddJob,
+            constraint=constraint,
+            projection=projection,
+            match=match,
+            since=since,
+            remote_version=self._version,
+            users=users,
+            jobs=jobs,
+            batchnames=batchnames,
+            batchids=batchids,
+            dagids=dagids,
+            use_librarian=use_librarian,
+        )
 
 
     def jobEpochHistory(self,
@@ -727,6 +712,11 @@ class Schedd():
         projection : List[str] = [],
         match : int = -1,
         since : Union[int, str, classad.ExprTree] = None,
+        users : Optional[Union[str, List[str]]] = None,
+        jobs : Optional[Union[str, int, List[Union[str, int]]]] = None,
+        batchnames : Optional[Union[str, List[str]]] = None,
+        batchids : Optional[Union[str, int, List[Union[str, int]]]] = None,
+        dagids : Optional[Union[int, str, List[Union[int, str]]]] = None,
         **kwargs
     ) -> List[classad.ClassAd]:
         """
@@ -752,9 +742,54 @@ class Schedd():
             ``"clusterID == 1038"`` return the same set of jobs.
 
             If :py:obj:`None`, return all (matching) jobs.
+        :param users:  A username, or list of usernames.  Return jobs whose
+            :ad-attr:`Owner` matches one of the given names (case-insensitive).
+        :param jobs:  A cluster ID or job ID, or a list of them.  A cluster ID
+            is an integer or a string of digits (``1038`` or ``"1038"``)
+            and matches every job in that cluster; a job ID is a string in
+            the format ``{clusterID}.{procID}`` (``"1038.2"``).
+        :param batchnames:  A batch name, or list of batch names.  Return jobs
+            whose :ad-attr:`JobBatchName` matches one of the given names
+            exactly (case-sensitive).
+        :param batchids:  A batch ID, or list of batch IDs, as integers or
+            strings.  Return jobs whose :ad-attr:`JobBatchId` matches one of the
+            given IDs exactly (case-sensitive).  DAGMan sets the batch ID
+            of every job in a workflow, including jobs of nested sub-DAGs,
+            to the :ad-attr:`ClusterId` of the root DAGMan job.
+        :param dagids:  A DAGMan job's :ad-attr:`ClusterId`, or list of them,
+            as integers or strings of digits.
+            Return jobs whose :ad-attr:`DAGManJobId` matches one of the given
+            IDs, i.e. the node jobs submitted directly by that DAGMan job
+            (not the jobs of its nested sub-DAGs).
         :return: List of ClassAds.
+        :raises HTCondorException:  If a problem occurs querying the
+            *condor_schedd*'s history.
+        :raises TypeError:  If an argument is of the wrong type.
+        :raises ValueError:  If an argument has an invalid value.
+
+        .. note::
+
+            A job is returned if it matches any of the ``users``, ``jobs``,
+            ``batchnames``, ``batchids``, or ``dagids`` values and also
+            matches ``constraint``.  For a *condor_schedd* older than version
+            26.3.0, the filters are sent as the equivalent ``constraint``.
         """
-        return self._history(HistorySrc.JobEpoch, constraint, projection, match, since, **kwargs)
+        return _history_internal(
+            addr=self._addr,
+            cmd=CMD_SCHEDD_HISTORY,
+            src=HistorySrc.JobEpoch,
+            constraint=constraint,
+            projection=projection,
+            match=match,
+            since=since,
+            ad_type=kwargs.get("ad_type", ""),
+            remote_version=self._version,
+            users=users,
+            jobs=jobs,
+            batchnames=batchnames,
+            batchids=batchids,
+            dagids=dagids,
+        )
 
 
     def daemonHistory(self,
@@ -785,7 +820,16 @@ class Schedd():
         if since is not None and not isinstance(since, classad.ExprTree):
             raise TypeError("since must be an ExprTree")
 
-        return self._history(HistorySrc.Daemon, constraint, projection, match, since, ad_type="SCHEDD")
+        return _history_internal(
+            addr=self._addr,
+            cmd=CMD_SCHEDD_HISTORY,
+            src=HistorySrc.Daemon,
+            constraint=constraint,
+            projection=projection,
+            match=match,
+            since=since,
+            ad_type="SCHEDD"
+        )
 
 
     def submit(self,

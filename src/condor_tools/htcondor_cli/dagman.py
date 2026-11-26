@@ -409,6 +409,7 @@ class Resources(Verb):
     options = {
         "dag_id": {
             "args": ("dag_id",),
+            "type": int,
             "help": "DAG ID",
         },
         "history": {
@@ -458,10 +459,12 @@ class Resources(Verb):
         """Query the history file for DAG node jobs."""
         schedd = htcondor.Schedd()
 
+        # Use the history filters so the schedd can use the librarian index
+
         # First, verify the DAG exists in history and get its batch name
         try:
             dag = list(schedd.history(
-                constraint=f"ClusterId == {dag_id}",
+                jobs=dag_id,
                 projection=["DAG_NodesTotal", "JobBatchName"],
                 match=1,
             ))
@@ -473,11 +476,18 @@ class Resources(Verb):
             raise RuntimeError(f"Job {dag_id} is not a DAG")
 
         batch_name = dag[0].get("JobBatchName", "")
-        constraint = f'JobBatchName == "{batch_name}" && DAG_NodesTotal is undefined'
+        if not batch_name:
+            # Node jobs are found by batch name, so there is nothing to match
+            logger.info(f"DAG {dag_id} has no batch name, so its jobs cannot be found in the history.")
+            return None
 
+        # Filter on batch name (not batch id) so a sub-DAG's id and jobs recorded
+        # before JobBatchId existed still match. The constraint excludes the
+        # DAGMan jobs themselves.
         try:
             jobs = list(schedd.history(
-                constraint=constraint,
+                batchnames=batch_name,
+                constraint="DAG_NodesTotal is undefined",
                 projection=["ClusterId", "ProcId", "DAGNodeName", "JobStatus",
                             "MemoryUsage", "RequestMemory", "NumJobStarts", "RemoteHost"],
             ))
