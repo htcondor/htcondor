@@ -388,20 +388,53 @@ Contribution of compute capacity from the
 						data_url: "/data/ce_overview?r=week",
                         action_url: "showModal('eps-past-week-modal')",
                         graph_query: urlEscapeGraphQuery(`
-                            vAxis.maxValue=3
-                            filter=Type=R
-                            q=EPsRunning
-                            order=Date
-                            pivot=Date;Project;EPsRunning
-                            legend.position=in
-                            series.0.areaOpacity=0.5
-                            vAxis.format=short
-                            chart=area
-                        `)
+                          vAxis.maxValue=3
+                          filter=Type=R
+                          q=EPsRunning,GlideinsRunning
+                          order=Date
+                          pivot=Date;Project;EPsRunning,GlideinsRunning
+                          unselect=EPsRunning GlideinsRunning,GlideinsRunning EPsRunning
+                          rename=EPsRunning EPsRunning=EPs Reporting
+                          rename=GlideinsRunning GlideinsRunning=Glideins Running
+                          legend.position=in
+                          series.0.areaOpacity=1
+                          series.1.areaOpacity=0.05
+                          vAxis.format=short
+                          chart=area
+                          `)
                     });
                 </script>
             </div>
         </div>
+        
+        <div class="row">
+            <div class="col-6 htcv-col-6" id="network-chart">
+                <script>
+                    new HTCondorView({
+                        dst_id: "network-chart",
+                        title: "Network Transfers per Day",
+        				data_url: "/data/ce_overview?r=week",
+                        action_url: "showModal('groups-per-day-modal')",
+                        // The multiply by 30 is to convert from MB/minute (the default sampling rate of GangliaD),
+                        // to MB/30 minutes, the downsampling rate of Ganglia for the week view
+          				graph_query: urlEscapeGraphQuery(`
+                          filter=Type=R
+                          q=TotalTransfer
+                          extract_regexp=Date=-(.*) .*
+                          group=Date;TotalTransferInputMB,TotalTransferOutputMB
+                          chart=column
+                          mult=TotalTransferInputMB,30,TotalTransferInputMB2
+                          mult=TotalTransferOutputMB,30,TotalTransferOutputMB2
+                          div=TotalTransferInputMB2,1000,TotalTransferInputGB
+                          div=TotalTransferOutputMB2,1000,TotalTransferOutputGB
+                          unselect=TotalTransferInputMB,TotalTransferOutputMB,TotalTransferInputMB2,TotalTransferOutputMB2
+                          vAxis.logScale=true
+                          legend.position=in
+                      `)
+                    });
+                </script>
+            </div>
+		</div>
 
 		<p><p>
         <div class="row">

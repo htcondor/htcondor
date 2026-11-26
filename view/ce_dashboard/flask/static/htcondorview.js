@@ -245,6 +245,25 @@ HTCondorView.prototype.initialize = function (options) {
 
 HTCondorView.next_graph_id = 0;
 
+// Shared cache keyed by data URL query string. All HTCondorView instances on
+// the same page that request the same URL reuse one HTTP fetch and one
+// AfterQuery parse pass.
+HTCondorView._dataCache = {};
+
+// Returns a shallow clone of a parsed AfterQuery grid: new headers/types
+// arrays and new row arrays, but shared cell values (strings, numbers, Date
+// objects are all replaced rather than mutated by transforms, so sharing is
+// safe). Each render gets its own copy so in-place mutations by transforms
+// (extractRegexp, doSetVal, doArithmetic, yspread, etc.) cannot corrupt the
+// cached original.
+HTCondorView._cloneGrid = function (grid) {
+    return {
+        headers: grid.headers.slice(),
+        types: grid.types.slice(),
+        data: grid.data.map(function (row) { return row.slice(); }),
+    };
+};
+
 HTCondorView.prototype.new_graph_id = function () {
     "use strict";
     HTCondorView.next_graph_id++;
@@ -421,7 +440,6 @@ HTCondorView.prototype.add_total_field = function (grid,start,end) {
 };
 
 HTCondorView.prototype.aq_load = function (url, start, end) {
-    const def = $.Deferred();
     const that = this;
 
     let files = [url];
@@ -460,18 +478,24 @@ HTCondorView.prototype.aq_load = function (url, start, end) {
     let query = "url=" + files.join("&url=") + range;
 	query = query.replace("&host=","?host=");
 
-    if (query === this.data_id) {
-        def.resolve(this.data);
-        return def;
-    }
-    else {
-        this.data_id = query;
-        this.aq_graph.load(query, null, function (data) {
+    if (HTCondorView._dataCache[query]) {
+        return HTCondorView._dataCache[query].then(function (data) {
             that.data = data;
-            def.resolve(data);
+            return HTCondorView._cloneGrid(data);
         });
     }
-    return def.promise();
+
+    const def = $.Deferred();
+    HTCondorView._dataCache[query] = def.promise();
+
+    this.aq_graph.load(query, null, function (data) {
+        def.resolve(data);
+    });
+
+    return def.promise().then(function (data) {
+        that.data = data;
+        return HTCondorView._cloneGrid(data);
+    });
 };
 
 HTCondorView.prototype.promise_render_viz = function (viz, args) {
@@ -3700,7 +3724,7 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
 
             if (charttype === "area" || charttype === "stacked") {
                 chart = new google.visualization.AreaChart(el);
-				if (charttype === "stacked") options.isStacked = true;
+        				if (charttype === "stacked") options.isStacked = true;
                 options.explorer = { actions: ['dragToZoom', 'rightClickToReset'] };
             }
             else if (charttype === "column") {
@@ -3757,10 +3781,13 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
             }
             gridoptions.show_only_lastseg = true;
             gridoptions.bool_to_num = true;
-			if (options.chartArea === undefined) options.chartArea = {};
-			if (options.chartArea.height === undefined) options.chartArea.height="70%";
-			if (options.chartArea.left === undefined) options.chartArea.left="10%";
-			if (options.chartArea.right === undefined) options.chartArea.right="10%";
+       			if (options.chartArea === undefined) options.chartArea = {};
+       			if (options.chartArea.height === undefined) options.chartArea.height="70%";
+       			if (options.chartArea.left === undefined) options.chartArea.left="10%";
+            if (options.chartArea.right === undefined) options.chartArea.right = "10%";
+            if (options.hAxis === undefined) options.hAxis = {};
+            if (options.hAxis.format === undefined) options.hAxis.format = "MMM dd";
+          
         }
         else {
             chart = new google.visualization.Table(el);
