@@ -1,6 +1,8 @@
 #ifndef _CONDOR_GUIDANCE_H
 #define _CONDOR_GUIDANCE_H
 
+// See guidance.md for an introduction.
+
 // #include <optional>
 // #include <tuple>
 // #include <string>
