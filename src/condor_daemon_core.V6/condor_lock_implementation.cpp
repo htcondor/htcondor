@@ -178,9 +178,8 @@ CondorLockImpl::SetupTimer( void )
 	timer = daemonCore->Register_Timer(
 			next_poll - now,
 			poll_period,
-			(TimerHandlercpp) &CondorLockImpl::DoPoll,
-			"CondorLockImpl",
-			this );
+			[this](int timerID) -> void { this->DoPoll(timerID); },
+			"CondorLockImpl");
 	if ( timer < 0 ) {
 		dprintf( D_ALWAYS, "CondorLockImpl: Failed to create timer\n" );
 		return -1;

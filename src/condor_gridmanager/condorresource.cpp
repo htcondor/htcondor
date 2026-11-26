@@ -113,8 +113,8 @@ CondorResource::CondorResource( const char *resource_name, const char *pool_name
 	}
 
 	scheddPollTid = daemonCore->Register_Timer( 0,
-							(TimerHandlercpp)&CondorResource::DoScheddPoll,
-							"CondorResource::DoScheddPoll", (Service*)this );
+							[this](int timerID) -> void { this->DoScheddPoll(timerID); },
+							"CondorResource::DoScheddPoll");
 
 	char *gahp_path = param("CONDOR_GAHP");
 	if ( gahp_path == NULL ) {

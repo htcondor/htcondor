@@ -185,8 +185,8 @@ VMGahp::startUp()
 	m_request_buffer.setPipeEnd(stdin_pipe);
 	(void)daemonCore->Register_Pipe(m_request_buffer.getPipeEnd(),
 			"stdin_pipe",
-			static_cast<PipeHandlercpp>(&VMGahp::waitForCommand),
-			"VMGahp::waitForCommand", this);
+			[this](int pipe) -> int { return this->waitForCommand(pipe); },
+			"VMGahp::waitForCommand");
 }
 
 void

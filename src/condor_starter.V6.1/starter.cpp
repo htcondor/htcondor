@@ -184,31 +184,23 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 		// calling the appropriate JIC method
 		//
 	daemonCore->Register_Signal(DC_SIGSUSPEND, "DC_SIGSUSPEND", 
-		(SignalHandlercpp)&Starter::RemoteSuspend, "RemoteSuspend",
-		this);
+		[this](int sig) -> int { return this->RemoteSuspend(sig); }, "RemoteSuspend");
 	daemonCore->Register_Signal(DC_SIGCONTINUE, "DC_SIGCONTINUE",
-		(SignalHandlercpp)&Starter::RemoteContinue, "RemoteContinue",
-		this);
+		[this](int sig) -> int { return this->RemoteContinue(sig); }, "RemoteContinue");
 	daemonCore->Register_Signal(DC_SIGHARDKILL, "DC_SIGHARDKILL",
-		(SignalHandlercpp)&Starter::RemoteShutdownFast, "RemoteShutdownFast",
-		this);
+		[this](int sig) -> int { return this->RemoteShutdownFast(sig); }, "RemoteShutdownFast");
 	daemonCore->Register_Signal(DC_SIGSOFTKILL, "DC_SIGSOFTKILL",
-		(SignalHandlercpp)&Starter::RemoteShutdownGraceful, "RemoteShutdownGraceful",
-		this);
+		[this](int sig) -> int { return this->RemoteShutdownGraceful(sig); }, "RemoteShutdownGraceful");
 	daemonCore->Register_Signal(DC_SIGPCKPT, "DC_SIGPCKPT",
-		(SignalHandlercpp)&Starter::RemotePeriodicCkpt, "RemotePeriodicCkpt",
-		this);
+		[this](int sig) -> int { return this->RemotePeriodicCkpt(sig); }, "RemotePeriodicCkpt");
 	daemonCore->Register_Signal(DC_SIGREMOVE, "DC_SIGREMOVE",
-		(SignalHandlercpp)&Starter::RemoteRemove, "RemoteRemove",
-		this);
+		[this](int sig) -> int { return this->RemoteRemove(sig); }, "RemoteRemove");
 	daemonCore->Register_Signal(SIGUSR1, "SIGUSR1",
-		(SignalHandlercpp)&Starter::RemoteRemove, "RemoteRemove",
-		this);
+		[this](int sig) -> int { return this->RemoteRemove(sig); }, "RemoteRemove");
 	daemonCore->Register_Signal(DC_SIGHOLD, "DC_SIGHOLD",
-		(SignalHandlercpp)&Starter::RemoteHold, "RemoteHold",
-		this);
-	daemonCore->Register_Reaper("Reaper", (ReaperHandlercpp)&Starter::Reaper,
-		"Reaper", this);
+		[this](int sig) -> int { return this->RemoteHold(sig); }, "RemoteHold");
+	daemonCore->Register_Reaper("Reaper", [this](int pid, int status) -> int { return this->Reaper(pid, status); },
+		"Reaper");
 
 		// Register a command with DaemonCore to handle ClassAd-only
 		// protocol commands.  For now, the only one we care about is
@@ -222,40 +214,40 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 		// for COD, who knows...
 	daemonCore->
 		Register_Command( CA_CMD, "CA_CMD",
-						  (CommandHandlercpp)&Starter::classadCommand,
-						  "Starter::classadCommand", this, WRITE );
+						  [this](int command, Stream* stream) -> int { return this->classadCommand(command, stream); },
+						  "Starter::classadCommand", WRITE );
 	daemonCore->
 		Register_Command( UPDATE_GSI_CRED, "UPDATE_GSI_CRED",
-						  (CommandHandlercpp)&Starter::updateX509Proxy,
-						  "Starter::updateX509Proxy", this, WRITE );
+						  [this](int command, Stream* stream) -> int { return this->updateX509Proxy(command, stream); },
+						  "Starter::updateX509Proxy", WRITE );
 	daemonCore->
 		Register_Command( DELEGATE_GSI_CRED_STARTER,
 						  "DELEGATE_GSI_CRED_STARTER",
-						  (CommandHandlercpp)&Starter::updateX509Proxy,
-						  "Starter::updateX509Proxy", this, WRITE );
+						  [this](int command, Stream* stream) -> int { return this->updateX509Proxy(command, stream); },
+						  "Starter::updateX509Proxy", WRITE );
 	daemonCore->
 		Register_Command( STARTER_VACATE_JOB,
 						  "STARTER_VACATE_JOB",
-						  (CommandHandlercpp)&Starter::remoteVacateCommand,
-						  "Starter::remoteVacateCommand", this, DAEMON );
+						  [this](int command, Stream* stream) -> int { return this->remoteVacateCommand(command, stream); },
+						  "Starter::remoteVacateCommand", DAEMON );
 	daemonCore->
 		Register_Command( CREATE_JOB_OWNER_SEC_SESSION,
 						  "CREATE_JOB_OWNER_SEC_SESSION",
-						  (CommandHandlercpp)&Starter::createJobOwnerSecSession,
-						  "Starter::createJobOwnerSecSession", this, DAEMON );
+						  [this](int command, Stream* stream) -> int { return this->createJobOwnerSecSession(command, stream); },
+						  "Starter::createJobOwnerSecSession", DAEMON );
 
 		// Job-owner commands are registered at READ authorization level.
 		// Why?  See the explanation in createJobOwnerSecSession().
 	daemonCore->
 		Register_Command( START_SSHD,
 						  "START_SSHD",
-						  (CommandHandlercpp)&Starter::startSSHD,
-						  "Starter::startSSHD", this, READ );
+						  [this](int command, Stream* stream) -> int { return this->startSSHD(command, stream); },
+						  "Starter::startSSHD", READ );
 	daemonCore->
 		Register_Command( STARTER_PEEK,
 						"STARTER_PEEK",
-						(CommandHandlercpp)&Starter::peek,
-						"Starter::peek", this, READ );
+						[this](int command, Stream* stream) -> int { return this->peek(command, stream); },
+						"Starter::peek", READ );
 
 		// initialize our JobInfoCommunicator
 	if( ! jic->init() ) {
@@ -2126,8 +2118,8 @@ Starter::createTempExecuteDir( void )
 			} else {
 				lvm_setup_successful = true;
 				m_lvm_poll_tid = daemonCore->Register_Timer(10, 10,
-					(TimerHandlercpp)&Starter::CheckLVUsage,
-					"check disk usage", this);
+					[this](int timerID) -> void { this->CheckLVUsage(timerID); },
+					"check disk usage");
 			}
 		}
 		if ( ! lvm_setup_successful) {
@@ -2263,9 +2255,8 @@ Starter::skipJobImmediately() {
 	// executed
 	//
 	this->deferral_tid = daemonCore->Register_Timer(0,
-		(TimerHandlercpp)&Starter::SkipJobs,
-		"SkipJobs",
-		this );
+		[this](int timerID) -> void { this->SkipJobs(timerID); },
+		"SkipJobs");
 
 	//
 	// Make sure our timer callback registered properly
@@ -2431,9 +2422,8 @@ Starter::jobWaitUntilExecuteTime( void )
 			//
 		this->deferral_tid = daemonCore->Register_Timer(
 										deltaT,
-										(TimerHandlercpp)&Starter::SpawnJobOrPreScript,
-										"deferred job start",
-										this );
+										[this](int timerID) -> void { this->SpawnJobOrPreScript(timerID); },
+										"deferred job start");
 			//
 			// Make sure our timer callback registered properly
 			//

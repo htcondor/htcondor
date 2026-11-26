@@ -224,9 +224,8 @@ main_init( int argc, char ** const argv )
 
 		(void)daemonCore->Register_Pipe (workers[i].result_buffer.getPipeEnd(),
 										 "result pipe",
-										 static_cast<PipeHandlercpp>(&Worker::result_handler),
-										 "Worker::result_handler",
-										 (Service*)&workers[i]);
+										 [p = &workers[i]](int pipe) -> int { return p->result_handler(pipe); },
+										 "Worker::result_handler");
 	}
 
 	// Create child process

@@ -210,9 +210,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::WaitForSocke
 	int reg_rc = daemonCore->Register_Socket(
 			m_sock,
 			m_sock->peer_description(),
-			(SocketHandlercpp)&DaemonCommandProtocol::SocketCallback,
+			[this](Stream* stream) -> int { return this->SocketCallback(stream); },
 			WaitForSocketDataString.c_str(),
-			this,
 			HANDLE_READ,
 			&m_prev_sock_ent);
 

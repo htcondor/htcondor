@@ -115,8 +115,8 @@ VMGahpRequest::startPendingTimer()
 
 	if( m_timeout ) {
 		m_pending_timeout_tid = daemonCore->Register_Timer(m_timeout, 
-				(TimerHandlercpp)&VMGahpRequest::pending_timer_fn,
-				"VMGahpRequest::pending_timer_fn", this);
+				[this](int timerID) -> void { this->pending_timer_fn(timerID); },
+				"VMGahpRequest::pending_timer_fn");
 		m_expire_time = time(NULL) + m_timeout;
 	}
 }

@@ -266,8 +266,8 @@ JobRouter::config( int /* timerID */ ) {
 				daemonCore->Register_Timer(
 					initial_refresh ? 0 : m_job_router_idtoken_refresh,
 					m_job_router_idtoken_refresh,
-					(TimerHandlercpp)&JobRouter::refreshIDTokens,
-					"JobRouter::refreshIDTokens", this);
+					[this](int timerID) -> void { this->refreshIDTokens(timerID); },
+					"JobRouter::refreshIDTokens");
 		}
 	}
 
@@ -283,8 +283,8 @@ JobRouter::config( int /* timerID */ ) {
 				daemonCore->Register_Timer(
 					m_job_router_entries_refresh,
 					m_job_router_entries_refresh,
-					(TimerHandlercpp)&JobRouter::config,
-					"JobRouter::config", this);
+					[this](int timerID) -> void { this->config(timerID); },
+					"JobRouter::config");
 		}
 	}
 
@@ -441,14 +441,13 @@ JobRouter::config( int /* timerID */ ) {
 		m_job_router_polling_timer = daemonCore->Register_Timer(
 										0,
 										m_job_router_polling_period,
-										(TimerHandlercpp)&JobRouter::Poll,
-										"JobRouter::Poll", this);
+										[this](int timerID) -> void { this->Poll(timerID); },
+										"JobRouter::Poll");
 
 		if (periodic_interval.getMinInterval() > 0) {
 			m_periodic_timer_id = daemonCore->Register_Timer(periodic_interval, 
-									(TimerHandlercpp)&JobRouter::EvalAllSrcJobPeriodicExprs,
-									"JobRouter::EvalAllSrcJobPeriodicExprs",
-									this);
+									[this](int timerID) -> void { this->EvalAllSrcJobPeriodicExprs(timerID); },
+									"JobRouter::EvalAllSrcJobPeriodicExprs");
 			dprintf(D_FULLDEBUG, "JobRouter: Registered EvalAllSrcJobPeriodicExprs() to evaluate periodic expressions.\n");
 		}
 		else {
@@ -484,9 +483,8 @@ JobRouter::config( int /* timerID */ ) {
 			m_public_ad_update_timer = daemonCore->Register_Timer(
 				0,
 				m_public_ad_update_interval,
-				(TimerHandlercpp)&JobRouter::TimerHandler_UpdateCollector,
-				"JobRouter::TimerHandler_UpdateCollector",
-				this);
+				[this](int timerID) -> void { this->TimerHandler_UpdateCollector(timerID); },
+				"JobRouter::TimerHandler_UpdateCollector");
 		}
 	} // ! m_operate_as_tool
 

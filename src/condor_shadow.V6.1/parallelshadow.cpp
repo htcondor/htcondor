@@ -150,8 +150,8 @@ ParallelShadow::spawn( void )
 		*/
 	info_tid = daemonCore->
 		Register_Timer( 1, 0,
-						(TimerHandlercpp)&ParallelShadow::getResources,
-						"getResources", this );
+						[this](int timerID) -> void { this->getResources(timerID); },
+						"getResources");
 	ASSERT(info_tid >= 0);
 	// Start the timer for the periodic user job policy
 	shadow_user_policy.startTimer();

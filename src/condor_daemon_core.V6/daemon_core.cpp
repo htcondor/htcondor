@@ -515,89 +515,27 @@ void DaemonCore::Set_Default_Reaper( int reaper_id )
  These methods here just call the actual method implementation with a
  default parameter set.
  ********************************************************/
-int	DaemonCore::Register_Command(int command, const char* com_descrip,
-				CommandHandler handler, const char* handler_descrip,
-				DCpermission perm, bool force_authentication,
-				int wait_for_payload, std::vector<DCpermission> *alternate_perm)
-{
-	return( Register_Command(command, com_descrip, handler,
-							(CommandHandlercpp)NULL, handler_descrip, nullptr,
-							 perm, FALSE, force_authentication,
-							 wait_for_payload, alternate_perm) );
-}
-
-int	DaemonCore::Register_Command(int command, const char *com_descrip,
-				CommandHandlercpp handlercpp, const char* handler_descrip,
-				Service* s, DCpermission perm,
-				bool force_authentication, int wait_for_payload,
-				std::vector<DCpermission> *alternate_perm)
-{
-	return( Register_Command(command, com_descrip, NULL, handlercpp,
-							 handler_descrip, s, perm, TRUE,
-							 force_authentication, wait_for_payload,
-							 alternate_perm) );
-}
-
 int	DaemonCore::Register_CommandWithPayload(int command, const char* com_descrip,
-				CommandHandler handler, const char* handler_descrip,
+				StdCommandHandler handler, const char* handler_descrip,
 				DCpermission perm, bool force_authentication,
 				int wait_for_payload, std::vector<DCpermission> *alternate_perm)
 {
 	return( Register_Command(command, com_descrip, handler,
-							(CommandHandlercpp)NULL, handler_descrip, nullptr,
-							 perm, FALSE, force_authentication,
+							 handler_descrip, perm, force_authentication,
 							 wait_for_payload, alternate_perm) );
-}
-
-int	DaemonCore::Register_CommandWithPayload(int command, const char *com_descrip,
-				CommandHandlercpp handlercpp, const char* handler_descrip,
-				Service* s, DCpermission perm,
-				bool force_authentication, int wait_for_payload,
-				std::vector<DCpermission> *alternate_perm)
-{
-	return( Register_Command(command, com_descrip, NULL, handlercpp,
-							 handler_descrip, s, perm, TRUE,
-							 force_authentication, wait_for_payload,
-							 alternate_perm) );
 }
 
 int	DaemonCore::Register_Signal(int sig, const char* sig_descrip,
-				SignalHandler handler, const char* handler_descrip)
+				StdSignalHandler handler, const char* handler_descrip)
 {
-	if( handler == 0 ) {
+	if( ! handler ) {
 		dprintf(D_DAEMONCORE, "Can't register NULL signal handler\n");
 		return -1;
 	}
 
-	auto f = [=](int s) -> int {
-		return (* handler)(s);
-	};
-
 	const bool BACKWARDS_COMPAT_FLAG = true;
 	std::ignore = Register_Signal( sig, sig_descrip,
-		f, handler_descrip,
-		std::function<void(void)>(),
-		BACKWARDS_COMPAT_FLAG
-	);
-	return sig;
-}
-
-int	DaemonCore::Register_Signal(int sig, const char *sig_descrip,
-				SignalHandlercpp handlercpp, const char* handler_descrip,
-				Service* svc)
-{
-	if( handlercpp == 0 ) {
-		dprintf(D_DAEMONCORE, "Can't register NULL signal handler\n");
-		return -1;
-	}
-
-	auto f = [=](int s) -> int {
-		return (svc->*handlercpp)(s);
-	};
-
-	const bool BACKWARDS_COMPAT_FLAG = true;
-	std::ignore = Register_Signal( sig, sig_descrip,
-		f, handler_descrip,
+		handler, handler_descrip,
 		std::function<void(void)>(),
 		BACKWARDS_COMPAT_FLAG
 	);
@@ -704,92 +642,22 @@ bool DaemonCore::TooManyRegisteredSockets(int fd,std::string *msg,int num_fds)
 	return false;
 }
 
-int	DaemonCore::Register_Socket(Stream* iosock, const char* iosock_descrip,
-				SocketHandler handler, const char* handler_descrip,
-				HandlerType handler_type, void **prev_entry)
-{
-	return( Register_Socket(iosock, iosock_descrip, handler,
-							(SocketHandlercpp)NULL, handler_descrip, nullptr,
-							handler_type, FALSE, prev_entry) );
-}
-
-int	DaemonCore::Register_Socket(Stream* iosock, const char* iosock_descrip,
-				SocketHandlercpp handlercpp, const char* handler_descrip,
-				Service* s, HandlerType handler_type, void **prev_entry)
-{
-	return( Register_Socket(iosock, iosock_descrip, NULL, handlercpp,
-							handler_descrip, s, handler_type, TRUE, prev_entry) );
-}
-
-int	DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
-				PipeHandler handler, const char* handler_descrip,
-				HandlerType handler_type)
-{
-	return( Register_Pipe(pipe_end, pipe_descrip, handler,
-							NULL, handler_descrip, nullptr,
-							handler_type, FALSE) );
-}
-
-int	DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
-				PipeHandlercpp handlercpp, const char* handler_descrip,
-				Service* s, HandlerType handler_type)
-{
-	return( Register_Pipe(pipe_end, pipe_descrip, NULL, handlercpp,
-							handler_descrip, s, handler_type, TRUE) );
-}
-
-
-int	DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
-				StdPipeHandler handler, const char* handler_descrip,
-				HandlerType handler_type)
-{
-	return( Register_Pipe(pipe_end, pipe_descrip, nullptr,
-							nullptr, handler_descrip, nullptr,
-							handler_type, FALSE, & handler) );
-}
-
-int	DaemonCore::Register_Reaper(const char* reap_descrip, ReaperHandler handler,
-				const char* handler_descrip)
-{
-	return( Register_Reaper(-1, reap_descrip, handler,
-							(ReaperHandlercpp)NULL, handler_descrip,
-							nullptr, FALSE) );
-}
-
-int	DaemonCore::Register_Reaper(const char* reap_descrip,
-				ReaperHandlercpp handlercpp, const char* handler_descrip, Service* s)
-{
-	return( Register_Reaper(-1, reap_descrip, NULL, handlercpp,
-							handler_descrip, s, TRUE) );
-}
-
 int	DaemonCore::Register_Reaper(const char* reap_descrip, StdReaperHandler handler,
 				const char* handler_descrip)
 {
-	return( Register_Reaper(-1, reap_descrip, (ReaperHandler)NULL,
-							(ReaperHandlercpp)NULL, handler_descrip,
-							nullptr, FALSE, & handler) );
+	return( Register_Reaper(-1, reap_descrip, handler, handler_descrip) );
 }
 
 int	DaemonCore::Reset_Reaper(int rid, const char* reap_descrip,
-				ReaperHandler handler, const char* handler_descrip)
+				StdReaperHandler handler, const char* handler_descrip)
 {
-	return( Register_Reaper(rid, reap_descrip, handler,
-							(ReaperHandlercpp)NULL, handler_descrip,
-							nullptr, FALSE) );
+	return( Register_Reaper(rid, reap_descrip, handler, handler_descrip) );
 }
 
-int	DaemonCore::Reset_Reaper(int rid, const char* reap_descrip,
-				ReaperHandlercpp handlercpp, const char* handler_descrip, Service* s)
-{
-	return( Register_Reaper(rid, reap_descrip, NULL, handlercpp,
-							handler_descrip, s, TRUE) );
-}
-
-int	DaemonCore::Register_Timer(time_t deltawhen, TimerHandler handler,
+int	DaemonCore::Register_Timer(time_t deltawhen, StdTimerHandler handler,
 				const char *event_descrip)
 {
-	return( t.NewTimer(deltawhen, handler, event_descrip, 0) );
+	return( Register_Timer(deltawhen, 0, handler, event_descrip) );
 }
 
 int DaemonCore::Register_PumpWork_TS(PumpWorkCallback handler, void* cls, void* data)
@@ -857,32 +725,15 @@ int DaemonCore::DoPumpWork() {
 #endif
 }
 
-int	DaemonCore::Register_Timer(time_t deltawhen, TimerHandlercpp handlercpp,
-				const char *event_descrip, Service* s)
-{
-	return( t.NewTimer(s, deltawhen, handlercpp, event_descrip, 0) );
-}
-
-int	DaemonCore::Register_Timer(time_t deltawhen, time_t period,
-				TimerHandlercpp handler, const char *event_descrip, Service* s )
-{
-	return( t.NewTimer(s, deltawhen, handler, event_descrip, period) );
-}
-
 int DaemonCore::Register_Timer( time_t deltawhen, time_t period, StdTimerHandler f, const char * event_description )
 {
 	return t.NewTimer(deltawhen, period, f, event_description);
 }
 
 
-int DaemonCore::Register_Timer (const Timeslice &timeslice,TimerHandler handler,const char * event_descrip)
+int DaemonCore::Register_Timer (const Timeslice &timeslice,StdTimerHandler handler,const char * event_descrip)
 {
 	return t.NewTimer(timeslice, handler, event_descrip );
-}
-
-int DaemonCore::Register_Timer (const Timeslice &timeslice,TimerHandlercpp handler,const char * event_descrip,Service* s)
-{
-	return t.NewTimer(s, timeslice, handler, event_descrip );
 }
 
 int	DaemonCore::Cancel_Timer( int id )
@@ -917,12 +768,11 @@ bool DaemonCore::GetTimerTimeslice( int id, Timeslice &timeslice )
 
 
 int DaemonCore::Register_UnregisteredCommandHandler(
-	CommandHandlercpp handlercpp,
+	StdCommandHandler handlercpp,
 	const char* handler_descrip,
-	Service* s,
 	bool include_auth)
 {
-	if (handlercpp == 0) {
+	if (! handlercpp) {
 		dprintf(D_ERROR, "Can't register NULL unregistered command handler\n");
 		return -1;
 	}
@@ -930,12 +780,11 @@ int DaemonCore::Register_UnregisteredCommandHandler(
 		dprintf(D_ERROR, "DaemonCore: Unregistered command handler already registered\n");
 		return -1;
 	}
-	m_unregisteredCommand.handlercpp = handlercpp;
+	m_unregisteredCommand.std_handler = handlercpp;
 	m_unregisteredCommand.command_descrip = strdup("UNREGISTERED COMMAND");
 	m_unregisteredCommand.handler_descrip = strdup(handler_descrip ? handler_descrip : EMPTY_DESCRIP);
-	m_unregisteredCommand.service = s;
 	m_unregisteredCommand.num = 1;
-	m_unregisteredCommand.is_cpp = include_auth;
+	m_unregisteredCommandIncludesAuth = include_auth;
 	return 1;
 }
 
@@ -951,46 +800,16 @@ int DaemonCore::Register_HTTP_CommandHandler(
 	m_httpCommand.command_descrip = strdup("HTTP HANDLER");
 	m_httpCommand.handler_descrip = strdup(handler_descrip ? handler_descrip : EMPTY_DESCRIP);
 	m_httpCommand.num = 1;
-	m_httpCommand.is_cpp = true;
 	return 1;
 }
 
-int
-DaemonCore::Register_Command(
-    int                 command,
-    const char *        command_description,
-    StdCommandHandler   handler,
-    const char *        handler_description,
-    DCpermission        permission,
-    bool                force_authentication,
-    int                 wait_for_payload,
-    std::vector<DCpermission> *
-                        alternate_permissions
-) {
-    const int IS_NOT_CPP = FALSE;
-    return Register_Command(
-        command, command_description,
-        (CommandHandler)nullptr,
-        (CommandHandlercpp)nullptr,
-        handler_description,
-        (Service *)nullptr,
-        permission,
-        IS_NOT_CPP,
-        force_authentication,
-        wait_for_payload,
-        alternate_permissions,
-        & handler
-    );
-}
-
 int DaemonCore::Register_Command(int command, const char* command_descrip,
-				CommandHandler handler, CommandHandlercpp handlercpp,
-				const char *handler_descrip, Service* s, DCpermission perm,
-				int is_cpp, bool force_authentication,
-				int wait_for_payload, std::vector<DCpermission> *alternate_perm,
-				StdCommandHandler * handler_f )
+				StdCommandHandler handler,
+				const char *handler_descrip, DCpermission perm,
+				bool force_authentication,
+				int wait_for_payload, std::vector<DCpermission> *alternate_perm )
 {
-    if( handler == 0 && handlercpp == 0 && handler_f == NULL ) {
+    if( ! handler ) {
 		dprintf(D_DAEMONCORE, "Can't register NULL command handler\n");
 		return -1;
     }
@@ -1000,7 +819,7 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 
 	CommandEnt *entry = nullptr;
 	for ( auto &ce: comTable) {
-		if ( ce.handler == NULL && ce.handlercpp == NULL && (! ce.std_handler)) {
+		if ( ! ce.std_handler ) {
 			entry = &ce;
 		}
 		if ( ce.num == command ) {
@@ -1019,15 +838,9 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 
 	// Found a blank entry. Now add in the new data.
 	entry->num = command;
-	entry->handler = handler;
-	entry->handlercpp = handlercpp;
-	if( handler_f != NULL ) {
-	    entry->std_handler = * handler_f;
-	}
-	entry->is_cpp = (bool)is_cpp;
+	entry->std_handler = handler;
 	entry->perm = perm;
 	entry->force_authentication = force_authentication;
-	entry->service = s;
 	entry->data_ptr = nullptr;
 	entry->wait_for_payload = wait_for_payload;
 	if (alternate_perm) {
@@ -1061,11 +874,9 @@ int DaemonCore::Cancel_Command( int command )
 
 	for( auto &ct: comTable) {
 		if( ct.num == command &&
-			( ct.handler || ct.handlercpp || ct.std_handler ) )
+			ct.std_handler )
 		{
 			ct.num = 0;
-			ct.handler = nullptr;
-			ct.handlercpp = nullptr;
 			ct.std_handler = StdCommandHandler();
 			free(ct.command_descrip);
 			ct.command_descrip = nullptr;
@@ -1680,10 +1491,10 @@ int DaemonCore::Cancel_Signal( int sig )
 }
 
 int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
-				SocketHandler handler, SocketHandlercpp handlercpp,
-				const char *handler_descrip, Service* s,
+				StdSocketHandler handler,
+				const char *handler_descrip,
 				HandlerType handler_type,
-				int is_cpp, void **prev_entry, StdSocketHandler *handler_f)
+				void **prev_entry)
 {
 
     // In sockTable, unlike the others handler tables, we allow for a NULL
@@ -1828,21 +1639,9 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 			EXCEPT("Adding CEDAR socket of unknown type");
 			break;
 	}
-	sockTable[i].handler = handler;
-	sockTable[i].handlercpp = handlercpp;
-		// Always (re)assign std_handler -- including clearing it when this
-		// registration does not supply one.  Cancel_Socket does not clear a slot's
-		// std_handler, so a slot freed by a std::function-handler socket keeps that
-		// std::function until the slot is reused.  If the slot is then reused by a
-		// registration with only a C/C++ handler (or none, e.g. a command socket via
-		// Register_Command_Socket), the stale std_handler would otherwise linger and,
-		// because CallSocketHandler_worker dispatches std_handler when handler and
-		// handlercpp are both null, be invoked on the wrong socket -- a use-after-free
-		// of whatever the stale std::function captured.
-	sockTable[i].std_handler = handler_f ? *handler_f : StdSocketHandler();
-	sockTable[i].is_cpp = (bool)is_cpp;
+
+	sockTable[i].std_handler = handler;
 	sockTable[i].handler_type = handler_type;
-	sockTable[i].service = s;
 	sockTable[i].data_ptr = NULL;
 	sockTable[i].waiting_for_data = false;
 	free(sockTable[i].iosock_descrip);
@@ -1861,7 +1660,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 		sockTable[i].handler_descrip = strdup(EMPTY_DESCRIP);
 
 	// Mark command socks (identified by lack of handlers, endpoint)
-	if ( handler == 0 && handlercpp == 0 && m_shared_port_endpoint == NULL ) {
+	if ( ! handler && m_shared_port_endpoint == NULL ) {
 		sockTable[i].is_command_sock = true;
 	} else {
 		sockTable[i].is_command_sock = false;
@@ -2205,10 +2004,9 @@ int DaemonCore::Inherit_Pipe(int fd, [[maybe_unused]] bool is_write, [[maybe_unu
 }
 
 int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
-				PipeHandler handler, PipeHandlercpp handlercpp,
-				const char *handler_descrip, Service* s,
-				HandlerType handler_type, int is_cpp,
-				StdPipeHandler * handler_f)
+				StdPipeHandler handler,
+				const char *handler_descrip,
+				HandlerType handler_type)
 {
 	size_t index = pipe_end - PIPE_INDEX_OFFSET;
 	if (pipeHandleTableLookup(index) == FALSE) {
@@ -2245,16 +2043,8 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 	pipeTable[i].call_handler = false;
 	pipeTable[i].in_handler = false;
 	pipeTable[i].index = index;
-	pipeTable[i].handler = handler;
 	pipeTable[i].handler_type = handler_type;
-	pipeTable[i].handlercpp = handlercpp;
-	// Assign std_handler unconditionally: this slot may be reused from a
-	// prior registration that installed a std::function, and Cancel_Pipe
-	// does not reset it.  Leaving a stale std_handler here would let dispatch
-	// call a dead captured object (heap-use-after-free).
-	pipeTable[i].std_handler = handler_f ? *handler_f : StdPipeHandler();
-	pipeTable[i].is_cpp = (bool)is_cpp;
-	pipeTable[i].service = s;
+	pipeTable[i].std_handler = handler;
 	pipeTable[i].data_ptr = NULL;
 	free(pipeTable[i].pipe_descrip);
 	if ( pipe_descrip )
@@ -2663,7 +2453,7 @@ DaemonCore::Write_Stdin_Pipe(int pid, const void* buffer, int /* len */ ) {
 	}
 	pidinfo.pipe_buf[0] = new std::string;
 	*pidinfo.pipe_buf[0] = (const char*)buffer;
-	daemonCore->Register_Pipe(pidinfo.std_pipes[0], "DC stdin pipe", static_cast<PipeHandlercpp>(&DaemonCore::PidEntry::pipeFullWrite), "Guarantee all data written to pipe", &pidinfo, HANDLE_WRITE);
+	daemonCore->Register_Pipe(pidinfo.std_pipes[0], "DC stdin pipe", [p = &pidinfo](int pipe) -> int { return p->pipeFullWrite(pipe); }, "Guarantee all data written to pipe", HANDLE_WRITE);
 	return 0;
 }
 
@@ -2695,9 +2485,8 @@ DaemonCore::Close_Stdin_Pipe(int pid) {
 
 
 int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
-				ReaperHandler handler, ReaperHandlercpp handlercpp,
-				const char *handler_descrip, Service* s, int is_cpp,
-				StdReaperHandler * handler_f)
+				StdReaperHandler handler,
+				const char *handler_descrip)
 {
     size_t     i;
 
@@ -2746,16 +2535,7 @@ int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 
 	// Found the entry to use at index i. Now add in the new data.
 	reapTable[i].num = rid;
-	reapTable[i].handler = handler;
-	reapTable[i].handlercpp = handlercpp;
-	// Assign std_handler unconditionally.  Besides the reuse-of-cancelled-slot
-	// case, this path also replaces a live entry in place (rid > 0), and the
-	// reaper table explicitly permits all-null handlers (use the default
-	// reaper).  Leaving a stale std_handler here would let dispatch call a
-	// dead captured object (heap-use-after-free) instead of the default reaper.
-	reapTable[i].std_handler = handler_f ? *handler_f : StdReaperHandler();
-	reapTable[i].is_cpp = (bool)is_cpp;
-	reapTable[i].service = s;
+	reapTable[i].std_handler = handler;
 	reapTable[i].data_ptr = nullptr;
 	free(reapTable[i].reap_descrip);
 	if ( reap_descrip )
@@ -2820,10 +2600,7 @@ int DaemonCore::Cancel_Reaper( int rid )
 	}
 
 	reapTable[idx].num = 0;
-	reapTable[idx].handler = NULL;
-	reapTable[idx].handlercpp = NULL;
 	reapTable[idx].std_handler = StdReaperHandler();
-	reapTable[idx].service = NULL;
 	reapTable[idx].data_ptr = NULL;
 
 	for (auto& [key, pid_entry] : pidTable) {
@@ -2866,7 +2643,7 @@ void DaemonCore::DumpCommandTable(int flag, const char* indent)
 	dprintf(flag, "%sCommands Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~~\n", indent);
 	for (auto &ce : comTable) {
-		if( ce.handler || ce.handlercpp || ce.std_handler )
+		if( ce.std_handler )
 		{
 			descrip1 = "NULL";
 			descrip2 = descrip1;
@@ -2894,7 +2671,7 @@ std::string DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authent
 					}
 				}
 			}
-			if( (ce.handler || ce.handlercpp || ce.std_handler) &&
+			if( ce.std_handler &&
 				((ce.perm == perm) || alternate_perm_match) &&
 				(!ce.force_authentication || is_authenticated))
 			{
@@ -2910,7 +2687,7 @@ std::string DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authent
 int
 DaemonCore::numRegisteredReapers() {
 	return std::count_if(reapTable.begin(), reapTable.end(),
-			[](const auto &entry) { return entry.handler || entry.handlercpp || entry.std_handler; });
+			[](const auto &entry) { return bool(entry.std_handler); });
 }
 
 void DaemonCore::DumpReapTable(int flag, const char* indent)
@@ -2933,7 +2710,7 @@ void DaemonCore::DumpReapTable(int flag, const char* indent)
 	dprintf(flag, "%sReapers Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~~\n", indent);
 	for (size_t i = 0; i < nReap; i++) {
-		if( reapTable[i].handler || reapTable[i].handlercpp || reapTable[i].std_handler ) {
+		if( reapTable[i].std_handler ) {
 			descrip1 = "NULL";
 			descrip2 = descrip1;
 			if ( reapTable[i].reap_descrip )
@@ -3137,8 +2914,8 @@ DaemonCore::reconfig(void) {
 		if( m_refresh_dns_timer < 0 ) {
 			m_refresh_dns_timer =
 				Register_Timer( dns_interval, dns_interval,
-								(TimerHandlercpp)&DaemonCore::refreshDNS,
-								"DaemonCore::refreshDNS()", daemonCore );
+								[](int timerID) -> void { daemonCore->refreshDNS(timerID); },
+								"DaemonCore::refreshDNS()");
 		} else {
 			Reset_Timer( m_refresh_dns_timer, dns_interval, dns_interval );
 		}
@@ -4100,13 +3877,7 @@ void DaemonCore::Driver()
 						// Update curr_dataptr for GetDataPtr()
 						curr_dataptr = &( pipeTable[i].data_ptr);
 						recheck_status = true;
-						if (pipeTable[i].handler ) {
-							// a C handler
-							(*(pipeTable[i].handler))(pipe_end);
-						} else if ( pipeTable[i].handlercpp ) {
-							// a C++ handler
-							(pipeTable[i].service->*( pipeTable[i].handlercpp))(pipe_end);
-						} else if ( pipeTable[i].std_handler ) {
+						if ( pipeTable[i].std_handler ) {
 							// A std::function handler.
 							pipeTable[i].std_handler( pipe_end );
 						} else {
@@ -4266,8 +4037,7 @@ DaemonCore::CallSocketHandler( const size_t i, bool default_to_HandleCommand )
     unsigned int iAcceptCnt = ( m_iMaxAcceptsPerCycle > 0 ) ? m_iMaxAcceptsPerCycle: -1;
 
 	// Dispatch UDP commands directly
-	if ( sockTable[i].handler==NULL && sockTable[i].handlercpp==NULL &&
-			(!sockTable[i].std_handler) &&
+	if ( (!sockTable[i].std_handler) &&
 			default_to_HandleCommand &&
 			sockTable[i].iosock->type() == Stream::safe_sock ) {
 
@@ -4318,8 +4088,7 @@ DaemonCore::CallSocketHandler( const size_t i, bool default_to_HandleCommand )
 	    args->accepted_sock = NULL;
 	    Stream *insock = sockTable[i].iosock;
 	    ASSERT(insock);
-	    if ( sockTable[i].handler==NULL && sockTable[i].handlercpp==NULL &&
-			(!sockTable[i].std_handler) &&
+	    if ( (!sockTable[i].std_handler) &&
 		    default_to_HandleCommand &&
 		    insock->type() == Stream::reli_sock &&
 		    ((ReliSock *)insock)->_state == Sock::sock_special &&
@@ -4396,7 +4165,7 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 	curr_dataptr = &( sockTable[i].data_ptr);
 
 		// log a message
-	if ( sockTable[i].handler || sockTable[i].handlercpp || sockTable[i].std_handler)
+	if ( sockTable[i].std_handler )
 	{
 		if (IsDebugLevel(D_DAEMONCORE)) {
 			dprintf(D_DAEMONCORE,
@@ -4410,15 +4179,7 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 			handler_start_time = _condor_debug_get_time_double();
 		}
 
-	if ( sockTable[i].handler ) {
-			// a C handler
-		result = (*( sockTable[i].handler))(sockTable[i].iosock);
-	} else if ( sockTable[i].handlercpp ) {
-			// a C++ handler
-		result = (sockTable[i].service->*( sockTable[i].handlercpp))(sockTable[i].iosock);
-	} else if (sockTable[i].std_handler) {
 		result = sockTable[i].std_handler(sockTable[i].iosock);
-	}
 
 		if (IsDebugLevel(D_COMMAND)) {
 			double handler_time = _condor_debug_get_time_double() - handler_start_time;
@@ -4475,7 +4236,7 @@ DaemonCore::CommandNumToTableIndex(int cmd,int *cmd_index)
 {
 	for (size_t i = 0; i < comTable.size(); i++) {
 		if ( comTable[i].num == cmd &&
-			 ( comTable[i].handler || comTable[i].handlercpp || comTable[i].std_handler) ) {
+			 comTable[i].std_handler ) {
 
 			*cmd_index = (int) i;
 			return true;
@@ -4573,8 +4334,8 @@ DaemonCore::CallUnregisteredCommandHandler(int req, Stream *stream)
 	curr_dataptr = &(m_unregisteredCommand.data_ptr);
 
 	int result = FALSE;
-	if ( m_unregisteredCommand.handlercpp )
-		result = (m_unregisteredCommand.service->*(m_unregisteredCommand.handlercpp))(req,stream);
+	if ( m_unregisteredCommand.std_handler )
+		result = m_unregisteredCommand.std_handler(req,stream);
 
 	curr_dataptr = NULL;
 
@@ -4645,9 +4406,8 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 					int rc = Register_Socket(
 						stream,
 						callback_desc,
-						(SocketHandlercpp) &DaemonCore::HandleReqPayloadReady,
-						"DaemonCore::HandleReqPayloadReady",
-						this);
+						[this](Stream* stream) -> int { return this->HandleReqPayloadReady(stream); },
+						"DaemonCore::HandleReqPayloadReady");
 					if( rc >= 0 ) {
 						CallCommandHandlerInfo *callback_info = new CallCommandHandlerInfo(req,old_deadline,time_spent_on_sec);
 						Register_DataPtr((void *)callback_info);
@@ -4677,16 +4437,8 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 		// call the handler function; first curr_dataptr for GetDataPtr()
 		curr_dataptr = &(comTable[index].data_ptr);
 
-		if ( comTable[index].is_cpp ) {
-			// the handler is c++ and belongs to a 'Service' class
-			if ( comTable[index].handlercpp )
-				result = (comTable[index].service->*(comTable[index].handlercpp))(req,stream);
-		} else if( comTable[index].std_handler ) {
+		if( comTable[index].std_handler ) {
 		    result = comTable[index].std_handler(req, stream);
-		} else {
-			// the handler is in c (not c++), so pass a Service pointer
-			if ( comTable[index].handler )
-				result = (*(comTable[index].handler))(req,stream);
 		}
 
 		// clear curr_dataptr
@@ -8371,8 +8123,8 @@ int DaemonCore::Create_Process(
 						 "with the ProcD\n",
 						 executable );
 				Register_Timer(0,
-					(TimerHandlercpp)&DaemonCore::CheckProcInterfaceFromTimer,
-					"DaemonCore::CheckProcInterface", this );
+					[this](int timerID) -> void { this->CheckProcInterfaceFromTimer(timerID); },
+					"DaemonCore::CheckProcInterface");
 				break;
 
 			case ERRNO_EXIT:
@@ -8635,8 +8387,8 @@ int DaemonCore::Create_Process(
 					pipe_handler_desc = "DC stderr pipe handler";
 				}
 				Register_Pipe(dc_pipe_fds[i][0], pipe_desc,
-					  static_cast<PipeHandlercpp>(&DaemonCore::PidEntry::pipeHandler),
-					  pipe_handler_desc, pidtmp);
+					  [pidtmp](int pipe) -> int { return pidtmp->pipeHandler(pipe); },
+					  pipe_handler_desc);
 			}
 				// Either way, we stashed/closed as needed, so clear
 				// out the records in dc_pipe_fds so we don't try to
@@ -8783,9 +8535,8 @@ FakeCreateThreadReaperCaller::FakeCreateThreadReaperCaller(int exit_status,int r
 		// register a timer that will call the reaper.
 	m_tid = daemonCore->Register_Timer(
 		0,
-		(TimerHandlercpp)&FakeCreateThreadReaperCaller::CallReaper,
-		"FakeCreateThreadReaperCaller::CallReaper()",
-		this );
+		[this](int timerID) -> void { this->CallReaper(timerID); },
+		"FakeCreateThreadReaperCaller::CallReaper()");
 
 	ASSERT( m_tid >= 0 );
 }
@@ -9670,14 +9421,14 @@ DaemonCore::InitDCCommandSocket( int command_port )
 
 			// register the command handler to take care of signals
 		daemonCore->Register_CommandWithPayload( DC_RAISESIGNAL, "DC_RAISESIGNAL",
-			(CommandHandlercpp)&DaemonCore::HandleSigCommand,
-			"HandleSigCommand()", daemonCore, DAEMON );
+			[](int command, Stream* stream) -> int { return daemonCore->HandleSigCommand(command, stream); },
+			"HandleSigCommand()", DAEMON );
 
 			// this handler receives keepalive pings from our children, so
 			// we can detect if any of our kids are hung.
 		daemonCore->Register_CommandWithPayload( DC_CHILDALIVE,"DC_CHILDALIVE",
-			(CommandHandlercpp)&DaemonKeepAlive::HandleChildAliveCommand,
-			"HandleChildAliveCommand", &m_DaemonKeepAlive, DAEMON );
+			[this](int command, Stream* stream) -> int { return this->m_DaemonKeepAlive.HandleChildAliveCommand(command, stream); },
+			"HandleChildAliveCommand", DAEMON );
 	}
 }
 
@@ -10118,7 +9869,7 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 #endif
 	}
 
-	if( !reaper || !(reaper->handler || reaper->handlercpp || reaper->std_handler) ) {
+	if( !reaper || !reaper->std_handler ) {
 			// no registered reaper
 			dprintf(D_DAEMONCORE,
 			"DaemonCore: %s %lu exited with status %d; no registered reaper\n",
@@ -10136,15 +9887,7 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 		"%d <%s>\n",
 		whatexited, (unsigned long)pid, exit_status, reaper_id, hdescrip.c_str());
 
-	if ( reaper->handler ) {
-		// a C handler
-		(*(reaper->handler))(pid,exit_status);
-	} else if ( reaper->handlercpp ) {
-		// a C++ handler
-		(reaper->service->*(reaper->handlercpp))(pid,exit_status);
-	} else if ( reaper->std_handler ) {
-		reaper->std_handler(pid, exit_status);
-	}
+	reaper->std_handler(pid, exit_status);
 
 	// Record the runtime of this reaper
 	double deltaTime = _condor_debug_get_time_double() - startTime;

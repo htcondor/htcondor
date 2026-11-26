@@ -416,9 +416,8 @@ SharedPortState::Handle(Stream *s)
 		int reg_rc = daemonCore->Register_Socket(
 			s,
 			m_requested_by.c_str(),
-			(SocketHandlercpp)&SharedPortState::Handle,
-			"Shared Port state handler",
-			this);
+			[this](Stream* stream) -> int { return this->Handle(stream); },
+			"Shared Port state handler");
 
 		if(reg_rc < 0) {
 			dprintf(D_ALWAYS, "Socket passing to %s failed because "

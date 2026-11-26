@@ -283,17 +283,17 @@ CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 
 		// NOP command for testing authentication
 	daemonCore->Register_Command( CREDD_NOP, "CREDD_NOP",
-								(CommandHandlercpp)&CredDaemon::nop_handler,
-								"nop_handler", this, DAEMON );
+								[this](int command, Stream* stream) -> int { return this->nop_handler(command, stream); },
+								"nop_handler", DAEMON );
 
 		// See if creds are present for all modules requested
 	daemonCore->Register_Command( CREDD_CHECK_CREDS, "CREDD_CHECK_CREDS",
-								(CommandHandlercpp)&CredDaemon::check_creds_handler,
-								"check_creds_handler", this, WRITE, true);
+								[this](int command, Stream* stream) -> int { return this->check_creds_handler(command, stream); },
+								"check_creds_handler", WRITE, true);
 
 		// set timer to periodically advertise ourself to the collector
 	daemonCore->Register_Timer(0, m_update_collector_interval,
-		(TimerHandlercpp)&CredDaemon::update_collector, "update_collector", this);
+		[this](int timerID) -> void { this->update_collector(timerID); }, "update_collector");
 
 	// only sweep if we have a cred dir
 	auto_free_ptr cred_dir_krb(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
@@ -303,8 +303,8 @@ CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 		dprintf(D_FULLDEBUG, "CREDD: setting sweep_timer_handler for KRB\n");
 		int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 300);
 		m_cred_sweep_tid = daemonCore->Register_Timer( sec_cred_sweep_interval, sec_cred_sweep_interval,
-								(TimerHandlercpp)&CredDaemon::sweep_timer_handler,
-								"sweep_timer_handler", this );
+								[this](int timerID) -> void { this->sweep_timer_handler(timerID); },
+								"sweep_timer_handler");
 	}
 }
 
@@ -676,7 +676,7 @@ CredDaemon::check_creds_handler( int, Stream* s)
 	ck_state->oauth2_missing = std::move(oauth2_missing);
 	ck_state->ccfiles = std::move(ccfiles);
 
-	daemonCore->Register_Timer(0, (TimerHandlercpp)&CredDaemon::check_creds_continue, "Finish check_creds", this);
+	daemonCore->Register_Timer(0, [this](int timerID) -> void { this->check_creds_continue(timerID); }, "Finish check_creds");
 	daemonCore->Register_DataPtr(ck_state);
 	return KEEP_STREAM;
 

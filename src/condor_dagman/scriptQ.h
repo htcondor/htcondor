@@ -54,8 +54,8 @@ public:
 		_dag = dag;
 		// register daemonCore reaper for PRE/POST/HOLD script completion
 		_scriptReaperId = daemonCore->Register_Reaper("PRE/POST/HOLD Script Reaper",
-		                                              (ReaperHandlercpp)&ScriptQ::ScriptReaper,
-		                                              "ScriptQ::ScriptReaper", this);
+		                                              [this](int pid, int status) -> int { return this->ScriptReaper(pid, status); },
+		                                              "ScriptQ::ScriptReaper");
 	}
 
 	// Being executing a script
