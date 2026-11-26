@@ -61,15 +61,9 @@ BuildRequires: libvirt-devel
 %endif
 BuildRequires: libselinux-devel
 BuildRequires: libxcrypt-devel
-BuildRequires: bind-utils
 BuildRequires: libX11-devel
 %if ! ( 0%{?rhel} >= 10 ) && "%{os_release_id}" != "sles"
 BuildRequires: libXScrnSaver-devel
-%endif
-%if 0%{?suse_version}
-BuildRequires: openldap2-devel
-%else
-BuildRequires: openldap-devel
 %endif
 BuildRequires: python3-devel
 BuildRequires: python3-setuptools
@@ -83,15 +77,7 @@ BuildRequires: perl(Data::Dumper)
 
 BuildRequires: glibc-static
 BuildRequires: gcc-c++
-BuildRequires: libuuid-devel
 BuildRequires: patch
-BuildRequires: pam-devel
-%if 0%{?suse_version}
-BuildRequires: mozilla-nss-devel
-%else
-BuildRequires: nss-devel
-%endif
-BuildRequires: openssl-devel
 %if 0%{?suse_version}
 BuildRequires: libexpat-devel
 BuildRequires: dbus-1-devel
@@ -99,10 +85,6 @@ BuildRequires: dbus-1-devel
 BuildRequires: expat-devel
 BuildRequires: dbus-devel
 %endif
-BuildRequires: perl(Archive::Tar)
-BuildRequires: perl(XML::Parser)
-BuildRequires: perl(Digest::MD5)
-BuildRequires: python3-devel
 BuildRequires: libcurl-devel
 
 # Authentication build requirements
@@ -159,11 +141,11 @@ BuildRequires: systemd-units
 Requires: systemd
 
 %if 0%{?rhel} || 0%{?amzn} || 0%{?fedora}
-BuildRequires: python3-sphinx python3-sphinx_rtd_theme
+BuildRequires: python3-sphinx
 %endif
 
 %if 0%{?suse_version}
-BuildRequires: python3-Sphinx python3-sphinx_rtd_theme
+BuildRequires: python3-Sphinx
 %endif
 
 # openssh-server needed for condor_ssh_to_job
