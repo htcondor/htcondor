@@ -16,6 +16,9 @@ logger.setLevel(logging.DEBUG)
 #
 # See HTCONDOR-736 for a detailed explanation of what we're testing here.
 #
+# The checkpoint file name contains a space to verify that
+# transfer_checkpoint_files is split only on commas (HTCONDOR-4103).
+#
 
 
 @action
@@ -30,7 +33,7 @@ def path_to_the_job_script(test_dir):
     total_steps = 24
     num_completed_steps = 0
     try:
-        with open("saved-state", "r") as saved_state:
+        with open("saved state", "r") as saved_state:
             num_completed_steps = int(saved_state.readline().strip())
     except IOError:
         pass
@@ -44,7 +47,7 @@ def path_to_the_job_script(test_dir):
         if num_completed_steps % 5 == 0:
             print(f"Checkpointing after {num_completed_steps}.")
             try:
-                with open("saved-state", "w") as saved_state:
+                with open("saved state", "w") as saved_state:
                     saved_state.write(f"{num_completed_steps}")
                 sys.exit(17)
             except IOError:
@@ -74,7 +77,7 @@ def the_job_description(path_to_the_job_script):
         "when_to_transfer_output":      "ON_EXIT",
 
         "checkpoint_exit_code":         "17",
-        "transfer_checkpoint_files":    "saved-state",
+        "transfer_checkpoint_files":    "saved state",
         "transfer_output_files":        "",
     }
 
@@ -175,7 +178,7 @@ class TestFileTransfer:
     # The observable problem for this bug is that the non-tmp spool directory
     # is never created (because file transfer fails).
     def test_checkpoint_exists(self, logged_job_files_in_spool):
-        assert sorted(logged_job_files_in_spool) == sorted(['saved-state'])
+        assert sorted(logged_job_files_in_spool) == sorted(['saved state'])
 
     # The bug is here is the presence of [/dev/]null in SPOOL.
     def test_checkpoint_missing_null(self, unlogged_job_files_in_spool):
