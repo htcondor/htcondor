@@ -113,6 +113,28 @@ class TestMergeProperties:
         # The original dict should not have been mutated
         assert existing["Owner"] == original_owner
 
+    def test_nested_field_suppresses_dotted_children(self):
+        """Regression: if an existing index maps a field as nested but the
+        defaults define it as object with explicit children, the flattened
+        dotted children (e.g. metadata.condor_adstash_hostname) must not
+        appear alongside the nested parent, or ES rejects the mapping."""
+        existing = {
+            "metadata": {
+                "type": "nested",
+                "dynamic": True,
+                "properties": {
+                    "adstash_runtime": {"type": "date"},
+                },
+            },
+        }
+        from adstash.mapping.common import METADATA_MAPPING
+        result = merge_properties(existing, METADATA_MAPPING)
+        # The existing nested type must be preserved
+        assert result["metadata"]["type"] == "nested"
+        # No dotted metadata.* keys should appear at the top level
+        dotted_metadata_keys = [k for k in result if k.startswith("metadata.")]
+        assert dotted_metadata_keys == [], f"Unexpected dotted keys: {dotted_metadata_keys}"
+
     def test_requires_at_least_two_dicts(self):
         with pytest.raises(ValueError):
             merge_properties({"Owner": {"type": "keyword"}})

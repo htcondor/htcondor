@@ -64,6 +64,21 @@ def merge_properties(*properties_in: dict) -> dict:
         for field, mapping in flattened_properties_in.items():
             new_field_type = mapping.get("type", "object")
 
+            # Skip dotted children whose parent (or any ancestor) is already
+            # nested in the output, since ES would interpret the dotted key
+            # as a conflicting non-nested object mapper on the same path.
+            if "." in field:
+                parts = field.split(".")
+                skip = False
+                for i in range(1, len(parts)):
+                    ancestor = ".".join(parts[:i])
+                    if ancestor in properties_out and properties_out[ancestor].get("type") == "nested":
+                        logging.debug(f"Skipping field {field} because ancestor {ancestor} is nested")
+                        skip = True
+                        break
+                if skip:
+                    continue
+
             # Add the field if it doesn't exist yet
             if field not in properties_out:
                 properties_out[field] = mapping.copy()
