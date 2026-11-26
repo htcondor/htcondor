@@ -416,6 +416,29 @@ public:
 		*/
 	bool reschedule();
 
+		// Ask this schedd (acting as an AP) to mint a controller capability
+		// token, used to establish this AP as the controller of an EP.  On
+		// success, fills in the returned token and the controller identity
+		// (subject@issuer) and pool the EP should record.  See CONTROLLER_DESIGN.md.
+		// returns: true/false on success/failure; errstack carries the reason.
+	bool requestControllerToken(std::string &token, std::string &controller_name,
+		std::string &controller_identity, std::string &controller_pool,
+		CondorError &errstack);
+
+		// Tell this schedd (acting as an AP) that it is now the controller of
+		// the named EP, or -- when remove is true -- that it no longer is.
+		// Called by the "htcondor ep controller" CLI after the EP itself has
+		// accepted (or been cleared of) the relationship, so the AP can list
+		// the EPs it controls.  This is bookkeeping distinct from claims.
+		// ep_pool may be NULL.  returns true/false; errstack carries the reason.
+	bool registerControlledEP(const char *ep_name, const char *ep_pool,
+		bool remove, CondorError &errstack);
+
+		// Fetch the list of EPs this schedd (AP) currently controls, one ad
+		// each.  returns true/false; errstack carries the reason on failure.
+	bool getControlledEPs(std::vector<std::unique_ptr<ClassAd>> &eps,
+		CondorError &errstack);
+
 	bool spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError * errstack);
 
 	bool receiveJobSandbox(const char* constraint, CondorError * errstack, int * numdone = 0);

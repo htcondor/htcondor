@@ -20,6 +20,8 @@ from .htcondor2_impl import (
     _startd_vacate_slots,
     _startd_cancel_drain_jobs,
     _startd_rehome,
+    _startd_set_controller,
+    _startd_clear_controller,
     _history_query,
 )
 
@@ -119,6 +121,39 @@ class Startd():
             guard expression evaluates to true.
         """
         _startd_rehome(self._addr, schedd_name, schedd_pool, timeout, cancel, reboot)
+
+
+    def set_controller(self,
+        controller_name : str,
+        token : str,
+        controller_pool : Optional[str] = None,
+        controller_identity : Optional[str] = None,
+    ) -> None:
+        """
+        Designate an access point (AP) as the *controller* of this execution
+        point (EP).  The controller is permitted to evict any claim on this
+        EP, regardless of which AP owns the claim.  An EP may have at most one
+        controller; this fails if one is already set.
+
+        :param controller_name:  The name of the controlling AP.
+        :param token:  An AP-signed capability token authorizing the
+            relationship, as returned by
+            :meth:`htcondor2.Schedd.request_controller_token`.
+        :param controller_pool:  The collector pool used to reach the
+            controller.  If :py:obj:`None`, ``COLLECTOR_HOST`` is used.
+        :param controller_identity:  The security identity the controller
+            authenticates as when it evicts claims.  If :py:obj:`None`, the
+            EP falls back to ``controller_name``.
+        """
+        _startd_set_controller(self._addr, controller_name, controller_pool, controller_identity, token)
+
+
+    def clear_controller(self) -> None:
+        """
+        Remove this execution point's controller, if any.  This is a no-op if
+        no controller is set.
+        """
+        _startd_clear_controller(self._addr)
 
     def cancelDrainJobs(self, request_id : Optional[str] = None) -> None:
         """
