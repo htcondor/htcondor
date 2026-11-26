@@ -1,0 +1,190 @@
+#!/usr/bin/env python3
+
+# To start a local RabbitMQ broker for testing:
+#   docker run -d --name rabbitmq -p 5672:5672 rabbitmq:4
+# Access at localhost:5672 with login guest:guest
+
+import sys
+import time
+import socket
+import contextlib
+
+from collections.abc import Iterator
+
+import pika
+import classad2
+import htcondor2
+
+
+@contextlib.contextmanager
+def open_mq_channel(
+    host: str, port: int, username: str, password: str
+) -> Iterator[pika.adapters.blocking_connection.BlockingChannel]:
+    # PlainCredentials uses username/password (PLAIN mechanism). For production
+    # deployments consider ExternalCredentials with TLS client certificates
+    # or reading and passing a token as the password.
+    # See: https://pika.readthedocs.io/en/stable/modules/credentials.html
+    credentials = pika.PlainCredentials(username, password)
+    params = pika.ConnectionParameters(host=host, port=port, credentials=credentials)
+    connection = pika.BlockingConnection(params)
+
+    try:
+        yield connection.channel()
+    finally:
+        connection.close()
+
+
+def send_one_ad( channel, queue : str, ad : classad2.ClassAd ):
+    properties = pika.BasicProperties(
+        content_type="text/plain",
+        content_encoding="utf-8",
+        timestamp=int(time.time()),
+        expiration=None,
+        # x-source-host identifies the sender. To route to a specific
+        # consumer, consider adding an x-intended-recipient header and
+        # having consumers filter on it (requires a headers exchange).
+        headers={"x-source-host": socket.gethostname()},
+    )
+    # reply_to can be also be set in the properties to a callback
+    # queue name to enable an RPC pattern: the consumer sends an
+    # acknowledgement back to that queue, allowing the producer to
+    # confirm the ad was received and processed.
+
+    channel.basic_publish(
+        exchange="",
+        routing_key=queue,
+        body=str(ad).encode("utf-8"),
+        properties=properties,
+        mandatory=True
+    )
+
+
+def main():
+    htcondor2.set_subsystem('DASHBOARD_SOURCE')
+    htcondor2.enable_log()
+
+    host = htcondor2.param['DASHBOARD_AMQP_HOST']
+    port = htcondor2.param['DASHBOARD_AMQP_PORT']
+    username = htcondor2.param['DASHBOARD_AMQP_USERNAME']
+    password = htcondor2.param['DASHBOARD_AMQP_PASSWORD']
+    queue = htcondor2.param['DASHBOARD_AMQP_QUEUE']
+
+    pool = htcondor2.param.get('DASHBOARD_SOURCE_COLLECTOR')
+    i = htcondor2.param['DASHBOARD_SOURCE_INTERVAL']
+    try:
+        interval = int(i)
+    except ValueError:
+        htcondor2.log(
+                htcondor2.LogLevel.Always,
+                f"DASHBOARD_SOURCE_INTERVAL ('{i}') is not an integer"
+        )
+        sys.exit(1)
+
+    # Try to connect to the AMQP server before querying the collector, under
+    # the assumption that doing so is faster, cheaper, and more likely to be
+    # misconfigured.
+
+    try:
+        with open_mq_channel(
+            host, port, username, password
+        ) as channel:
+            htcondor2.log(
+                htcondor2.LogLevel.Always,
+                f"Connected to AMQP server at {host}:{port}"
+            )
+
+            # Create the queue if it doesn't already exist.
+            # durable=False (the default) means the queue does not survive
+            # a broker restart, but doesn't work with the RabbitMQ broker
+            # specified above for testing.
+            channel.queue_declare(queue=queue, durable=True)
+
+            htcondor2.log(
+                htcondor2.LogLevel.Always,
+                f"Created/confirmed queue {queue}."
+            )
+
+            # Enable publisher confirms so that basic_publish() raises
+            # UnroutableError if the broker cannot deliver the message.
+            channel.confirm_delivery()
+
+            htcondor2.log(
+                htcondor2.LogLevel.Always,
+                f"Set queue to confirm delivery."
+            )
+
+
+            #
+            # Attempt to connect to the collector.
+            #
+            collector = htcondor2.Collector(pool=pool)
+
+            # No update constraint for the first query.
+            last_query = time.time()
+            results = collector.query(
+                ad_type=htcondor2.AdType.Startd,
+            )
+
+            htcondor2.log(
+                htcondor2.LogLevel.Always,
+                f"Fetched {len(results)} ads from the collector."
+            )
+
+            for ad in results:
+                send_one_ad(channel, queue, ad)
+
+            htcondor2.log(
+                htcondor2.LogLevel.Always,
+                f"Sent {len(results)} ads to the broker."
+            )
+
+
+            while True:
+                htcondor2.log(
+                    htcondor2.LogLevel.Always,
+                    f"Sleeping for {interval} seconds..."
+                )
+                time.sleep(interval)
+
+                this_query = time.time()
+                results = collector.query(
+                    ad_type=htcondor2.AdType.Startd,
+                )
+                last_query = this_query
+
+                htcondor2.log(
+                    htcondor2.LogLevel.Always,
+                    f"Fetched {len(results)} ads from the collector."
+                )
+
+                for ad in results:
+                    send_one_ad(channel, queue, ad)
+
+                htcondor2.log(
+                    htcondor2.LogLevel.Always,
+                    f"Sent {len(results)} ads to the broker."
+                )
+
+
+    except pika.exceptions.UnroutableError:
+        htcondor2.log(
+            htcondor2.LogLevel.Always,
+            f"Message could not be routed to queue '{queue}'"
+        )
+        sys.exit(1)
+    except pika.exceptions.AMQPConnectionError:
+        htcondor2.log(
+            htcondor2.LogLevel.Always,
+            f"Could not connect to AMQP server at {host}:{port}"
+        )
+        sys.exit(1)
+    except htcondor2.HTCondorException:
+        htcondor2.log(
+            htcondor2.LogLevel.Always,
+            f"Failed to connect to collector '{pool}'"
+        )
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
