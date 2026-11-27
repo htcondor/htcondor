@@ -12,6 +12,13 @@
   to restart.
   :jira:`4096`
 
+- Fixed several bugs in :py:meth:`htcondor2.Credd.check_user_service_creds`
+  that caused it to always raise an exception.  Also fixed the
+  :py:class:`htcondor2.CredCheck` it returns, whose ``present`` attribute
+  and truth value were inverted, so that they are now ``True`` when the
+  credentials are present.
+  :jira:`4112`
+
 *** 26.0.2 bugs
 
 - :tool:`condor_tail` should now work on files larger than 2 Gb in size.
