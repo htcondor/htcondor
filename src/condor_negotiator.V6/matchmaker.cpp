@@ -44,6 +44,7 @@
 #include <vector>
 #include <string>
 #include <deque>
+#include <unordered_set>
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT) && defined(UNIX)
 #include "NegotiatorPlugin.h"
@@ -113,6 +114,11 @@ public:
     int bundle_matches;       // slots matched for bundles this cycle
     time_t bundle_duration;   // wall-clock seconds spent in the bundle round
 
+    // The priority round (see negotiatePriorityRound).  Zero when
+    // NEGOTIATOR_PRIORITY_SUBMITTER_CONSTRAINT is unset or matches nothing.
+    int priority_submitters;  // distinct submitter names given to that round
+    time_t priority_duration; // wall-clock seconds spent in the priority round
+
     // set of unique active schedd, id by sinful strings:
     std::set<std::string> active_schedds;
 
@@ -155,6 +161,8 @@ NegotiationCycleStats::NegotiationCycleStats():
     bundle_slots_wanted(0),
     bundle_matches(0),
     bundle_duration(0),
+    priority_submitters(0),
+    priority_duration(0),
     active_schedds(),
     active_submitters(),
     submitters_share_limit(),
@@ -915,6 +923,37 @@ reinitialize ()
             SlotPoolsizeConstraint = NULL;
 		}
         free (tmp);
+	}
+
+	m_priority_submitter_constraint.reset();
+	std::string priority_constraint;
+	if (param(priority_constraint, "NEGOTIATOR_PRIORITY_SUBMITTER_CONSTRAINT")) {
+		ExprTree *tree = nullptr;
+		if (ParseClassAdRvalExpr(priority_constraint.c_str(), tree) == 0) {
+			m_priority_submitter_constraint.reset(tree);
+			dprintf(D_FULLDEBUG, "NEGOTIATOR_PRIORITY_SUBMITTER_CONSTRAINT = %s\n",
+			        priority_constraint.c_str());
+		} else {
+			dprintf(D_ALWAYS, "Error parsing NEGOTIATOR_PRIORITY_SUBMITTER_CONSTRAINT expression: %s; "
+			        "there will be no priority round\n", priority_constraint.c_str());
+		}
+	}
+	m_priority_slot_constraint.reset();
+	std::string priority_slot_constraint;
+	if (m_priority_submitter_constraint &&
+	    param(priority_slot_constraint, "NEGOTIATOR_PRIORITY_SLOT_CONSTRAINT")) {
+		ExprTree *tree = nullptr;
+		if (ParseClassAdRvalExpr(priority_slot_constraint.c_str(), tree) == 0) {
+			m_priority_slot_constraint.reset(tree);
+			dprintf(D_FULLDEBUG, "NEGOTIATOR_PRIORITY_SLOT_CONSTRAINT = %s\n",
+			        priority_slot_constraint.c_str());
+		} else {
+			// Without the constraint the round would hand out every free
+			// slot in the pool, the opposite of what was asked for.
+			dprintf(D_ALWAYS, "Error parsing NEGOTIATOR_PRIORITY_SLOT_CONSTRAINT expression: %s; "
+			        "there will be no priority round\n", priority_slot_constraint.c_str());
+			m_priority_submitter_constraint.reset();
+		}
 	}
 
 	m_SubmitterConstraintStr.clear();
@@ -1905,6 +1944,27 @@ CountMatches(const std::vector<ClassAd *> &ads, classad::ExprTree* constraint) {
 	return matchCount;
 }
 
+// True for a slot that can only be had by preempting the job on it: one that
+// is Claimed or Preempting.  A partitionable slot is never such a slot, even
+// when Claimed, since it can still be carved up without preempting anyone.
+static bool
+isClaimedOrPreempting(ClassAd *ad)
+{
+	static const std::string claimed_state_str = state_to_string(claimed_state);
+	static const std::string preempting_state_str = state_to_string(preempting_state);
+
+	std::string cur_state;
+	if ( ! ad->LookupString(ATTR_STATE, cur_state)) {
+		return false;
+	}
+	if ((cur_state != claimed_state_str) && (cur_state != preempting_state_str)) {
+		return false;
+	}
+	bool is_pslot = false;
+	ad->LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
+	return ! is_pslot;
+}
+
 // Move the reserved slot-bundle submitter ads out of submitterAds and into
 // bundleAds.  A bundle needs all N of its slots before any of them are useful,
 // and it holds them off-the-books, so it is negotiated in a round of its own
@@ -1962,6 +2022,118 @@ Matchmaker::negotiateBundleRound(const NegotiationCycle &cycle, std::vector<Clas
 	round.kind = RoundKind::Bundle;
 	negotiateWithGroup(cycle, round, bundleSubmitterAds);
 	negotiation_cycle_stats[0]->bundle_duration = time(nullptr) - start_time_bundles;
+}
+
+// ----- The priority round: favored submitters get first claim on free slots.
+//
+// The submitters matching NEGOTIATOR_PRIORITY_SUBMITTER_CONSTRAINT (typically
+// every submitter from one schedd) are negotiated for in a round of their own,
+// right after the bundle round and ahead of the floor and fair-share rounds.
+// It is a soft preference:
+//
+//   * No preemption.  The round sees only the slots that can be had without
+//     preempting anyone (an unclaimed-only view of the cycle's slot list),
+//     and never ignores its submitter limits for startd rank.
+//   * Only some slots, optionally.  NEGOTIATOR_PRIORITY_SLOT_CONSTRAINT, an
+//     expression on the slot ad, narrows the view further, and the round's
+//     pie is then the weight of the slots it matches, claimed or not.
+//   * Fair share among the favored submitters, of the round's slots.  Shares
+//     are normalized over just them, and only what a submitter holds on the
+//     round's slots counts as its usage; what it holds elsewhere does not, so
+//     the round can put it over its pool-wide fair share.  Matches are
+//     charged to the accountant as usual.
+//   * No partitionable-slot preemption either: m_in_priority_round turns off
+//     ALLOW_PSLOT_PREEMPTION in matchmakingAlgorithm() for the round.
+//
+// The ads are copied into the round, not taken out of submitterAds: the
+// favored submitters still take part in the floor and fair-share rounds.
+//
+// Group quotas are not enforced in this round, so a favored submitter's group
+// can end up over its quota.  This round also runs before the floor round, so
+// it can take slots a floor would otherwise have guaranteed.
+void
+Matchmaker::negotiatePriorityRound(const NegotiationCycle &cycle, const std::vector<ClassAd *> &submitterAds)
+{
+	if ( ! m_priority_submitter_constraint) {
+		return;
+	}
+
+	std::vector<ClassAd *> prioritySubmitterAds;
+	std::ranges::copy_if(submitterAds, std::back_inserter(prioritySubmitterAds),
+		[this](ClassAd *ad) { return EvalExprBool(ad, m_priority_submitter_constraint.get()); });
+	if (prioritySubmitterAds.empty()) {
+		dprintf(D_FULLDEBUG, "No submitters match NEGOTIATOR_PRIORITY_SUBMITTER_CONSTRAINT, skipping the priority round\n");
+		return;
+	}
+
+	// Hand the round only the slots it can have without preempting anyone,
+	// and of those, only the ones NEGOTIATOR_PRIORITY_SLOT_CONSTRAINT allows.
+	std::vector<ClassAd *> &startdAds = *cycle.startdAds;
+	std::vector<ClassAd *> unclaimedAds;
+	classad::ExprTree *slot_constraint = m_priority_slot_constraint.get();
+	std::ranges::copy_if(startdAds, std::back_inserter(unclaimedAds),
+		[slot_constraint](ClassAd *ad) {
+			return ! isClaimedOrPreempting(ad) &&
+				( ! slot_constraint || EvalExprBool(ad, slot_constraint));
+		});
+	if (unclaimedAds.empty()) {
+		dprintf(D_FULLDEBUG, "Phase 3.6:  No unclaimed slots %sfor the priority round, skipping it\n",
+			slot_constraint ? "match NEGOTIATOR_PRIORITY_SLOT_CONSTRAINT " : "");
+		return;
+	}
+	const std::unordered_set<ClassAd *> offered(unclaimedAds.begin(), unclaimedAds.end());
+
+	// The pie is the slots the round may use, claimed or not (see
+	// negotiationTime()), so fair share among the favored submitters is
+	// computed over just those slots.
+	NegotiationCycle view = cycle;
+	view.startdAds = &unclaimedAds;
+	view.poolSize = cycle.priorityPoolSize;
+	view.weightedPoolSize = cycle.priorityWeightedPoolSize;
+
+	NegotiationRound round;
+	round.kind = RoundKind::Priority;
+
+	// Count submitters by name: one submitter can have an ad per schedd.
+	std::set<std::string> names;
+	for (ClassAd *ad: prioritySubmitterAds) {
+		std::string name;
+		if (ad->LookupString(ATTR_NAME, name)) {
+			names.insert(name);
+		}
+	}
+
+	// A submitter's usage in this round is what it holds on the round's
+	// slots.  Express that as an offset from the accountant's pool-wide
+	// figure: every match the round makes is on its slots and raises the
+	// accountant's figure, so the two move together from here on.
+	SubmitterUsage usageOffset;
+	if (cycle.priorityUsage) {
+		for (const auto &name: names) {
+			auto it = cycle.priorityUsage->find(name);
+			const double held_here = (it == cycle.priorityUsage->end()) ? 0.0 : it->second;
+			usageOffset[name] = held_here - accountant.GetWeightedResourcesUsed(name);
+		}
+		round.usageOffset = &usageOffset;
+	}
+
+	dprintf(D_ALWAYS, "Phase 3.6:  Negotiating for %zu priority submitter(s) over %zu unclaimed slot(s) ...\n",
+		names.size(), unclaimedAds.size());
+	negotiation_cycle_stats[0]->priority_submitters = (int)names.size();
+	time_t start_time_priority = time(nullptr);
+
+	m_in_priority_round = true;
+	negotiateWithGroup(view, round, prioritySubmitterAds);
+	m_in_priority_round = false;
+
+	// A slot the round matched is gone from the view; take it out of the
+	// cycle's slot list too, so the rounds after this one do not see it.
+	const std::unordered_set<ClassAd *> left(unclaimedAds.begin(), unclaimedAds.end());
+	size_t matched = std::erase_if(startdAds,
+		[&offered, &left](ClassAd *ad) { return offered.contains(ad) && ! left.contains(ad); });
+
+	negotiation_cycle_stats[0]->priority_duration = time(nullptr) - start_time_priority;
+	dprintf(D_ALWAYS, "Priority round finished: %zu slot(s) removed from consideration\n", matched);
 }
 
 // If there are any submitters who have a floor defined, and their current
@@ -2165,6 +2337,41 @@ Matchmaker::negotiationTime( int /* timerID */ )
         effectivePoolsize = count_effective_slots(startdAds, NULL);
     }
 
+	// The priority round's slots.  NEGOTIATOR_PRIORITY_SLOT_CONSTRAINT limits
+	// the round to some of the slots, so its pie is just those slots, claimed
+	// or not, and a submitter's usage in the round is only what it holds on
+	// them.  Both have to be counted before the claimed slots are trimmed.
+	// Slots NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT leaves out of the pool's size
+	// are left out of the round's size too.  Without the slot constraint, the
+	// round's slots are the whole pool, and these are the pool's own figures.
+	int priorityPoolsize = cPoolsize;
+	double priorityWeightedPoolsize = weightedPoolsize;
+	SubmitterUsage priorityUsage;
+	if (m_priority_submitter_constraint && m_priority_slot_constraint) {
+		classad::ExprTree *slot_constraint = m_priority_slot_constraint.get();
+		std::vector<ClassAd *> round_slots;
+		std::ranges::copy_if(startdAds, std::back_inserter(round_slots),
+			[this, slot_constraint](ClassAd *ad) {
+				return EvalExprBool(ad, slot_constraint) &&
+					(SlotPoolsizeConstraint == nullptr || EvalExprBool(ad, SlotPoolsizeConstraint));
+			});
+		priorityPoolsize = (int)round_slots.size();
+		priorityWeightedPoolsize = (accountant.UsingWeightedSlots())
+			? sumSlotWeights(round_slots, nullptr, nullptr)
+			: priorityPoolsize;
+		// Charge each claimed slot to whoever CheckMatches() charged it to.
+		// As in the pool-wide pie, usage counts every slot the round may
+		// use, including ones left out of its size.
+		for (ClassAd *ad: startdAds) {
+			std::string customer;
+			if (EvalExprBool(ad, slot_constraint) && accountant.IsClaimed(ad, customer)) {
+				priorityUsage[customer] += accountant.GetSlotWeight(ad);
+			}
+		}
+		dprintf(D_ALWAYS, "NEGOTIATOR_PRIORITY_SLOT_CONSTRAINT gives the priority round %d of %d slots (weighted %g)\n",
+			priorityPoolsize, cTotalSlots, priorityWeightedPoolsize);
+	}
+
 	// Trim out ads that we should not bother considering
 	// during matchmaking now.  (e.g. when NEGOTIATOR_CONSIDER_PREEMPTION=False)
 	// note: we cannot trim out the Unclaimed ads before we call CheckMatches,
@@ -2204,8 +2411,14 @@ Matchmaker::negotiationTime( int /* timerID */ )
 	cycle.poolSize = cPoolsize;
 	cycle.weightedPoolSize = weightedPoolsize;
 	cycle.minSlotWeight = minSlotWeight;
+	cycle.priorityPoolSize = priorityPoolsize;
+	cycle.priorityWeightedPoolSize = priorityWeightedPoolsize;
+	if (m_priority_slot_constraint) {
+		cycle.priorityUsage = &priorityUsage;
+	}
 
 	negotiateBundleRound(cycle, submitterAds);
+	negotiatePriorityRound(cycle, submitterAds);
 
     if (hgq_groups.size() <= 1) {
         // If there is only one group (the root group) we are in traditional non-HGQ mode.
@@ -2610,7 +2823,8 @@ negotiateWithGroup(const NegotiationCycle &cycle,
         // submitterLimit w/ respect to jobs which are strictly preferred by resource
         // offers (via startd rank).  However, if preemption is not being considered,
         // we respect submitter limits on all iterations.
-        const bool ignore_submitter_limit = ((spin_pie == 1) && ConsiderPreemption);
+        // The priority round never preempts, so it never does this.
+        const bool ignore_submitter_limit = ((spin_pie == 1) && ConsiderPreemption && !round.isPriority());
 
         double groupusage = (NULL != groupName) ? accountant.GetWeightedResourcesUsed(groupName) : 0.0;
         if (!ignore_submitter_limit && (NULL != groupName) && (groupusage >= groupQuota)) {
@@ -2652,9 +2866,10 @@ negotiateWithGroup(const NegotiationCycle &cycle,
 				/* result parameters: */
 			pieLeft);
 
-		if (!ConsiderPreemption && (pieLeft <= 0)) {
+		if ((!ConsiderPreemption || round.isPriority()) && (pieLeft <= 0)) {
 			dprintf(D_ALWAYS,
-				"Halting negotiation: no slots available to match (preemption disabled,%zu trimmed slots,pieLeft=%.3f)\n",
+				"Halting negotiation: no slots available to match (%s,%zu trimmed slots,pieLeft=%.3f)\n",
+				round.isPriority() ? "priority round" : "preemption disabled",
 				startdAds.size(),pieLeft);
 			break;
 		}
@@ -2774,7 +2989,10 @@ negotiateWithGroup(const NegotiationCycle &cycle,
 				submitterPrio,
 				submitterPrioFactor);
 
-				if (spin_pie == 1) {
+				// The priority round's shares are over just the favored
+				// submitters and the round's slots, not the whole pool, so
+				// leave them out of the accounting ad.
+				if (spin_pie == 1 && ! round.isPriority()) {
 					// Save away the submitter share on the first pie spin to put in
 					// the accounting ad to publish to the AccountingAd.
 					ClassAd *accountingAd = accountant.GetClassAd(AccountantTable::Customer, submitterName);
@@ -2916,7 +3134,19 @@ negotiateWithGroup(const NegotiationCycle &cycle,
                 }
 				negotiation_cycle_stats[0]->active_submitters.insert(submitterName);
 				negotiation_cycle_stats[0]->active_schedds.insert(scheddAddr.c_str());
-				result=negotiate(groupName, submitterName.c_str(), submitter_ad, submitterPrio,
+				// The priority round has no group of its own; label its
+				// requests with each submitter's group, as that group's own
+				// round would, rather than as root-group surplus.
+				const char *negotiatingGroup = groupName;
+				std::string assignedGroup;
+				if (round.isPriority() && (hgq_groups.size() > 1)) {
+					GroupEntry *group = GroupEntry::GetAssignedGroup(hgq_root_group, submitterName);
+					if (group && (group != hgq_root_group || !autoregroup)) {
+						assignedGroup = group->name;
+						negotiatingGroup = assignedGroup.c_str();
+					}
+				}
+				result=negotiate(negotiatingGroup, submitterName.c_str(), submitter_ad, submitterPrio,
                               submitterLimit, submitterLimitUnclaimed, submitterCeiling,
 							  startdAds, claimIds,
 							  ignore_submitter_limit,
@@ -3123,25 +3353,6 @@ trimStartdAds_PreemptionLogic(std::vector<ClassAd *> &startdAds) const
 		}
 		return removed;
 	}
-
-	const std::string claimed_state_str = state_to_string(claimed_state);
-	const std::string preempting_state_str = state_to_string(preempting_state);
-
-	auto isClaimedOrPreempting = [&claimed_state_str,&preempting_state_str](ClassAd *ad) {
-		std::string curState;
-		bool is_pslot = false;
-		if (ad->LookupString(ATTR_STATE, curState)) {
-			if ((curState == claimed_state_str) || (curState == preempting_state_str)) {
-				// Ignore Claimed pslots, they aren't eligible for preemption
-				ad->LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
-				if (is_pslot) {
-					return false;
-				}
-				return true;
-			}
-		}
-		return false;
-	};
 
 	auto lastGood = std::remove_if(startdAds.begin(), startdAds.end(), isClaimedOrPreempting);
 	removed = std::distance(lastGood, startdAds.end());
@@ -4984,7 +5195,9 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, const ch
 	rejPreemptForRank = 0;
 	rejForSubmitterLimit = 0;
 
-	bool allow_pslot_preemption = param_boolean("ALLOW_PSLOT_PREEMPTION", false);
+	// The priority round never preempts, and preempting dynamic slots to
+	// make room in their partitionable slot is still preemption.
+	bool allow_pslot_preemption = !m_in_priority_round && param_boolean("ALLOW_PSLOT_PREEMPTION", false);
 	double allocatedWeight = 0.0;
 		// Set up for parallel matchmaking, if enabled
 	std::vector<ClassAd *> par_candidates;
@@ -5701,6 +5914,13 @@ Matchmaker::calculateSubmitterLimit(
 		// calculate the percentage of machines that this schedd can use
 	submitterPrio = accountant.GetPriority ( submitterName );
 	submitterUsage = accountant.GetWeightedResourcesUsed( submitterName );
+	if (round.usageOffset) {
+		// The priority round counts only what the submitter holds on its slots.
+		auto it = round.usageOffset->find(submitterName);
+		if (it != round.usageOffset->end()) {
+			submitterUsage = std::max(0.0, submitterUsage + it->second);
+		}
+	}
 	submitterShare = maxPrioValue/(submitterPrio*normalFactor);
 
 	if ( param_boolean("NEGOTIATOR_IGNORE_USER_PRIORITIES",false) ) {
@@ -6837,7 +7057,9 @@ Matchmaker::publishNegotiationCycleStats( ClassAd *ad )
         ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_SUBMITTERS,
         ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_SLOTS_WANTED,
         ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_MATCHES,
-        ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_DURATION
+        ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_DURATION,
+        ATTR_LAST_NEGOTIATION_CYCLE_PRIORITY_SUBMITTERS,
+        ATTR_LAST_NEGOTIATION_CYCLE_PRIORITY_DURATION
     };
     const int nattrs = sizeof(attrs)/sizeof(*attrs);
 
@@ -6881,6 +7103,8 @@ Matchmaker::publishNegotiationCycleStats( ClassAd *ad )
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_SLOTS_WANTED, i, s->bundle_slots_wanted );
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_MATCHES, i, s->bundle_matches );
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_DURATION, i, s->bundle_duration );
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_PRIORITY_SUBMITTERS, i, s->priority_submitters );
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_PRIORITY_DURATION, i, s->priority_duration );
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_PIES, i, s->pies );
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_PIE_SPINS, i, s->pie_spins );
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_PREFETCH_DURATION, i, s->prefetch_duration );

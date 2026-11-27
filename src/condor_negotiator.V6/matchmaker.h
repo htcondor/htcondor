@@ -33,7 +33,9 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <set>
 #include <algorithm>
+#include <memory>
 
 typedef struct MapEntry {
 	char *remoteHost;
@@ -208,6 +210,11 @@ class Matchmaker : public Service
 		//   Bundle     slot-bundle submitters (negotiateBundleRound).  Whole
 		//              remaining pie, no ceiling, ordered by bundle age, and
 		//              never charged to the accountant.
+		//   Priority   submitters matching NEGOTIATOR_PRIORITY_SUBMITTER_CONSTRAINT
+		//              (negotiatePriorityRound).  Fair share among just those
+		//              submitters, over unclaimed slots only (and only those
+		//              matching NEGOTIATOR_PRIORITY_SLOT_CONSTRAINT).  They
+		//              take part in the rounds after this one as well.
 		//   Floor      submitters below their floor.  Capped at the floor,
 		//              one pass of the pie.
 		//   FairShare  every submitter: the fair-share pie, spun until no
@@ -215,7 +222,11 @@ class Matchmaker : public Service
 		//
 		// Floor and FairShare run once without group quotas, and once per
 		// group with them (negotiateFloor, then negotiateFairShare).
-		enum class RoundKind { Bundle, Floor, FairShare };
+		enum class RoundKind { Bundle, Priority, Floor, FairShare };
+
+		// Weighted usage by submitter name, compared the way the accountant
+		// compares names.
+		using SubmitterUsage = std::map<std::string, double, Accountant::ci_less>;
 
 		// What every round in one cycle shares.  Built once in
 		// negotiationTime(), after the slot ads are trimmed.  The slot list is
@@ -226,6 +237,15 @@ class Matchmaker : public Service
 			int poolSize = 0;               // slots in the pool; only logged
 			double weightedPoolSize = 0.0;  // size of the pie
 			double minSlotWeight = 0.0;     // smallest slot worth matching
+			// The priority round's pool and pie: the slots matching
+			// NEGOTIATOR_PRIORITY_SLOT_CONSTRAINT, claimed or not, or the
+			// whole pool when it is unset.
+			int priorityPoolSize = 0;
+			double priorityWeightedPoolSize = 0.0;
+			// What each submitter holds on those slots, by weight.  Null
+			// when the constraint is unset: the accountant's figures are then
+			// the round's own.
+			const SubmitterUsage *priorityUsage = nullptr;
 		};
 
 		// What differs between rounds.
@@ -233,9 +253,13 @@ class Matchmaker : public Service
 			RoundKind kind = RoundKind::FairShare;
 			double quota = INT_MAX;            // group quota; caps the pie
 			const char *groupName = nullptr;   // accounting group, if any
+			// Priority round only: added to each submitter's usage, so that
+			// its usage counts only what it holds on the round's slots.
+			const SubmitterUsage *usageOffset = nullptr;
 
 			bool isFloor() const { return kind == RoundKind::Floor; }
 			bool isBundle() const { return kind == RoundKind::Bundle; }
+			bool isPriority() const { return kind == RoundKind::Priority; }
 		};
 
 		int negotiateWithGroup(const NegotiationCycle &cycle,
@@ -246,6 +270,12 @@ class Matchmaker : public Service
 		// submitterAds.  Does nothing if there are none.
 		void negotiateBundleRound(const NegotiationCycle &cycle,
 		                          std::vector<ClassAd *> &submitterAds);
+
+		// A priority round for the submitters in submitterAds that match
+		// NEGOTIATOR_PRIORITY_SUBMITTER_CONSTRAINT.  submitterAds is left
+		// unchanged.  Does nothing if the knob is unset or nothing matches.
+		void negotiatePriorityRound(const NegotiationCycle &cycle,
+		                            const std::vector<ClassAd *> &submitterAds);
 
 		// A floor round for the submitters in submitterAds that are below
 		// their floor.  Does nothing if there are none.
@@ -442,6 +472,15 @@ class Matchmaker : public Service
                                          // formerly DynQuotaMachConstraint Added for CDF.
 
 		std::string m_SubmitterConstraintStr;
+
+		// The priority round (see negotiatePriorityRound).  No constraint
+		// means no round.
+		std::unique_ptr<classad::ExprTree> m_priority_submitter_constraint;
+		// Narrows the priority round to the slots it matches; none means
+		// every slot.
+		std::unique_ptr<classad::ExprTree> m_priority_slot_constraint;
+		// True while the priority round negotiates; it must never preempt.
+		bool m_in_priority_round{false};
 		std::string m_JobConstraintStr;
 
 		bool m_staticRanks;

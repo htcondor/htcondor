@@ -104,6 +104,9 @@ public:
   void RemoveMatch(const std::string& ResourceName); // remove a match
 
   double GetSlotWeight(ClassAd *candidate) const;
+  // True if the slot is claimed (or preempting), and if so, who is charged
+  // for it: the name CheckMatches() charges the slot to.
+  int IsClaimed(ClassAd* ResourceAd, std::string& CustomerName);
   void UpdatePriorities(); // update all the priorities
   void UpdateOnePriority(time_t T, time_t TimePassed, double AgingFactor, const std::string& customerName, ClassAd *ad); // Help function for above
 
@@ -193,7 +196,6 @@ private:
 
   static std::string GetResourceName(ClassAd* Resource);
   bool GetResourceState(ClassAd* Resource, State& state);
-  int IsClaimed(ClassAd* ResourceAd, std::string& CustomerName);
   int CheckClaimedOrMatched(ClassAd* ResourceAd, const std::string& CustomerName);
   static std::string GetDomain(const std::string& CustomerName);
 
