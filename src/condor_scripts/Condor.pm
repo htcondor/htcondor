@@ -734,6 +734,30 @@ sub monitor_debug {
 	debug ( $indent . "(Mon$$) $msg", $level);
 }
 
+# Text read from SUBMIT_LOG that did not yet end in a newline.
+my $partial_log_line = "";
+
+# Read the next line from SUBMIT_LOG, or return undef at EOF, like
+# <SUBMIT_LOG>.  Unlike <SUBMIT_LOG>, never return an incomplete line.
+# The writer may be in the middle of writing an event (a reader can see
+# part of a single write() that crosses a page boundary), and parsing
+# the fragment would silently drop that event.  Hold the fragment back
+# and return undef, so the caller waits and retries exactly as it would
+# at EOF; the rest of the line is appended on a later call.
+sub ReadLogLine
+{
+	local $/ = "\n";
+	my $chunk = <SUBMIT_LOG>;
+	return undef unless defined $chunk;
+
+	$partial_log_line .= $chunk;
+	return undef unless $partial_log_line =~ /\n\z/;
+
+	my $line = $partial_log_line;
+	$partial_log_line = "";
+	return $line;
+}
+
 # spawn process to monitor the submit log file and execute callbacks
 # upon seeing registered events
 # July 26, 2013
@@ -787,6 +811,9 @@ sub Monitor
 	my $userlogcnt = @userlogs;
 	my $thislog = 0;
 	my $skipcheck = "true";
+
+	# Don't carry a fragment over from a previous log.
+	$partial_log_line = "";
 
 
 		#print "thislog:$thislog userlogcnt:$userlogcnt in while loop\n";
@@ -854,7 +881,7 @@ sub Monitor
 
 		# read line from log (if we're at EOF, wait and re-try)
 		SUBMIT_LOG->clearerr();
-		$line = <SUBMIT_LOG>;
+		$line = ReadLogLine();
 		while( ! defined $line )
 		{
 			sleep 2;
@@ -874,7 +901,7 @@ sub Monitor
 				CheckTimedCallback();
 			}
 			SUBMIT_LOG->clearerr();
-			$line = <SUBMIT_LOG>;
+			$line = ReadLogLine();
 		}
 		CondorUtils::fullchomp($line);
 		$linenum++;
@@ -905,7 +932,7 @@ sub Monitor
 		    # [this should really loop like above, not sleep like this...]
 		    # sleep 5;
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -924,7 +951,7 @@ sub Monitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -984,7 +1011,7 @@ sub Monitor
 
 		    # read next line to see how job terminated
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -1003,7 +1030,7 @@ sub Monitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -1035,7 +1062,7 @@ sub Monitor
 
 				# read next line to find core file
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 				while( ! defined $line )
 				{
 					sleep 2;
@@ -1054,7 +1081,7 @@ sub Monitor
 						CheckTimedCallback();
 					}
 					SUBMIT_LOG->clearerr();
-					$line = <SUBMIT_LOG>;
+					$line = ReadLogLine();
 				}
 			    CondorUtils::fullchomp($line);
 				$linenum++;
@@ -1091,7 +1118,7 @@ sub Monitor
 				while( $line ne "...\n" ) {
 				    # read next line to see how job terminated
 				    SUBMIT_LOG->clearerr();
-				    $line = <SUBMIT_LOG>;
+				    $line = ReadLogLine();
 					while( ! defined $line ) {
 						sleep 2;
 
@@ -1100,7 +1127,7 @@ sub Monitor
 						if( defined $TimedCallback ) { CheckTimedCallback(); }
 
 						SUBMIT_LOG->clearerr();
-						$line = <SUBMIT_LOG>;
+						$line = ReadLogLine();
 					}
 					$usageLines .= $line;
 					$linenum++;
@@ -1125,7 +1152,7 @@ sub Monitor
 
 		    # read next line to see current Megs
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -1144,7 +1171,7 @@ sub Monitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -1157,7 +1184,7 @@ sub Monitor
 
 		    # read next line to see current RSS
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -1176,7 +1203,7 @@ sub Monitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -1216,7 +1243,7 @@ sub Monitor
 
 		    # read next line to see how job terminated
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -1235,7 +1262,7 @@ sub Monitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -1260,7 +1287,7 @@ sub Monitor
 
 		    # read next line to see cause
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -1279,7 +1306,7 @@ sub Monitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -1288,7 +1315,7 @@ sub Monitor
 
 		    # read next line to see recovery
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -1307,7 +1334,7 @@ sub Monitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -1332,7 +1359,7 @@ sub Monitor
 
 		    # read next line to see cause
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -1351,7 +1378,7 @@ sub Monitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -1360,7 +1387,7 @@ sub Monitor
 
 		    # read next line to see recovery
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -1379,7 +1406,7 @@ sub Monitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -1404,7 +1431,7 @@ sub Monitor
 
 		    # read next line to see cause
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -1423,7 +1450,7 @@ sub Monitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -1432,7 +1459,7 @@ sub Monitor
 
 		    # read next line to see recovery
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -1451,7 +1478,7 @@ sub Monitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -1476,7 +1503,7 @@ sub Monitor
 
 		    # read next line to see processes affected
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -1495,7 +1522,7 @@ sub Monitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -1637,7 +1664,7 @@ sub Monitor
 		    
 		    # read next line to see how job was held
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -1656,7 +1683,7 @@ sub Monitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -1744,6 +1771,10 @@ sub MultiMonitor
 	my @children = ();
 	my $mypid = 0;
 
+	# Don't carry a fragment over from a previous log.  Each forked
+	# child gets its own copy, as it gets its own SUBMIT_LOG.
+	$partial_log_line = "";
+
 	foreach my $log (@userlogs) {
 		print "\t$log\n";
 		open(SUBMIT_LOG,"<$log") or die "MultiMonitor failed to open $log for about to be child:$!\n";
@@ -1789,7 +1820,7 @@ sub MultiMonitor
 
 		# read line from log (if we're at EOF, wait and re-try)
 		SUBMIT_LOG->clearerr();
-		$line = <SUBMIT_LOG>;
+		$line = ReadLogLine();
 		while( ! defined $line )
 		{
 			sleep 2;
@@ -1809,7 +1840,7 @@ sub MultiMonitor
 				CheckTimedCallback();
 			}
 			SUBMIT_LOG->clearerr();
-			$line = <SUBMIT_LOG>;
+			$line = ReadLogLine();
 		}
 		CondorUtils::fullchomp($line);
 		$linenum++;
@@ -1839,7 +1870,7 @@ sub MultiMonitor
 		    # [this should really loop like above, not sleep like this...]
 		    # sleep 5;
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -1858,7 +1889,7 @@ sub MultiMonitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -1916,7 +1947,7 @@ sub MultiMonitor
 
 			# read next line to see how job terminated
 			SUBMIT_LOG->clearerr();
-			$line = <SUBMIT_LOG>;
+			$line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -1935,7 +1966,7 @@ sub MultiMonitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 			CondorUtils::fullchomp($line);
 			$linenum++;
@@ -1964,7 +1995,7 @@ sub MultiMonitor
 
 				# read next line to find core file
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 				while( ! defined $line )
 					{
 					sleep 2;
@@ -1983,7 +2014,7 @@ sub MultiMonitor
 						CheckTimedCallback();
 					}
 					SUBMIT_LOG->clearerr();
-					$line = <SUBMIT_LOG>;
+					$line = ReadLogLine();
 				}
 				CondorUtils::fullchomp($line);
 				$linenum++;
@@ -2028,7 +2059,7 @@ sub MultiMonitor
 
 		    # read next line to see current Megs
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -2047,7 +2078,7 @@ sub MultiMonitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -2060,7 +2091,7 @@ sub MultiMonitor
 
 		    # read next line to see current RSS
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -2079,7 +2110,7 @@ sub MultiMonitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -2118,7 +2149,7 @@ sub MultiMonitor
 
 		    # read next line to see how job terminated
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -2137,7 +2168,7 @@ sub MultiMonitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -2161,7 +2192,7 @@ sub MultiMonitor
 
 		    # read next line to see cause
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -2180,7 +2211,7 @@ sub MultiMonitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -2189,7 +2220,7 @@ sub MultiMonitor
 
 		    # read next line to see recovery
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -2208,7 +2239,7 @@ sub MultiMonitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -2232,7 +2263,7 @@ sub MultiMonitor
 
 		    # read next line to see cause
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -2251,7 +2282,7 @@ sub MultiMonitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -2260,7 +2291,7 @@ sub MultiMonitor
 
 		    # read next line to see recovery
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -2279,7 +2310,7 @@ sub MultiMonitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -2304,7 +2335,7 @@ sub MultiMonitor
 
 		    # read next line to see cause
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -2323,7 +2354,7 @@ sub MultiMonitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -2332,7 +2363,7 @@ sub MultiMonitor
 
 		    # read next line to see recovery
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -2351,7 +2382,7 @@ sub MultiMonitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -2375,7 +2406,7 @@ sub MultiMonitor
 
 		    # read next line to see processes affected
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -2394,7 +2425,7 @@ sub MultiMonitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
@@ -2494,7 +2525,7 @@ sub MultiMonitor
 		    
 		    # read next line to see how job was held
 		    SUBMIT_LOG->clearerr();
-		    $line = <SUBMIT_LOG>;
+		    $line = ReadLogLine();
 			while( ! defined $line )
 			{
 				sleep 2;
@@ -2503,7 +2534,7 @@ sub MultiMonitor
 					CheckTimedCallback();
 				}
 				SUBMIT_LOG->clearerr();
-				$line = <SUBMIT_LOG>;
+				$line = ReadLogLine();
 			}
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
