@@ -261,6 +261,10 @@ if (BUILD_TESTING)
 		# ClassAds test suite
 		condor_pl_test (test_classad_version_comparison "Test ClassAd version comparison functions" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
+		# htcondor2._utils.bytes unit tests
+		condor_pl_test (test_htcondor2_utils_bytes "Test htcondor2._utils.bytes conversion and formatting" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+		condor_pl_test (test_htcondor2_utils_safe_file "Test htcondor2._utils.safe_file symlink-safe file helpers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
 		if (NOT WINDOWS)
 			condor_pl_test (test_ccb_streaming "Test CCB streaming/proxy mode for private-to-private connections" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
