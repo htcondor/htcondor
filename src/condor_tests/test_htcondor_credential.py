@@ -1,6 +1,8 @@
 #!/usr/bin/env pytest
 
 import htcondor2
+import classad2
+import pytest
 
 import logging
 from getpass import getuser
@@ -115,3 +117,47 @@ class TestHTCondorCredential:
 
         use_file = local_dir / "oauth.d" / getuser() / "plain.use"
         assert rv.stdout == use_file.read_text()
+
+    def test_check_user_service_creds(self, the_condor, plain_token_file):
+        rv = the_condor.run_command(
+            ['htcondor', '-v', 'credential', 'add', 'oauth2',
+             str(plain_token_file),
+             '--service', 'checked'],
+        )
+        assert rv.returncode == 0
+
+        with the_condor.use_config():
+            credd = htcondor2.Credd()
+
+            # The credential we just stored.
+            rv = credd.check_user_service_creds(
+                htcondor2.CredType.OAuth,
+                [classad2.ClassAd({"Service": "checked"})],
+            )
+            logger.info(f"present: {rv.present} url: {rv.url} error: {rv.error}")
+            assert rv.present
+            assert bool(rv)
+            assert rv.url is None
+            assert rv.error is None
+            assert rv.services == "checked"
+
+            # A credential we didn't store; accept a tuple, too.
+            rv = credd.check_user_service_creds(
+                htcondor2.CredType.OAuth,
+                (classad2.ClassAd({"Service": "missing", "Handle": "h"}),),
+            )
+            logger.info(f"present: {rv.present} url: {rv.url} error: {rv.error}")
+            assert not rv.present
+            assert not bool(rv)
+            assert (rv.url is not None) or (rv.error is not None)
+            assert rv.services == "missing*h"
+
+            with pytest.raises(ValueError):
+                credd.check_user_service_creds(
+                    htcondor2.CredType.OAuth, [classad2.ClassAd()],
+                )
+
+            with pytest.raises(TypeError):
+                credd.check_user_service_creds(
+                    htcondor2.CredType.OAuth, [{"Service": "checked"}],
+                )

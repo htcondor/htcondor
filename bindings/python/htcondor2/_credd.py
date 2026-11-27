@@ -306,14 +306,17 @@ class Credd():
             # This was HTCondorEnumError in version 1.
             raise ValueError("invalid credtype")
 
+        # The C++ side requires a list.
+        serviceAds = list(serviceAds)
         services = []
         for ad in serviceAds:
-            if not isinstance(ad, ClassAd):
+            if not isinstance(ad, classad.ClassAd):
                 raise TypeError("service must be of type classad.ClassAd")
 
             name = ad.get("Service", None)
-            # This was HTCondorValueError in version 1.
-            raise ValueError("request has no 'Service' attribute")
+            if name is None:
+                # This was HTCondorValueError in version 1.
+                raise ValueError("request has no 'Service' attribute")
 
             handle = ad.get("Handle", None)
             if handle is not None:
