@@ -14,7 +14,7 @@ def _isURL(c : str) -> bool:
         return False
 
     i = 1
-    while c[i].isalnum() or c[i] == '+' or c[i] == '-' or c[i] == '.':
+    while i < len(c) and (c[i].isalnum() or c[i] == '+' or c[i] == '-' or c[i] == '.'):
         i += 1
 
     if c[i:i+3] == "://" and i + 3 <= len(c):
@@ -29,13 +29,15 @@ def _isURL(c : str) -> bool:
 class CredCheck():
 
     def __init__(self, services, url_or_error):
+        # The CredD returns an empty string if the credentials are present,
+        # a URL if they must be acquired, and otherwise an error message.
         self._services = services
-        if isURL(url_or_error):
+        self._url = None
+        self._error = None
+        if _isURL(url_or_error):
             self._url = url_or_error
-            self._error = None
-        else:
+        elif url_or_error:
             self._error = url_or_error
-            self._url = None
 
 
     def __str__(self):
@@ -47,8 +49,8 @@ class CredCheck():
 
 
     def __bool__(self):
-        # In version 1, a CredCheck was true if an error had happened.
-        return self._url is not None
+        # As in version 1, a CredCheck is true if the credentials are present.
+        return self._url is None and self._error is None
 
 
     @property
