@@ -274,6 +274,8 @@ my $wrap_test;
 
 my %personal_condor_params;
 my %personal_config_changes;
+my %master_log_paths; # MASTER_LOG per CONDOR_CONFIG, see GetMasterLogPath
+my $last_master_state_detail = ""; # how RefreshMasterFromPid last decided
 my $personal_config = "condor_config";
 my $personal_template = "condor_config_template";
 my $personal_daemons = "";
@@ -1537,8 +1539,22 @@ sub StateChange
 	debug("CondorPersonal Waiting $timelimit sec for <$node_name> to be $desiredstate. MasterTime:$masterlimit\n\tDAEMON_LIST = $daemonlist\n", 1);
 	#print "\tCONDOR_CONFIG=$config\n";
 
+	# KillDaemons sent the first condor_off just before calling us
+	my $lastofftime = $RunningTimeStamp;
+
 	while($state ne $desiredstate) {
 		#print "Waiting for state: $desiredstate current $state\n";
+		my $pidstate = undef;
+		if($desiredstate eq "down") {
+			# One pass of this loop can take minutes on a loaded Windows
+			# host, so check the process table before the give-up test
+			# below rather than trusting stale cached condor_who data.
+			$pidstate = RefreshMasterFromPid($condor_instance);
+			if($pidstate == 0) {
+				$state = ProcessStateWanted($config);
+				last if $state eq $desiredstate;
+			}
+		}
 		my $amialive = $condor_instance->HasLiveMaster();
 		$now = time;
 		if(($amialive == 0) &&($desiredstate eq "up")) {
@@ -1551,10 +1567,17 @@ sub StateChange
 		if(($amialive == 1) &&($desiredstate eq "down")) {
 			if(($now - $RunningTimeStamp) >= $masterlimit) {
 				print "StateChange: <$node_name> Master did not exit in $masterlimit seconds. giving up.\n";
+				print "StateChange: <$node_name> last master check: $last_master_state_detail\n";
 				$condor_instance->DisplayWhoDataInstances();
 				return(0);
-			} else {
+			}
+			if(($now - $RunningTimeStamp) >= 10) {
+				print timestamp() . " StateChange: <$node_name> master still up after " .
+					($now - $RunningTimeStamp) . "s: $last_master_state_detail\n";
+			}
+			if(($now - $lastofftime) >= 10) {
 				# We see occasionally condor_off getting lost on Windows.  Let's condor_off again
+				$lastofftime = $now;
 				CondorTest::runToolNTimes("condor_off -master -fast",1,0,{expect_result=>\&ANY,emit_output=>0});
 			}
 		}
@@ -1564,8 +1587,7 @@ sub StateChange
 			return(0);
 		}
 		#print "StateChange: again\n";
-		#CollectWhoData($desiredstate);
-		CollectWhoData();
+		CollectWhoData($desiredstate, $pidstate);
 		$state = ProcessStateWanted($config);
 		#print "StateChange: now:$state\n";
 		CheckNamedFWTimed();
@@ -1651,19 +1673,25 @@ sub MasterPidState
 		return(-1);
 	}
 	if(CondorUtils::is_windows() == 1) {
-		my @tasks = `tasklist`;
-		if(@tasks == 0) {
-			return(-1);
-		}
-		foreach my $process (@tasks) {
-			# image name, pid, session name, ...
-			if($process =~ /(.*?)\s+(\d+)\s+(\w+).*/) {
-				if(($2 eq $pid) && ($1 =~ /condor_master/)) {
-					return(1);
+		# Ask for just this pid; listing every process is slow on a
+		# loaded host.
+		my @tasks = `tasklist /FI "PID eq $pid" /NH /FO CSV 2>&1`;
+		foreach my $task (@tasks) {
+			# "image name","pid","session name",...
+			if($task =~ /^"([^"]*)","(\d+)"/) {
+				if($2 eq $pid) {
+					return(($1 =~ /condor_master/i) ? 1 : 0);
 				}
 			}
 		}
-		return(0);
+		# Only trust an explicit "no such task" answer; treat errors
+		# and anything else as unknown.
+		foreach my $task (@tasks) {
+			if($task =~ /^INFO: No tasks/) {
+				return(0);
+			}
+		}
+		return(-1);
 	}
 	# ps is kind of expensive.  Skip the wait on linux
 	my $master_name = "";
@@ -1687,11 +1715,87 @@ sub MasterPidState
 	return(0);
 }
 
+# MASTER_LOG for the current CONDOR_CONFIG, looked up once.
+sub GetMasterLogPath
+{
+	my $config = $ENV{CONDOR_CONFIG} // "";
+	if(! exists $master_log_paths{$config}) {
+		my $masterlog = `condor_config_val MASTER_LOG`;
+		$masterlog = "" if ! defined $masterlog;
+		CondorUtils::fullchomp($masterlog);
+		# Don't cache a failed lookup, so it's retried next time.
+		return("") if $masterlog eq "";
+		$master_log_paths{$config} = $masterlog;
+	}
+	return($master_log_paths{$config});
+}
+
+# Returns 1 if the master's log says it exited after it last started.
+# The master's last act is to log "(condor_MASTER) pid N EXITING WITH
+# STATUS". Reading that is cheap and, unlike tasklist and condor_who,
+# keeps working on a loaded Windows host. It also can't be fooled by
+# another process reusing the master's pid.
+sub MasterLogShowsExit
+{
+	my $masterlog = shift;
+	if((! defined $masterlog) || ($masterlog eq "")) {
+		return(0);
+	}
+	my $fh;
+	if(! open($fh, "<", $masterlog)) {
+		return(0);
+	}
+	my $tailbytes = 65536;
+	my $size = -s $fh;
+	if((defined $size) && ($size > $tailbytes)) {
+		seek($fh, $size - $tailbytes, 0);
+	}
+	my $exited = 0;
+	while(my $line = <$fh>) {
+		if($line =~ /\(condor_MASTER\) pid \d+ EXITING WITH STATUS/i) {
+			$exited = 1;
+		} elsif($line =~ /\(condor_MASTER\) STARTING UP/i) {
+			$exited = 0;
+		}
+	}
+	close($fh);
+	return($exited);
+}
+
+# Once the master is marked alive, only a parsed condor_who poll can
+# mark it dead, and those polls can stall or fail, leaving it "alive"
+# long after it exited. So check the master's log and the process
+# table directly, and mark a cached-alive master dead if either shows
+# it is gone.
+# Returns 1 (live), 0 (gone) or -1 (unknown), or -1 if no live master
+# is cached. Sets $last_master_state_detail for diagnostics.
+sub RefreshMasterFromPid
+{
+	my $condor = shift;
+	if($condor->HasLiveMaster() != 1) {
+		$last_master_state_detail = "no live master cached";
+		return(-1);
+	}
+	my $masterpid = $condor->GetMasterPid();
+	my $pidstate = 0;
+	my $masterlog = GetMasterLogPath();
+	if(MasterLogShowsExit($masterlog)) {
+		$last_master_state_detail = "MasterLog shows exit (pid $masterpid)";
+	} else {
+		$pidstate = MasterPidState($masterpid);
+		$last_master_state_detail = "pid $masterpid tasklist/ps state $pidstate, " .
+			"no exit in MasterLog <$masterlog>";
+	}
+	if($pidstate == 0) {
+		CondorTest::LoadWhoData("Master","no",$masterpid,"","","","");
+	}
+	return($pidstate);
+}
+
 sub CollectWhoData
 {
-	my $desiredstate = shift;
-	# experient to vary by going up vs down OFF now
-	# and nothing is passed in
+	my $desiredstate = shift; # "up", "down" or undefined
+	my $pidstate = shift; # RefreshMasterFromPid result if the caller just ran it
 	my @whoarray;
 	#print "CollectWhoData for this Condor:<$ENV{CONDOR_CONFIG}>\n";
 
@@ -1703,27 +1807,16 @@ sub CollectWhoData
 	#$condor->DisplayWhoDataInstances();
 	# condor_who -quick is best before master is alive
 	if($condor != 0) {
-		# Once the master is marked alive, only a parsed condor_who poll can
-		# mark it dead, and those polls can stall or fail, leaving it "alive"
-		# long after it exited. So check the process table directly.
-		if($condor->HasLiveMaster() == 1) {
-			my $masterpid = $condor->GetMasterPid();
-			if(MasterPidState($masterpid) == 0) {
-				CondorTest::LoadWhoData("Master","no",$masterpid,"","","","");
-			}
+		if(! defined $pidstate) {
+			$pidstate = RefreshMasterFromPid($condor);
 		}
-		if(defined $desiredstate) {
-			if($desiredstate eq "down"){
-				print "going down and using quick mode\n";
-			} else {
-				if($condor->HasLiveMaster() == 1) {
-					$usequick = 0;
-				}
-			}
-		} else {
-			my $hasLive = $condor->HasLiveMaster();
-			#print "HasLiveMaster says:$hasLive\n";
-			if($condor->HasLiveMaster() == 1) {
+		if($condor->HasLiveMaster() == 1) {
+			# condor_who -quick can only mark the master alive, never dead,
+			# so going down it is only usable when the pid check above can
+			# mark the master dead. Otherwise use the full query, which on
+			# Windows is slow, and runCondorTool retries its failures after
+			# sleeping 10s, 20s and 30s.
+			if((! defined $desiredstate) || ($desiredstate ne "down") || ($pidstate == -1)) {
 				$usequick = 0;
 			}
 		}

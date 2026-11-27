@@ -515,7 +515,10 @@ sub DoChild
         if($personalstatus != 0 && $res == 0) {
             print "\tTest succeeded, but condor failed to shut down or there were\n";
             print "\tcore files or error messages in the logs. see CondorTest::EndTest\n";
-            $res = $personalstatus;
+            # $res is a system() status, which callers decode with
+            # ProcessReturn, so shift the exit code into place. Unshifted,
+            # EndTest's 137 reads as "killed by signal 9".
+            $res = $personalstatus << 8;
         }
     }
     return($res);
