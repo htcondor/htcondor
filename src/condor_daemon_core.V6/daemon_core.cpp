@@ -174,6 +174,63 @@ void **curr_regdataptr;
 
 extern void drop_addr_file( void );
 
+namespace {
+
+// Marks a command/socket/pipe/reaper/signal table entry as being dispatched
+// while its handler runs.  A handler may cancel or re-register its own
+// entry; destroying or overwriting the entry's std_handler then would
+// destroy the std::function that is executing.  So while in_handler is
+// set, Cancel_* (and Register_*) leave std_handler alone, set
+// release_pending instead, and do not reuse the slot.  The std_handler is
+// released here once the outermost dispatch of the entry returns, like
+// TimerManager's did_cancel.
+//
+// The tables are std::deques, so holding this reference across the handler
+// is safe even if the handler registers more entries.  Dispatch can nest
+// (e.g. via ServiceCommandSocket), hence the saved previous in_handler value.
+template <class Ent>
+class HandlerDispatchGuard {
+public:
+	explicit HandlerDispatchGuard(Ent &ent) : m_ent(ent), m_was_in_handler(ent.in_handler) {
+		m_ent.in_handler = true;
+	}
+	~HandlerDispatchGuard() {
+		m_ent.in_handler = m_was_in_handler;
+		if ( !m_ent.in_handler && m_ent.release_pending ) {
+			m_ent.std_handler = {};
+			m_ent.release_pending = false;
+		}
+		if constexpr ( requires { m_ent.retired_handlers; } ) {
+			if ( !m_ent.in_handler ) {
+				m_ent.retired_handlers.clear();
+			}
+		}
+	}
+	HandlerDispatchGuard(const HandlerDispatchGuard &) = delete;
+	HandlerDispatchGuard &operator=(const HandlerDispatchGuard &) = delete;
+private:
+	Ent &m_ent;
+	bool m_was_in_handler;
+};
+
+// A socket's std_handler can be replaced while it is running: a handler
+// may re-register its own socket with a temporary handler (Register_Socket
+// with prev_entry), and the temporary handler then restores the original
+// entry (Cancel_Socket with prev_entry).  Rather than destroy the running
+// std::function, park it in retired_handlers; CallSocketHandler_worker's
+// HandlerDispatchGuard releases it when the outermost dispatch returns.
+template <class Ent>
+void
+retireRunningHandler(Ent &ent)
+{
+	if ( ent.in_handler && ent.std_handler ) {
+		ent.retired_handlers.push_back(std::move(ent.std_handler));
+		ent.std_handler = {};
+	}
+}
+
+} // namespace
+
 // DaemonCore constructor.
 
 #ifdef WIN32
@@ -1000,7 +1057,7 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 
 	CommandEnt *entry = nullptr;
 	for ( auto &ce: comTable) {
-		if ( ce.handler == NULL && ce.handlercpp == NULL && (! ce.std_handler)) {
+		if ( !ce.registered() && !ce.release_pending ) {
 			entry = &ce;
 		}
 		if ( ce.num == command ) {
@@ -1021,9 +1078,9 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 	entry->num = command;
 	entry->handler = handler;
 	entry->handlercpp = handlercpp;
-	if( handler_f != NULL ) {
-	    entry->std_handler = * handler_f;
-	}
+		// Always (re)assign std_handler, including clearing it when this registration
+		// does not supply one.
+	entry->std_handler = handler_f ? *handler_f : StdCommandHandler();
 	entry->is_cpp = (bool)is_cpp;
 	entry->perm = perm;
 	entry->force_authentication = force_authentication;
@@ -1044,7 +1101,7 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 	else
 		entry->handler_descrip = strdup(EMPTY_DESCRIP);
 
-	// Update curr_regdataptr for SetDataPtr()
+	// Update curr_regdataptr for Register_DataPtr()
 	curr_regdataptr = &(entry->data_ptr);
 
 	// Conditionally dump what our table looks like
@@ -1060,19 +1117,26 @@ int DaemonCore::Cancel_Command( int command )
 	}
 
 	for( auto &ct: comTable) {
-		if( ct.num == command &&
-			( ct.handler || ct.handlercpp || ct.std_handler ) )
+		if( ct.num == command && ct.registered() )
 		{
 			ct.num = 0;
 			ct.handler = nullptr;
 			ct.handlercpp = nullptr;
-			ct.std_handler = StdCommandHandler();
-			free(ct.command_descrip);
-			ct.command_descrip = nullptr;
-			free(ct.handler_descrip);
-			ct.handler_descrip = nullptr;
 			delete ct.alternate_perm;
 			ct.alternate_perm = nullptr;
+			if ( ct.in_handler ) {
+					// Cancelled from within its own handler.  Leave the
+					// std_handler and descrips for CallCommandHandler;
+					// its HandlerDispatchGuard releases the std_handler,
+					// and Register_Command frees the descrips on reuse.
+				ct.release_pending = true;
+			} else {
+				ct.std_handler = StdCommandHandler();
+				free(ct.command_descrip);
+				ct.command_descrip = nullptr;
+				free(ct.handler_descrip);
+				ct.handler_descrip = nullptr;
+			}
 
 			return TRUE;
 		}
@@ -1538,7 +1602,7 @@ DaemonCore::Register_Signal( int sig, const char * sig_descrip,
 	struct SignalEnt::HandlerEntry entry;
 
 	entry.valid = true;
-	entry.handler = handler;
+	entry.std_handler = handler;
 	entry.destroyer = destroyer;
 
 	if ( sig_descrip )
@@ -1560,7 +1624,9 @@ DaemonCore::Register_Signal( int sig, const char * sig_descrip,
 				EXCEPT("DaemonCore: Same signal registered twice");
 			} else {
 				for( size_t i = 0; i < sigEntry.handlers.size(); ++i ) {
-					if(! sigEntry.handlers[i].valid) {
+					// Don't reuse an entry cancelled from within its own
+					// handler until callSignalHandlers releases it.
+					if(! sigEntry.handlers[i].valid && ! sigEntry.handlers[i].release_pending) {
 						sigEntry.handlers[i] = entry;
 						which = i;
 
@@ -1578,10 +1644,12 @@ DaemonCore::Register_Signal( int sig, const char * sig_descrip,
 
 
     {
-	// Search our array for an empty spot
+	// Search our array for an empty spot.  A cancelled entry that still has
+	// handlers was cancelled from within one of them; callSignalHandlers
+	// clears it once they return, so don't reuse it before then.
 	auto sigIt = sigTable.begin();
 	while (sigIt != sigTable.end()) {
-		if ( sigIt->num == 0 ) {
+		if ( sigIt->num == 0 && sigIt->handlers.empty() ) {
 			break;
 		}
 		sigIt++;
@@ -1620,7 +1688,7 @@ DaemonCore::Cancel_Signal( int sig, int which ) {
 	for( auto & sigEntry : sigTable ) {
 		if( sigEntry.num == sig ) {
 			if( 0 <= which && ((unsigned int)which) < sigEntry.handlers.size() ) {
-				sigEntry.handlers[which].valid = false;
+				sigEntry.handlers[which].cancel();
 			} else {
 				dprintf( D_ERROR, "Attempt to delete %d chained handler for signal %d, which was out of range.\n", which, sig );
 				return false;
@@ -1652,11 +1720,19 @@ int DaemonCore::Cancel_Signal( int sig )
 		return FALSE;
 	}
 
-	// Clear entry
+	// Clear entry.  If one of its handlers is running right now, keep that
+	// handler entry (cancelled) until callSignalHandlers releases it.
 	signalEntry->num = 0;
 	signalEntry->is_blocked = false;
 	signalEntry->is_pending = false;
-	signalEntry->handlers.clear();
+	bool any_in_handler = false;
+	for( auto & handlerEntry : signalEntry->handlers ) {
+		handlerEntry.cancel();
+		any_in_handler = any_in_handler || handlerEntry.in_handler;
+	}
+	if (! any_in_handler) {
+		signalEntry->handlers.clear();
+	}
 	signalEntry->data_ptr = nullptr;
 
 
@@ -1705,6 +1781,11 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	// Find empty slot, set to be i.
     size_t     i;
 	for (i=0;i < sockTable.size(); i++) {
+			// Skip slots cancelled from within their own handler until
+			// CallSocketHandler_worker is done with them.
+		if ( sockTable[i].release_pending ) {
+			continue;
+		}
 		if ( (sockTable)[i].iosock == NULL ) {
 			break;
 		}
@@ -1769,8 +1850,11 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	}
 	if (duplicate_found) {
 		if ( prev_entry ) {
+				// The registration below overwrites this slot's std_handler,
+				// which may be running right now; see retireRunningHandler().
 			*prev_entry = new SockEnt;
 			*(SockEnt*)*prev_entry = sockTable[i];
+			((SockEnt*)*prev_entry)->retired_handlers.clear();
 			sockTable[i].iosock_descrip = nullptr;
 			sockTable[i].handler_descrip = nullptr;
 		} else {
@@ -1831,14 +1915,15 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	sockTable[i].handler = handler;
 	sockTable[i].handlercpp = handlercpp;
 		// Always (re)assign std_handler -- including clearing it when this
-		// registration does not supply one.  Cancel_Socket does not clear a slot's
-		// std_handler, so a slot freed by a std::function-handler socket keeps that
-		// std::function until the slot is reused.  If the slot is then reused by a
-		// registration with only a C/C++ handler (or none, e.g. a command socket via
-		// Register_Command_Socket), the stale std_handler would otherwise linger and,
-		// because CallSocketHandler_worker dispatches std_handler when handler and
-		// handlercpp are both null, be invoked on the wrong socket -- a use-after-free
-		// of whatever the stale std::function captured.
+		// registration does not supply one.  If a stale std_handler were left
+		// in a reused slot whose new registration has only a C/C++ handler (or
+		// none, e.g. a command socket via Register_Command_Socket),
+		// CallSocketHandler_worker, which dispatches std_handler when handler and
+		// handlercpp are both null, would invoke it on the wrong socket -- a
+		// use-after-free of whatever the stale std::function captured.
+		// If this slot's handler is running (it is re-registering its own
+		// socket), keep that handler alive until it returns.
+	retireRunningHandler(sockTable[i]);
 	sockTable[i].std_handler = handler_f ? *handler_f : StdSocketHandler();
 	sockTable[i].is_cpp = (bool)is_cpp;
 	sockTable[i].handler_type = handler_type;
@@ -1861,13 +1946,14 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 		sockTable[i].handler_descrip = strdup(EMPTY_DESCRIP);
 
 	// Mark command socks (identified by lack of handlers, endpoint)
-	if ( handler == 0 && handlercpp == 0 && m_shared_port_endpoint == NULL ) {
+	if ( handler == 0 && handlercpp == 0 && !sockTable[i].std_handler &&
+		 m_shared_port_endpoint == NULL ) {
 		sockTable[i].is_command_sock = true;
 	} else {
 		sockTable[i].is_command_sock = false;
 	}
 
-	// Update curr_regdataptr for SetDataPtr()
+	// Update curr_regdataptr for Register_DataPtr()
 	curr_regdataptr = &(sockTable[i].data_ptr);
 
 	// Conditionally dump what our table looks like
@@ -1886,16 +1972,20 @@ DaemonCore::Destroy_Signals_By_Description( const std::string & d ) {
         return;
     }
 
-    for( const auto & signalEntry : sigTable ) {
-        for( const auto & handlerEntry : signalEntry.handlers ) {
-            if(! handlerEntry.valid) { continue; }
-            if( d == handlerEntry.handler_descrip ) {
-                if( handlerEntry.destroyer ) {
-                    handlerEntry.destroyer();
-                }
-            }
-        }
-    }
+	// A destroyer may cancel or register signals, which can clear or grow
+	// these deques and invalidate their iterators, so index rather than
+	// iterate.  Call a copy of the destroyer: cancelling the signal may
+	// clear the handler entry that holds it.
+	for( size_t s = 0; s < sigTable.size(); ++s ) {
+		for( size_t h = 0; h < sigTable[s].handlers.size(); ++h ) {
+			const auto & handlerEntry = sigTable[s].handlers[h];
+			if(! handlerEntry.valid) { continue; }
+			if( d == handlerEntry.handler_descrip && handlerEntry.destroyer ) {
+				auto destroyer = handlerEntry.destroyer;
+				destroyer();
+			}
+		}
+	}
 }
 
 
@@ -1941,23 +2031,52 @@ int DaemonCore::Cancel_Socket( Stream* insock, void *prev_entry)
 		// Log a message
 		dprintf(D_DAEMONCORE,"Cancel_Socket: cancelled socket %zu <%s> %p\n",
 				i,sockTable[i].iosock_descrip, sockTable[i].iosock );
-		// Remove entry; mark it is available for next add via iosock=NULL
-		sockTable[i].iosock = NULL;
 		free( sockTable[i].iosock_descrip );
 		sockTable[i].iosock_descrip = NULL;
 		free( sockTable[i].handler_descrip );
 		sockTable[i].handler_descrip = NULL;
 
 		if ( prev_entry ) {
-			((SockEnt*)prev_entry)->servicing_tid = sockTable[i].servicing_tid;
-			sockTable[i] = *(SockEnt*)prev_entry;
-			delete (SockEnt *)prev_entry;
+			// Restore the entry that Register_Socket saved when this socket
+			// was temporarily re-registered (see DaemonCommandProtocol::
+			// WaitForSocketData).  This is typically called from within the
+			// temporary handler, so the slot stays in use: keep its current
+			// dispatch state rather than the saved copy's, and don't destroy
+			// the temporary handler while it is running.
+			retireRunningHandler(sockTable[i]);
+			SockEnt *prev = (SockEnt *)prev_entry;
+			prev->servicing_tid = sockTable[i].servicing_tid;
+			prev->in_handler = sockTable[i].in_handler;
+			prev->release_pending = false;
+			prev->retired_handlers = std::move(sockTable[i].retired_handlers);
+			sockTable[i] = std::move(*prev);
+			delete prev;
+		} else {
+			// Remove entry; mark it is available for next add via iosock=NULL
+			sockTable[i].iosock = NULL;
+				// Release the std::function's captures now rather than when
+				// the slot is reused -- unless we are being called from within
+				// this socket's handler, in which case CallSocketHandler_worker's
+				// HandlerDispatchGuard releases it when the handler returns.
+			if ( sockTable[i].in_handler ) {
+				sockTable[i].release_pending = true;
+			} else {
+				sockTable[i].std_handler = StdSocketHandler();
+				sockTable[i].release_pending = false;
+			}
 		}
 	} else {
 		// Log a message
 		dprintf(D_DAEMONCORE,"Cancel_Socket: deferred cancel socket %zu <%s> %p\n",
 				i,sockTable[i].iosock_descrip, sockTable[i].iosock );
 		sockTable[i].remove_asap = true;
+			// Leave std_handler and release_pending alone: the servicing
+			// thread may be running the handler.  release_pending must only
+			// be set while in_handler, since only HandlerDispatchGuard clears
+			// it, and Register_Socket will not reclaim a slot that has it set.
+			// The std_handler is released by the final, synchronous
+			// Cancel_Socket, or overwritten when Register_Socket reuses
+			// the slot.
 	}
 
 	if ( !prev_entry ) {
@@ -2227,7 +2346,9 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 
 	size_t i;
 	for (i = 0; i < pipeTable.size(); i++) {
-		if (pipeTable[i].index == -1) break;
+			// Skip slots cancelled from within their own handler
+			// until the Driver is done with them.
+		if (pipeTable[i].index == -1 && !pipeTable[i].release_pending) break;
 	}
 
 	if (i == pipeTable.size()) {
@@ -2248,10 +2369,9 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 	pipeTable[i].handler = handler;
 	pipeTable[i].handler_type = handler_type;
 	pipeTable[i].handlercpp = handlercpp;
-	// Assign std_handler unconditionally: this slot may be reused from a
-	// prior registration that installed a std::function, and Cancel_Pipe
-	// does not reset it.  Leaving a stale std_handler here would let dispatch
-	// call a dead captured object (heap-use-after-free).
+	// Assign std_handler unconditionally, so a registration without one
+	// never inherits a stale std::function from an earlier use of this slot
+	// (which dispatch would otherwise call: heap-use-after-free).
 	pipeTable[i].std_handler = handler_f ? *handler_f : StdPipeHandler();
 	pipeTable[i].is_cpp = (bool)is_cpp;
 	pipeTable[i].service = s;
@@ -2267,7 +2387,7 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 	else
 		pipeTable[i].handler_descrip = strdup(EMPTY_DESCRIP);
 
-	// Update curr_regdataptr for SetDataPtr()
+	// Update curr_regdataptr for Register_DataPtr()
 	curr_regdataptr = &(pipeTable[i].data_ptr);
 
 #ifndef WIN32
@@ -2346,6 +2466,15 @@ int DaemonCore::Cancel_Pipe( int pipe_end )
 	pipeTable[i].pipe_descrip = nullptr;
 	free(pipeTable[i].handler_descrip );
 	pipeTable[i].handler_descrip = nullptr;
+	// Release the std::function's captures now rather than when the slot
+	// is reused -- unless we are being called from within this pipe's
+	// handler, in which case the Driver's HandlerDispatchGuard releases it
+	// when the handler returns.
+	if (pipeTable[i].in_handler) {
+		pipeTable[i].release_pending = true;
+	} else {
+		pipeTable[i].std_handler = StdPipeHandler();
+	}
 
 #ifdef WIN32
 	// we need to notify the PID-watcher thread that it should
@@ -2694,6 +2823,21 @@ DaemonCore::Close_Stdin_Pipe(int pid) {
 }
 
 
+size_t
+DaemonCore::findFreeReaperSlot()
+{
+	for ( size_t i = 0; i < nReap; i++ ) {
+			// Skip slots cancelled from within their own reaper
+			// until CallReaper is done with them.
+		if ( reapTable[i].num == 0 && !reapTable[i].release_pending ) {
+			return i;
+		}
+	}
+	nReap++;
+	reapTable.push_back({});
+	return nReap - 1;
+}
+
 int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 				ReaperHandler handler, ReaperHandlercpp handlercpp,
 				const char *handler_descrip, Service* s, int is_cpp,
@@ -2717,18 +2861,7 @@ int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 	if ( rid == -1 ) {
 		// a brand new entry in the table
 		// scan through the table to find an empty slot
-		for(i = 0; i < nReap; i++)
-		{
-			if ( reapTable[i].num == 0 ) {
-				break;
-			}
-		}
-		if ( i == nReap ) {
-			// Our new entry is at the end of our array,
-			// so increment our counter and add an entry to the
-			nReap++;
-			reapTable.push_back({});
-		}
+		i = findFreeReaperSlot();
 		rid = nextReapId++;
 	} else {
 		if ( rid < 1 ) {
@@ -2741,6 +2874,27 @@ int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 		}
 		if ( i == nReap ) {
 			return FALSE;	// trying to re-register a non-existant entry
+		}
+		if ( reapTable[i].in_handler ) {
+				// Re-registering the reaper that is running right now.
+				// Don't overwrite its std_handler mid-call: retire this
+				// slot (CallReaper releases it when the reaper returns)
+				// and put the new registration for rid in another slot.
+			reapTable[i].num = 0;
+			reapTable[i].handler = nullptr;
+			reapTable[i].handlercpp = nullptr;
+			reapTable[i].service = nullptr;
+			reapTable[i].data_ptr = nullptr;
+			reapTable[i].release_pending = true;
+			size_t retired = i;
+			i = findFreeReaperSlot();
+				// The running reaper's GetDataPtr() should follow the
+				// registration to its new slot, as it did when the slot
+				// was reused in place.  (deque: push_back in
+				// findFreeReaperSlot doesn't move the retired slot.)
+			if ( curr_dataptr == &(reapTable[retired].data_ptr) ) {
+				curr_dataptr = &(reapTable[i].data_ptr);
+			}
 		}
 	}
 
@@ -2768,7 +2922,7 @@ int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 	else
 		reapTable[i].handler_descrip = strdup(EMPTY_DESCRIP);
 
-	// Update curr_regdataptr for SetDataPtr()
+	// Update curr_regdataptr for Register_DataPtr()
 	curr_regdataptr = &(reapTable[i].data_ptr);
 
 	// Conditionally dump what our table looks like
@@ -2822,7 +2976,13 @@ int DaemonCore::Cancel_Reaper( int rid )
 	reapTable[idx].num = 0;
 	reapTable[idx].handler = NULL;
 	reapTable[idx].handlercpp = NULL;
-	reapTable[idx].std_handler = StdReaperHandler();
+	if ( reapTable[idx].in_handler ) {
+			// Cancelled from within this reaper; CallReaper's
+			// HandlerDispatchGuard releases the std_handler when it returns.
+		reapTable[idx].release_pending = true;
+	} else {
+		reapTable[idx].std_handler = StdReaperHandler();
+	}
 	reapTable[idx].service = NULL;
 	reapTable[idx].data_ptr = NULL;
 
@@ -2866,7 +3026,7 @@ void DaemonCore::DumpCommandTable(int flag, const char* indent)
 	dprintf(flag, "%sCommands Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~~\n", indent);
 	for (auto &ce : comTable) {
-		if( ce.handler || ce.handlercpp || ce.std_handler )
+		if( ce.registered() )
 		{
 			descrip1 = "NULL";
 			descrip2 = descrip1;
@@ -2894,7 +3054,7 @@ std::string DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authent
 					}
 				}
 			}
-			if( (ce.handler || ce.handlercpp || ce.std_handler) &&
+			if( ce.registered() &&
 				((ce.perm == perm) || alternate_perm_match) &&
 				(!ce.force_authentication || is_authenticated))
 			{
@@ -2909,8 +3069,14 @@ std::string DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authent
 
 int
 DaemonCore::numRegisteredReapers() {
+		// Count only live registrations (num != 0: a reaper cancelled
+		// from within itself keeps its std_handler until it returns)
+		// that have a handler; null-handler reapers just use the default.
 	return std::count_if(reapTable.begin(), reapTable.end(),
-			[](const auto &entry) { return entry.handler || entry.handlercpp || entry.std_handler; });
+			[](const auto &entry) {
+				return entry.num != 0 &&
+					(entry.handler || entry.handlercpp || entry.std_handler);
+			});
 }
 
 void DaemonCore::DumpReapTable(int flag, const char* indent)
@@ -2933,7 +3099,7 @@ void DaemonCore::DumpReapTable(int flag, const char* indent)
 	dprintf(flag, "%sReapers Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~~\n", indent);
 	for (size_t i = 0; i < nReap; i++) {
-		if( reapTable[i].handler || reapTable[i].handlercpp || reapTable[i].std_handler ) {
+		if( reapTable[i].num != 0 ) {
 			descrip1 = "NULL";
 			descrip2 = descrip1;
 			if ( reapTable[i].reap_descrip )
@@ -3559,7 +3725,11 @@ void
 DaemonCore::callSignalHandlers(double & runtime) {
 	sent_signal = FALSE;	// set to True inside Send_Signal()
 
-	for( auto &sigEntry : sigTable ) {
+	// A handler may register a new signal, which can push_back onto
+	// sigTable.  That invalidates deque iterators (but not references),
+	// so index rather than iterate.
+	for( size_t s = 0; s < sigTable.size(); ++s ) {
+		auto &sigEntry = sigTable[s];
 		if(! sigEntry.handlers.empty()) {
 			if( sigEntry.is_pending && !sigEntry.is_blocked ) {
 				// call handler, but first clear pending flag
@@ -3574,14 +3744,34 @@ DaemonCore::callSignalHandlers(double & runtime) {
 						"Calling Handler for Signal %d\n",
 						sigEntry.num
 				);
-				// call the handlers
-				for( const auto & handlerEntry : sigEntry.handlers ) {
+				// call the handlers.  A handler may register or cancel
+				// signal handlers, so index rather than iterate (push_back
+				// invalidates deque iterators, but not references), and stop
+				// if this signal is cancelled out from under us.  Handlers
+				// appended during this dispatch are not called for this
+				// signal, but one registered into a reused slot below
+				// num_handlers may be.
+				const int sig = sigEntry.num;
+				const size_t num_handlers = sigEntry.handlers.size();
+				for( size_t h = 0; h < num_handlers && h < sigEntry.handlers.size() && sigEntry.num == sig; ++h ) {
+					auto & handlerEntry = sigEntry.handlers[h];
 					if(! handlerEntry.valid) { continue; }
-					handlerEntry.handler(sigEntry.num);
+					{
+						HandlerDispatchGuard guard(handlerEntry);
+						handlerEntry.std_handler(sig);
+					}
 					// update per-timer runtime and count statistics
 					if(! handlerEntry.handler_descrip.empty() ) {
 						runtime = dc_stats.AddRuntime(handlerEntry.handler_descrip.c_str(), runtime);
 					}
+				}
+
+				// If a handler cancelled this signal, Cancel_Signal left the
+				// (cancelled) handler entries in place for us; clear them now
+				// so that Register_Signal can reuse this entry.
+				if( sigEntry.num == 0 &&
+					std::ranges::none_of(sigEntry.handlers, [](const auto &he) { return he.in_handler; }) ) {
+					sigEntry.handlers.clear();
 				}
 
 				// Clear curr_dataptr
@@ -4088,8 +4278,6 @@ void DaemonCore::Driver()
 						// below.
 						std::string handler_desc = pipeTable[i].handler_descrip ? pipeTable[i].handler_descrip : "";
 
-						pipeTable[i].in_handler = true;
-
 						// log a message
 						int pipe_end = pipeTable[i].index + PIPE_INDEX_OFFSET;
 						dprintf(D_COMMAND,"Calling pipe Handler <%s> for Pipe end=%d <%s>\n",
@@ -4100,6 +4288,8 @@ void DaemonCore::Driver()
 						// Update curr_dataptr for GetDataPtr()
 						curr_dataptr = &( pipeTable[i].data_ptr);
 						recheck_status = true;
+						{
+						HandlerDispatchGuard guard(pipeTable[i]);
 						if (pipeTable[i].handler ) {
 							// a C handler
 							(*(pipeTable[i].handler))(pipe_end);
@@ -4113,10 +4303,9 @@ void DaemonCore::Driver()
 							// no handler registered
 							EXCEPT("No pipe handler callback");
 						}
+						}	// end of HandlerDispatchGuard scope
 
 						dprintf(D_COMMAND,"Return from pipe Handler\n");
-
-						pipeTable[i].in_handler = false;
 
 						// Make sure we didn't leak our priv state
 						CheckPrivState();
@@ -4138,14 +4327,6 @@ void DaemonCore::Driver()
 						// update per-handler runtime statistics
 						if (!handler_desc.empty()) {
 							runtime = dc_stats.AddRuntime(handler_desc.c_str(), runtime);
-						}
-
-						if ( pipeTable[i].call_handler == true ) {
-							// looks like the handler called Cancel_Pipe(),
-							// and now entry i no longer points to what we
-							// think it points to.  Decrement i now, so when
-							// we loop back we do not miss calling a handler.
-							i--;
 						}
 
 					}	// if call_handler is True
@@ -4392,8 +4573,17 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 		// request number and calls any registered command
 		// handler.
 
+		// The handler may cancel this socket.  The HandlerDispatchGuard
+		// below keeps slot i from being reused until the handler returns,
+		// so if slot i no longer holds this socket afterwards, the handler
+		// cancelled it.
+	Stream *dispatched_sock = sockTable[i].iosock;
+
 		// Update curr_dataptr for GetDataPtr()
 	curr_dataptr = &( sockTable[i].data_ptr);
+
+	{
+	HandlerDispatchGuard guard(sockTable[i]);
 
 		// log a message
 	if ( sockTable[i].handler || sockTable[i].handlercpp || sockTable[i].std_handler)
@@ -4417,7 +4607,7 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 			// a C++ handler
 		result = (sockTable[i].service->*( sockTable[i].handlercpp))(sockTable[i].iosock);
 	} else if (sockTable[i].std_handler) {
-		result = sockTable[i].std_handler(sockTable[i].iosock);
+		result = sockTable[i].std_handler(dispatched_sock);
 	}
 
 		if (IsDebugLevel(D_COMMAND)) {
@@ -4438,6 +4628,7 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 			// this socket.
 		result = FALSE;
 	}
+	}	// end of HandlerDispatchGuard scope
 
 		// Make sure we didn't leak our priv state
 	CheckPrivState();
@@ -4445,15 +4636,26 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 		// Clear curr_dataptr
 	curr_dataptr = NULL;
 
+		// If the handler cancelled this socket, slot i is either empty
+		// or now belongs to some other socket; leave it alone.  If the
+		// handler then re-registered the socket, it lives in another
+		// slot now, so apply the handler's result there.  Otherwise
+		// the handler has taken ownership of the socket.
+	if ( sockTable[i].iosock != dispatched_sock ) {
+		i = Lookup_Socket( dispatched_sock );
+		if ( i < 0 ) {
+			return;
+		}
+	}
+
 		// Check result from socket handler, and if
 		// not KEEP_STREAM, then
 		// delete the socket and the socket handler.
 	if ( result != KEEP_STREAM ) {
-		Stream *iosock = sockTable[i].iosock;
 			// cancel the socket handler
-		Cancel_Socket( iosock );
+		Cancel_Socket( dispatched_sock );
 			// delete the cedar socket
-		delete iosock;
+		delete dispatched_sock;
 	} else {
 		// in this case, we are keeping the socket around.
 		// so if this tid has it marked as being serviced,
@@ -4474,8 +4676,7 @@ bool
 DaemonCore::CommandNumToTableIndex(int cmd,int *cmd_index)
 {
 	for (size_t i = 0; i < comTable.size(); i++) {
-		if ( comTable[i].num == cmd &&
-			 ( comTable[i].handler || comTable[i].handlercpp || comTable[i].std_handler) ) {
+		if ( comTable[i].num == cmd && comTable[i].registered() ) {
 
 			*cmd_index = (int) i;
 			return true;
@@ -4674,6 +4875,12 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 		
 		handler_start_time = _condor_debug_get_time_double();
 
+		// The handler may cancel its own command.  Until this guard goes
+		// out of scope (after the stats below), Cancel_Command leaves the
+		// entry's std_handler and descrips in place and the slot is not
+		// reused.
+		HandlerDispatchGuard guard(comTable[index]);
+
 		// call the handler function; first curr_dataptr for GetDataPtr()
 		curr_dataptr = &(comTable[index].data_ptr);
 
@@ -4682,7 +4889,7 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 			if ( comTable[index].handlercpp )
 				result = (comTable[index].service->*(comTable[index].handlercpp))(req,stream);
 		} else if( comTable[index].std_handler ) {
-		    result = comTable[index].std_handler(req, stream);
+			result = comTable[index].std_handler(req, stream);
 		} else {
 			// the handler is in c (not c++), so pass a Service pointer
 			if ( comTable[index].handler )
@@ -4698,9 +4905,9 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 			std::string key = user + '_' + std::string(comTable[index].handler_descrip);
 			dc_stats.UserRuntimes[key] += handler_time;
 		}
-		
+
 		if (IsDebugLevel(D_COMMAND)) {
-			dprintf(D_COMMAND, "Return from HandleReq <%s> (handler: %.6fs, sec: %.3fs, payload: %.3fs)\n", 
+			dprintf(D_COMMAND, "Return from HandleReq <%s> (handler: %.6fs, sec: %.3fs, payload: %.3fs)\n",
 					comTable[index].handler_descrip, handler_time, time_spent_on_sec, time_spent_waiting_for_payload );
 		}
 
@@ -5676,20 +5883,6 @@ int DaemonCore::Continue_Process(pid_t pid)
 	set_priv(priv);
 	return (status >= 0);		// return 1 if kill succeeds, 0 otherwise
 #endif
-}
-
-int DaemonCore::SetDataPtr(void *dptr)
-{
-	// note: curr_dataptr is updated by daemon core
-	// whenever a register_* or a handler invocation takes place
-
-	if ( curr_dataptr == NULL ) {
-		return FALSE;
-	}
-
-	*curr_dataptr = dptr;
-
-	return TRUE;
 }
 
 int DaemonCore::Register_DataPtr(void *dptr)
@@ -10126,7 +10319,7 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 		return;
 	}
 
-		// Set curr_dataptr for Get/SetDataPtr()
+		// Set curr_dataptr for GetDataPtr()
 	curr_dataptr = &(reaper->data_ptr);
 
 		// Log a message
@@ -10136,6 +10329,8 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 		"%d <%s>\n",
 		whatexited, (unsigned long)pid, exit_status, reaper_id, hdescrip.c_str());
 
+	{
+	HandlerDispatchGuard guard(*reaper);
 	if ( reaper->handler ) {
 		// a C handler
 		(*(reaper->handler))(pid,exit_status);
@@ -10145,6 +10340,7 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 	} else if ( reaper->std_handler ) {
 		reaper->std_handler(pid, exit_status);
 	}
+	}	// end of HandlerDispatchGuard scope
 
 	// Record the runtime of this reaper
 	double deltaTime = _condor_debug_get_time_double() - startTime;
